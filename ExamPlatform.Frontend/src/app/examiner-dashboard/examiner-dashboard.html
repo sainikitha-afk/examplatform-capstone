@@ -14,7 +14,7 @@
       <div class="card text-center border-secondary">
         <div class="card-body">
           <i class="bi bi-file-earmark-text display-4 text-secondary"></i>
-          <h2 class="mt-2">{{ countByStatus('Draft') }}</h2>
+          <h2 class="mt-2">{{ draftCount }}</h2>
           <p class="text-muted mb-0">Draft Exams</p>
         </div>
       </div>
@@ -23,7 +23,7 @@
       <div class="card text-center border-success">
         <div class="card-body">
           <i class="bi bi-broadcast display-4 text-success"></i>
-          <h2 class="mt-2">{{ countByStatus('Published') }}</h2>
+          <h2 class="mt-2">{{ publishedCount }}</h2>
           <p class="text-muted mb-0">Published</p>
         </div>
       </div>
@@ -32,7 +32,7 @@
       <div class="card text-center border-primary">
         <div class="card-body">
           <i class="bi bi-clipboard-check display-4 text-primary"></i>
-          <h2 class="mt-2">{{ countByStatus('ResultsPublished') }}</h2>
+          <h2 class="mt-2">{{ resultsPublishedCount }}</h2>
           <p class="text-muted mb-0">Results Published</p>
         </div>
       </div>

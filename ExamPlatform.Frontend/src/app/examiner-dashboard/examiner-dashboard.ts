@@ -20,6 +20,12 @@ export class ExaminerDashboard implements OnInit {
   errorMessage: string = '';
   fullName: string = sessionStorage.getItem('fullName') ?? 'Examiner';
 
+  // Pre-computed counts — set once when data loads, bound directly in template.
+  // Avoids calling a filter method on every change-detection cycle.
+  draftCount: number = 0;
+  publishedCount: number = 0;
+  resultsPublishedCount: number = 0;
+
   constructor(private examService: ExamApiService) {}
 
   ngOnInit(): void {
@@ -31,6 +37,9 @@ export class ExaminerDashboard implements OnInit {
     this.examService.loadMyExams(1).subscribe({
       next: (result) => {
         this.exams = result.items;
+        this.draftCount           = this.exams.filter(e => e.examStatus === 'Draft').length;
+        this.publishedCount       = this.exams.filter(e => e.examStatus === 'Published').length;
+        this.resultsPublishedCount = this.exams.filter(e => e.examStatus === 'ResultsPublished').length;
         this.isLoading.set(false);
       },
       error: () => {
@@ -38,9 +47,5 @@ export class ExaminerDashboard implements OnInit {
         this.isLoading.set(false);
       }
     });
-  }
-
-  countByStatus(status: string): number {
-    return this.exams.filter(e => e.examStatus === status).length;
   }
 }
