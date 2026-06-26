@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ExamPlatform.BLL\ExamPlatform.BLL.csproj" />
+    <ProjectReference Include="..\ExamPlatform.Domain\ExamPlatform.Domain.csproj" />
+    <ProjectReference Include="..\ExamPlatform.DAL\ExamPlatform.DAL.csproj" />
+  </ItemGroup>
+
+</Project>

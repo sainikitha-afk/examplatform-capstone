@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ExamPlatform.API/ExamPlatform.API.csproj" />
+  <Project Path="ExamPlatform.BLL/ExamPlatform.BLL.csproj" />
+  <Project Path="ExamPlatform.DAL/ExamPlatform.DAL.csproj" />
+  <Project Path="ExamPlatform.Domain/ExamPlatform.Domain.csproj" />
+</Solution>

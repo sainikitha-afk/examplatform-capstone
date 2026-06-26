@@ -1,0 +1,63 @@
+# ─────────── macOS ───────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ─────────── Node / Angular ───────────
+**/node_modules/
+**/dist/
+**/.angular/
+**/coverage/
+*.log
+npm-debug.log*
+.npm/
+
+# ─────────── .NET / ASP.NET Core ───────────
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+**/PublishProfiles/
+
+# ─────────── Editor / IDE ───────────
+.vscode/
+.idea/
+*.swp
+*~
+
+# ─────────── Secrets & local config ───────────
+# DO NOT commit secrets. If appsettings.json has a real JWT key, ignore it.
+# Use appsettings.Development.json or User Secrets locally.
+**/appsettings.Development.json
+**/.env
+**/.env.local
+*.pfx
+
+# ─────────── Local test artifacts ───────────
+*.zip
+RajuImport.xlsx
+demo.xlsx
+questions_template.xlsx
+QuestionImportTemplate.xlsx
+
+# ─────────── Misc ───────────
+notes.txt
+
+# ─────────── Backend secrets ───────────
+# Real secrets live in appsettings.json (gitignored).
+# Structure template lives in appsettings.Example.json (committed).
+**/appsettings.json
+!**/appsettings.Example.json
+
+# ─────────── Backend secrets ───────────
+# Real secrets live in appsettings.json (gitignored).
+# Structure template lives in appsettings.Example.json (committed).
+**/appsettings.json
+!**/appsettings.Example.json
+
+# ─────────── Claude Code local config ───────────
+.c/
+.claude/

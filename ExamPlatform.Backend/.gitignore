@@ -1,0 +1,19 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Local config with secrets — DO NOT COMMIT
+**/appsettings.json
+!**/appsettings.Example.json
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+
+# macOS
+.DS_Store
+
+# NuGet
+*.nupkg

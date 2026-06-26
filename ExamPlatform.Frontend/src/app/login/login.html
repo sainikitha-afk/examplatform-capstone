@@ -1,0 +1,20 @@
+<h2 class="text-center">ExamHub Login</h2>
+
+<!-- A simple form. Plain HTML for now — we'll add Bootstrap styling soon. -->
+<div>
+  <label>Username</label>
+  <!-- Two-way binding: [(ngModel)] keeps loginData.username and this input in sync -->
+  <input type="text" [(ngModel)]="loginData.username" name="username" />
+</div>
+
+<div>
+  <label>Password</label>
+  <input type="password" [(ngModel)]="loginData.password" name="password" />
+</div>
+
+<!-- Event binding: (click) wires the button to the handleLoginClick method -->
+<button (click)="handleLoginClick()">Login</button>
+
+<!-- Interpolation: shows live what's in the model. Type in the box, watch it update. -->
+<hr/>
+<p>You typed: <strong>{{ loginData.username }}</strong></p>
