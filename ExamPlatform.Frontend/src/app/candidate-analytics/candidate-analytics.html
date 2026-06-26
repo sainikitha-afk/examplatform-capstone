@@ -1,0 +1,65 @@
+<!-- Candidate Analytics page -->
+<div class="container mt-4">
+  <h3><i class="bi bi-bar-chart me-2"></i>My Analytics</h3>
+
+  <div *ngIf="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card text-center border-primary">
+          <div class="card-body">
+            <i class="bi bi-journal-check display-4 text-primary"></i>
+            <h2>{{ stats.totalAttempts }}</h2>
+            <p class="text-muted mb-0">Total Attempts</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center border-success">
+          <div class="card-body">
+            <i class="bi bi-percent display-4 text-success"></i>
+            <!-- Built-in pipe: number -->
+            <h2>{{ stats.passRate | number:'1.0-1' }}%</h2>
+            <p class="text-muted mb-0">Pass Rate</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center border-info">
+          <div class="card-body">
+            <i class="bi bi-bar-chart display-4 text-info"></i>
+            <h2>{{ stats.averageScore | number:'1.0-1' }}</h2>
+            <p class="text-muted mb-0">Avg Score</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center border-warning">
+          <div class="card-body">
+            <i class="bi bi-award display-4 text-warning"></i>
+            <h2>{{ stats.certificatesEarned }}</h2>
+            <p class="text-muted mb-0">Certificates</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Best scores table -->
+    <h5>Best Scores Per Exam</h5>
+    <table class="table table-striped">
+      <thead class="table-primary"><tr><th>Exam</th><th>Best Score</th><th>Passed?</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let s of stats.bestScores">
+          <td>{{ s.examTitle }}</td>
+          <td>{{ s.bestScore }}</td>
+          <td [ngClass]="{'text-success fw-bold': s.isPassed, 'text-danger': !s.isPassed}">
+            {{ s.isPassed ? 'Yes' : 'No' }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="stats.bestScores.length === 0" class="text-muted">No completed exams yet.</p>
+  </div>
+</div>

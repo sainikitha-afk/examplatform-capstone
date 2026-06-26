@@ -1,0 +1,48 @@
+<!-- Certificates page — CONCEPT DEMO: date pipe, uppercase pipe, *ngFor -->
+<div class="container mt-4">
+  <h3><i class="bi bi-award me-2"></i>My Certificates</h3>
+
+  <div *ngIf="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && certs.length === 0 && !errorMessage" class="alert alert-info">
+    No certificates yet. Pass an exam to earn one!
+  </div>
+
+  <div class="row g-3" *ngIf="!isLoading">
+    <div class="col-md-6" *ngFor="let cert of certs">
+      <div class="card shadow-sm"
+           [ngClass]="{'border-success': cert.certStatus === 'Issued', 'border-secondary': cert.certStatus === 'Revoked'}">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="bi bi-award-fill text-warning me-1"></i>
+            <!-- Interpolation -->
+            {{ cert.examTitle }}
+          </h5>
+          <p class="mb-1">
+            <strong>Code:</strong>
+            <!-- uppercase pipe -->
+            {{ cert.certificateCode | uppercase }}
+          </p>
+          <p class="mb-1">
+            <strong>Score:</strong> {{ cert.score }}
+          </p>
+          <p class="mb-1">
+            <strong>Issued:</strong>
+            <!-- CONCEPT DEMO: date pipe with format string -->
+            {{ cert.issuedAt | date:'mediumDate' }}
+          </p>
+          <span class="badge"
+                [ngClass]="{'bg-success': cert.certStatus === 'Issued', 'bg-secondary': cert.certStatus === 'Revoked'}">
+            {{ cert.certStatus }}
+          </span>
+        </div>
+        <div class="card-footer" *ngIf="cert.certStatus === 'Issued'">
+          <button class="btn btn-outline-primary btn-sm" (click)="handleDownloadClick(cert.certificateId)">
+            <i class="bi bi-download me-1"></i>Download
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

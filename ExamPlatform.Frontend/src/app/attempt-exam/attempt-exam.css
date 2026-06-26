@@ -1,0 +1,2 @@
+/* Sticky timer bar on scroll */
+.bg-light.rounded { position: sticky; top: 0; z-index: 10; }

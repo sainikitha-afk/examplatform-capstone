@@ -1,1 +1,81 @@
-<p>categories works!</p>
+<!-- Manage Categories (Admin) — full CRUD with template-driven validation -->
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3><i class="bi bi-tag me-2"></i>Manage Categories</h3>
+    <div>
+      <button class="btn btn-primary" *ngIf="view === 'list'" (click)="showCreateForm()">
+        <i class="bi bi-plus-circle me-1"></i>New Category
+      </button>
+      <button class="btn btn-secondary" *ngIf="view !== 'list'" (click)="view = 'list'">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+
+  <!-- ── LIST ── -->
+  <div *ngIf="view === 'list'">
+    <div *ngIf="isLoading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <table class="table table-striped table-hover" *ngIf="!isLoading">
+      <thead class="table-dark">
+        <tr><th>#</th><th>Category Name</th><th>Description</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <!-- *ngFor -->
+        <tr *ngFor="let cat of categories; let i = index">
+          <td>{{ i + 1 }}</td>
+          <td>{{ cat.catName }}</td>
+          <td>{{ cat.description }}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1" (click)="showEditForm(cat)">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" (click)="handleDeleteClick(cat.catId, cat.catName)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!isLoading && categories.length === 0" class="text-muted">No categories yet.</p>
+  </div>
+
+  <!-- ── CREATE / EDIT FORM — template-driven validation ── -->
+  <div *ngIf="view === 'create' || view === 'edit'" class="card shadow-sm col-md-6">
+    <div class="card-header">{{ view === 'create' ? 'New Category' : 'Edit Category' }}</div>
+    <div class="card-body">
+      <!-- #catForm template reference variable for NgForm -->
+      <form #catForm="ngForm" (ngSubmit)="handleSaveClick(catForm)">
+
+        <div class="mb-3">
+          <label class="form-label">Category Name <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="formName"
+            name="catName"
+            required
+            minlength="2"
+            #catNameCtrl="ngModel"
+          />
+          <!-- CONCEPT DEMO: template-driven validation errors -->
+          <div *ngIf="catNameCtrl.invalid && catNameCtrl.touched" class="text-danger small mt-1">
+            <span *ngIf="catNameCtrl.errors?.['required']">Name is required.</span>
+            <span *ngIf="catNameCtrl.errors?.['minlength']">At least 2 characters required.</span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="formDescription" name="description"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-check-circle me-1"></i>{{ view === 'create' ? 'Create' : 'Update' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

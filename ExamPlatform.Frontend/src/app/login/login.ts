@@ -1,28 +1,49 @@
+// login.ts — Login screen. Accepts email or username + password, calls AuthService,
+//   stores the JWT and routes by role.
+// Why it exists: the entry point for returning users to get their JWT token.
+// How Angular uses it: standalone component; FormsModule enables [(ngModel)] two-way binding.
+// CONCEPTS DEMO: two-way binding, event binding, interpolation, Observable subscribe.
+
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 import { LoginModel } from '../models/login.model';
 
 @Component({
   selector: 'app-login',
-  // FormsModule must be imported here for [(ngModel)] to work in the template.
-  // This is the "standalone component" pattern — the component declares its own
-  // dependencies, no NgModule needed.
-  imports: [FormsModule],
+  imports: [FormsModule, CommonModule, RouterModule],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
 export class Login {
-  // The "live" object the form is bound to.
-  // Two-way binding means: type in the input → loginData.username updates instantly.
+  // Two-way binding target: form inputs read/write this object.
   loginData: LoginModel = new LoginModel();
 
-  // Click handler. Mentor's naming convention: handle<What>Click().
-  // For now, just log what the user typed — proves binding works.
-  // In Stage C, this method will call the AuthService and hit /api/auth/login.
-  handleLoginClick() {
-    console.log("Login clicked!");
-    console.log("Username:", this.loginData.username);
-    console.log("Password:", this.loginData.password);
-    alert(`Login attempt — username: ${this.loginData.username}`);
+  // UI state flags.
+  isLoading: boolean = false;
+  errorMessage: string = '';
+
+  // Constructor injection — Angular provides AuthService via DI.
+  constructor(private authService: AuthService) {}
+
+  // Event binding target: called when the Login button is clicked.
+  handleLoginClick(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    // Observable + subscribe pattern (concept #10).
+    this.authService.login(this.loginData).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        // AuthService handles sessionStorage, BehaviorSubject push, and routing.
+        this.authService.saveSessionAndRoute(response);
+      },
+      error: (err: Error) => {
+        this.isLoading = false;
+        this.errorMessage = err.message;
+      }
+    });
   }
 }

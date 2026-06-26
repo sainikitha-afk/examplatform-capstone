@@ -1,0 +1,5 @@
+/* Minimal custom nav styles */
+.navbar .nav-link.active {
+  font-weight: 600;
+  border-bottom: 2px solid rgba(255,255,255,0.6);
+}

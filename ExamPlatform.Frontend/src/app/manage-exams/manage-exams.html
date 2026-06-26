@@ -1,0 +1,160 @@
+<!-- Manage Exams — Examiner CRUD + attach questions + publish -->
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3><i class="bi bi-file-earmark-text me-2"></i>My Exams</h3>
+    <div>
+      <button class="btn btn-primary" *ngIf="view === 'list'" (click)="showCreateForm()">
+        <i class="bi bi-plus-circle me-1"></i>New Exam
+      </button>
+      <button class="btn btn-secondary" *ngIf="view !== 'list'" (click)="view = 'list'">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+
+  <!-- ── LIST ── -->
+  <div *ngIf="view === 'list'">
+    <div *ngIf="isLoading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <table class="table table-striped table-hover" *ngIf="!isLoading">
+      <thead class="table-dark">
+        <tr><th>Title</th><th>Status</th><th>Duration</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of exams">
+          <td>{{ e.title }}</td>
+          <td>
+            <span class="badge"
+                  [ngClass]="{'bg-secondary':e.examStatus==='Draft','bg-success':e.examStatus==='Published','bg-primary':e.examStatus==='ResultsPublished'}">
+              {{ e.examStatus }}
+            </span>
+          </td>
+          <td>{{ e.durationMinutes }} min</td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary me-1" (click)="showEditForm(e)"
+                    *ngIf="e.examStatus === 'Draft'">Edit</button>
+            <button class="btn btn-sm btn-outline-info me-1" (click)="showAttachQuestions(e)"
+                    *ngIf="e.examStatus === 'Draft'">Questions</button>
+            <button class="btn btn-sm btn-outline-success me-1" (click)="handlePublishClick(e.examId)"
+                    *ngIf="e.examStatus === 'Draft'">Publish</button>
+            <button class="btn btn-sm btn-outline-primary me-1" (click)="handlePublishResultsClick(e.examId)"
+                    *ngIf="e.examStatus === 'Published'">Publish Results</button>
+            <button class="btn btn-sm btn-outline-danger" (click)="handleDeleteClick(e.examId)"
+                    *ngIf="e.examStatus === 'Draft'">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!isLoading && exams.length === 0" class="text-muted">No exams yet. Create one!</p>
+  </div>
+
+  <!-- ── CREATE FORM ── -->
+  <div *ngIf="view === 'create'" class="card shadow-sm">
+    <div class="card-header">Create New Exam</div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">Title</label>
+        <input class="form-control" [(ngModel)]="createForm.title" name="title" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Instructions</label>
+        <textarea class="form-control" rows="3" [(ngModel)]="createForm.instructions" name="instructions"></textarea>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label class="form-label">Duration (min)</label>
+          <input type="number" class="form-control" [(ngModel)]="createForm.durationMinutes" name="dur" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Total Marks</label>
+          <input type="number" class="form-control" [(ngModel)]="createForm.totalMarks" name="total" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Passing Marks</label>
+          <input type="number" class="form-control" [(ngModel)]="createForm.passingMarks" name="pass" />
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-5">
+          <label class="form-label">Start Time</label>
+          <input type="datetime-local" class="form-control" [(ngModel)]="createForm.startTime" name="start" />
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">End Time</label>
+          <input type="datetime-local" class="form-control" [(ngModel)]="createForm.endTime" name="end" />
+        </div>
+      </div>
+      <button class="btn btn-success" (click)="handleCreateClick()">
+        <i class="bi bi-check-circle me-1"></i>Create Exam
+      </button>
+    </div>
+  </div>
+
+  <!-- ── EDIT FORM ── -->
+  <div *ngIf="view === 'edit'" class="card shadow-sm">
+    <div class="card-header">Edit Exam</div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">Title</label>
+        <input class="form-control" [(ngModel)]="updateForm.title" name="title" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Instructions</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="updateForm.instructions" name="instructions"></textarea>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label class="form-label">Duration (min)</label>
+          <input type="number" class="form-control" [(ngModel)]="updateForm.durationMinutes" name="dur" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Total Marks</label>
+          <input type="number" class="form-control" [(ngModel)]="updateForm.totalMarks" name="total" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Passing Marks</label>
+          <input type="number" class="form-control" [(ngModel)]="updateForm.passingMarks" name="pass" />
+        </div>
+      </div>
+      <button class="btn btn-success" (click)="handleUpdateClick()">
+        <i class="bi bi-check-circle me-1"></i>Update
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ATTACH QUESTIONS ── -->
+  <div *ngIf="view === 'questions'">
+    <h5>Currently Attached</h5>
+    <p *ngIf="selectedExam.questions.length === 0" class="text-muted">No questions attached yet.</p>
+    <table *ngIf="selectedExam.questions.length > 0" class="table table-sm table-bordered mb-3">
+      <thead><tr><th>Question</th><th>Marks</th><th></th></tr></thead>
+      <tbody>
+        <tr *ngFor="let q of selectedExam.questions">
+          <td>{{ q.questionText }}</td>
+          <td>{{ q.marks }}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger"
+                    (click)="handleDetachClick(editingExamId, q.questionId)">Remove</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h5>Add From Question Bank</h5>
+    <div class="row g-2">
+      <div *ngFor="let q of questionBank" class="col-md-6">
+        <div class="form-check border rounded p-2">
+          <input type="checkbox" class="form-check-input"
+                 [checked]="selectedQuestionIds.has(q.questionId)"
+                 (change)="toggleQuestionSelect(q.questionId)" />
+          <label class="form-check-label ms-1">{{ q.questionText }} ({{ q.marks }} mk)</label>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary mt-3" (click)="handleAttachClick()">
+      <i class="bi bi-link-45deg me-1"></i>Attach Selected
+    </button>
+  </div>
+</div>

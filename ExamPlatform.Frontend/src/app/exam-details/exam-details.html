@@ -1,0 +1,49 @@
+<!-- Exam Details — shows full info before the candidate starts -->
+<div class="container mt-4">
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <!-- Interpolation -->
+        <h4 class="mb-0">{{ exam.title }}</h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <p><i class="bi bi-clock me-2"></i><strong>Duration:</strong> {{ exam.durationMinutes }} minutes</p>
+            <p><i class="bi bi-star me-2"></i><strong>Total Marks:</strong> {{ exam.totalMarks }}</p>
+            <p><i class="bi bi-check-circle me-2"></i><strong>Passing Marks:</strong> {{ exam.passingMarks }}</p>
+          </div>
+          <div class="col-md-6">
+            <p><i class="bi bi-calendar-event me-2"></i><strong>Start:</strong> {{ exam.startTime | date:'medium' }}</p>
+            <p><i class="bi bi-calendar-x me-2"></i><strong>End:</strong> {{ exam.endTime | date:'medium' }}</p>
+            <p>
+              <i class="bi bi-info-circle me-2"></i><strong>Status:</strong>
+              <span class="badge bg-success ms-1">{{ exam.examStatus }}</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- *ngIf: show instructions block only if there are instructions -->
+        <div *ngIf="exam.instructions" class="alert alert-info mt-3">
+          <strong>Instructions:</strong><br />{{ exam.instructions }}
+        </div>
+      </div>
+      <div class="card-footer text-end">
+        <a routerLink="/browse-exams" class="btn btn-outline-secondary me-2">
+          <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+        <!-- Event binding: start the exam -->
+        <button class="btn btn-primary" (click)="handleStartExamClick()">
+          <i class="bi bi-play-fill me-1"></i>Start Exam
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

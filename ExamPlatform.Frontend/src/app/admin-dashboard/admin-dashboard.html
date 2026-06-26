@@ -1,0 +1,96 @@
+<!-- Admin Dashboard — platform statistics -->
+<div class="container mt-4">
+  <h3><i class="bi bi-shield-check me-2"></i>Admin Dashboard — {{ fullName }}</h3>
+  <p class="text-muted">Platform-wide overview.</p>
+
+  <div *ngIf="isLoading()" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading() && !errorMessage" class="row g-3">
+
+    <div class="col-md-3">
+      <div class="card text-center border-primary">
+        <div class="card-body">
+          <i class="bi bi-people display-4 text-primary"></i>
+          <h2 class="mt-2">{{ stats.totalUsers }}</h2>
+          <p class="text-muted mb-0">Total Users</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card text-center border-info">
+        <div class="card-body">
+          <i class="bi bi-person-badge display-4 text-info"></i>
+          <h2 class="mt-2">{{ stats.totalExaminers }}</h2>
+          <p class="text-muted mb-0">Examiners</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card text-center border-success">
+        <div class="card-body">
+          <i class="bi bi-person display-4 text-success"></i>
+          <h2 class="mt-2">{{ stats.totalCandidates }}</h2>
+          <p class="text-muted mb-0">Candidates</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card text-center border-warning">
+        <div class="card-body">
+          <i class="bi bi-file-earmark-text display-4 text-warning"></i>
+          <h2 class="mt-2">{{ stats.totalExams }}</h2>
+          <p class="text-muted mb-0">Total Exams</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card text-center border-secondary">
+        <div class="card-body">
+          <i class="bi bi-journal-check display-4 text-secondary"></i>
+          <h2 class="mt-2">{{ stats.totalAttempts }}</h2>
+          <p class="text-muted mb-0">Total Attempts</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card text-center border-danger">
+        <div class="card-body">
+          <i class="bi bi-award display-4 text-danger"></i>
+          <h2 class="mt-2">{{ stats.totalCertificatesIssued }}</h2>
+          <p class="text-muted mb-0">Certificates Issued</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card text-center border-dark">
+        <div class="card-body">
+          <i class="bi bi-calendar-check display-4 text-dark"></i>
+          <h2 class="mt-2">{{ stats.examsCompletedLast30Days }}</h2>
+          <p class="text-muted mb-0">Completed (30 days)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <a routerLink="/admin/categories" class="btn btn-outline-primary me-2">
+      <i class="bi bi-tag me-1"></i>Categories
+    </a>
+    <a routerLink="/admin/users" class="btn btn-outline-secondary me-2">
+      <i class="bi bi-people me-1"></i>Users
+    </a>
+    <a routerLink="/admin/examiners" class="btn btn-outline-info">
+      <i class="bi bi-person-badge me-1"></i>Examiners
+    </a>
+  </div>
+</div>

@@ -1,0 +1,98 @@
+<!-- Attempt Exam Screen — timer, question navigator, and question card -->
+<div class="container-fluid mt-3">
+
+  <!-- Loading / Error states -->
+  <div *ngIf="(status$ | async) === 'loading'" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-2">Starting your exam...</p>
+  </div>
+
+  <div *ngIf="(status$ | async) === 'error'" class="alert alert-danger container">
+    {{ errorMessage$ | async }}
+  </div>
+
+  <!-- Main exam layout — shown when status is 'active' or 'submitting' -->
+  <div *ngIf="(status$ | async) === 'active' || (status$ | async) === 'submitting'">
+    <div class="row">
+
+      <!-- LEFT: Question + card -->
+      <div class="col-md-8">
+
+        <!-- Timer bar -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+          <h5 class="mb-0">{{ examTitle$ | async }}</h5>
+          <div>
+            <!-- CONCEPT DEMO: signal read with () in template -->
+            <span class="badge fs-5"
+                  [ngClass]="{'bg-danger': timeDisplay() < 120, 'bg-success': timeDisplay() >= 120}">
+              <i class="bi bi-clock me-1"></i>{{ formatTime(timeDisplay()) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- QuestionCard child component — @Input and @Output in action -->
+        <!-- CONCEPT DEMO: property binding [question] passes data DOWN to child -->
+        <!-- CONCEPT DEMO: event binding (answerSelected) receives data UP from child -->
+        <app-question-card
+          *ngIf="questions[currentIndex]"
+          [question]="questions[currentIndex]"
+          [selectedOptionId]="answers[questions[currentIndex].questionId] ?? null"
+          (answerSelected)="handleAnswerSelected($event)"
+        ></app-question-card>
+
+        <!-- Navigation buttons -->
+        <div class="d-flex justify-content-between mt-2">
+          <button class="btn btn-outline-secondary"
+                  [disabled]="currentIndex === 0"
+                  (click)="handleNavigateToQuestion(currentIndex - 1)">
+            <i class="bi bi-arrow-left"></i> Prev
+          </button>
+          <button class="btn btn-outline-secondary"
+                  [disabled]="currentIndex === questions.length - 1"
+                  (click)="handleNavigateToQuestion(currentIndex + 1)">
+            Next <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Navigator panel -->
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <!-- CONCEPT DEMO: signal read — answeredCount() -->
+            <small>{{ answeredCount() }} / {{ questions.length }} answered</small>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-2">
+              <!-- [ngClass] color legend -->
+              <span class="btn btn-primary btn-sm me-1">Current</span>
+              <span class="btn btn-success btn-sm me-1">Answered</span>
+              <span class="btn btn-outline-secondary btn-sm">Unanswered</span>
+            </p>
+            <!-- CONCEPT DEMO: *ngFor + [ngClass] for navigator squares -->
+            <div class="d-flex flex-wrap gap-1">
+              <button
+                *ngFor="let q of questions; let i = index"
+                [ngClass]="getNavSquareClass(q.questionId, i)"
+                (click)="handleNavigateToQuestion(i)"
+              >{{ i + 1 }}</button>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button
+              class="btn btn-danger w-100"
+              [disabled]="(status$ | async) === 'submitting'"
+              (click)="handleSubmitClick()"
+            >
+              <span *ngIf="(status$ | async) === 'submitting'">Submitting...</span>
+              <span *ngIf="(status$ | async) !== 'submitting'">
+                <i class="bi bi-send-check me-1"></i>Submit Exam
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,61 @@
+<!-- Browse Exams — published exam list with category filter -->
+<div class="container mt-4">
+  <h3><i class="bi bi-search me-2"></i>Browse Exams</h3>
+
+  <!-- Category filter — (change) event binding -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <select class="form-select" [(ngModel)]="selectedCategoryId" (change)="handleCategoryChange()">
+        <option [value]="null">All Categories</option>
+        <!-- *ngFor: render one option per category -->
+        <option *ngFor="let cat of categories" [value]="cat.catId">{{ cat.catName }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-4">
+    <div class="spinner-border text-primary"></div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <!-- Exam cards — *ngFor iterates the exams array -->
+  <div class="row g-3" *ngIf="!isLoading">
+    <div class="col-md-4" *ngFor="let exam of exams">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <!-- Interpolation: show exam title -->
+          <h5 class="card-title">{{ exam.title }}</h5>
+          <p class="text-muted small">
+            <i class="bi bi-clock me-1"></i>{{ exam.durationMinutes }} min &nbsp;|&nbsp;
+            <i class="bi bi-star me-1"></i>{{ exam.totalMarks }} marks
+          </p>
+          <p class="small">Pass: {{ exam.passingMarks }} marks</p>
+        </div>
+        <div class="card-footer">
+          <!-- Event binding: navigate to exam details -->
+          <button class="btn btn-primary btn-sm w-100" (click)="viewExamDetails(exam.examId)">
+            <i class="bi bi-eye me-1"></i>View Details
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No results -->
+  <div *ngIf="!isLoading && exams.length === 0 && !errorMessage" class="alert alert-info">
+    No published exams found. Check back later!
+  </div>
+
+  <!-- Pagination -->
+  <nav *ngIf="totalPages > 1" class="mt-3">
+    <ul class="pagination">
+      <li class="page-item" *ngFor="let p of [].constructor(totalPages); let i = index">
+        <!-- [ngClass]: active page styling; (click) event binding -->
+        <button class="page-link"
+                [ngClass]="{'active': currentPage === i+1}"
+                (click)="handlePageChange(i+1)">{{ i+1 }}</button>
+      </li>
+    </ul>
+  </nav>
+</div>

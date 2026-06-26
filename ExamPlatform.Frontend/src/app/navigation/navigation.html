@@ -1,0 +1,134 @@
+<!-- Navigation bar — shown on every page above <router-outlet> -->
+
+<!-- CONCEPT DEMO: async pipe — subscribes to the BehaviorSubject and auto-unsubscribes on destroy.
+     'as user' binds the emitted value to a local template variable. -->
+<ng-container *ngIf="(currentUser$ | async) as user">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary px-3">
+
+    <!-- Brand -->
+    <a class="navbar-brand fw-bold" routerLink="/candidate">
+      <i class="bi bi-mortarboard-fill me-1"></i>ExamHub
+    </a>
+
+    <!-- Bootstrap collapse toggle for mobile -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+
+        <!-- Candidate links — *ngIf shows only for Candidate role -->
+        <li class="nav-item" *ngIf="isRole('Candidate')">
+          <a class="nav-link"
+             routerLink="/candidate"
+             routerLinkActive="active"
+             [routerLinkActiveOptions]="{exact:true}">
+            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Candidate')">
+          <a class="nav-link" routerLink="/browse-exams" routerLinkActive="active">
+            <i class="bi bi-search me-1"></i>Browse Exams
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Candidate')">
+          <a class="nav-link" routerLink="/my-analytics" routerLinkActive="active">
+            <i class="bi bi-bar-chart me-1"></i>My Analytics
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Candidate')">
+          <a class="nav-link" routerLink="/my-certificates" routerLinkActive="active">
+            <i class="bi bi-award me-1"></i>Certificates
+          </a>
+        </li>
+
+        <!-- Examiner links -->
+        <li class="nav-item" *ngIf="isRole('Examiner')">
+          <a class="nav-link" routerLink="/examiner" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">
+            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Examiner')">
+          <a class="nav-link" routerLink="/manage-questions" routerLinkActive="active">
+            <i class="bi bi-question-circle me-1"></i>Questions
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Examiner')">
+          <a class="nav-link" routerLink="/manage-exams" routerLinkActive="active">
+            <i class="bi bi-file-earmark-text me-1"></i>Exams
+          </a>
+        </li>
+
+        <!-- Admin links -->
+        <li class="nav-item" *ngIf="isRole('Admin')">
+          <a class="nav-link" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">
+            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Admin')">
+          <a class="nav-link" routerLink="/admin/categories" routerLinkActive="active">
+            <i class="bi bi-tag me-1"></i>Categories
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Admin')">
+          <a class="nav-link" routerLink="/admin/users" routerLinkActive="active">
+            <i class="bi bi-people me-1"></i>Users
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isRole('Admin')">
+          <a class="nav-link" routerLink="/admin/examiners" routerLinkActive="active">
+            <i class="bi bi-person-badge me-1"></i>Examiners
+          </a>
+        </li>
+
+      </ul>
+
+      <!-- Right side: notifications badge + username + logout -->
+      <ul class="navbar-nav ms-auto align-items-center">
+        <li class="nav-item me-2">
+          <a class="nav-link position-relative" routerLink="/notifications">
+            <i class="bi bi-bell-fill"></i>
+            <!-- CONCEPT DEMO: signal read with () — unreadCount() returns the current value -->
+            <span *ngIf="unreadCount() > 0"
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              {{ unreadCount() }}
+            </span>
+          </a>
+        </li>
+
+        <li class="nav-item me-2">
+          <!-- Interpolation: show the logged-in user's full name -->
+          <span class="navbar-text text-white">
+            <i class="bi bi-person-circle me-1"></i>{{ user.fullName }}
+            <!-- [ngClass] demo: highlight role badge by role value -->
+            <span class="badge ms-1"
+                  [ngClass]="{
+                    'bg-warning text-dark': user.role === 'Admin',
+                    'bg-info text-dark': user.role === 'Examiner',
+                    'bg-light text-dark': user.role === 'Candidate'
+                  }">
+              {{ user.role | uppercase }}
+            </span>
+          </span>
+        </li>
+
+        <li class="nav-item">
+          <!-- Event binding: (click) calls handleLogoutClick() -->
+          <button class="btn btn-outline-light btn-sm" (click)="handleLogoutClick()">
+            <i class="bi bi-box-arrow-right me-1"></i>Logout
+          </button>
+        </li>
+      </ul>
+    </div>
+  </nav>
+</ng-container>
+
+<!-- Show a minimal bar when no user is logged in (login / register pages) -->
+<ng-container *ngIf="!(currentUser$ | async)">
+  <nav class="navbar navbar-dark bg-primary px-3">
+    <span class="navbar-brand fw-bold">
+      <i class="bi bi-mortarboard-fill me-1"></i>ExamHub
+    </span>
+  </nav>
+</ng-container>

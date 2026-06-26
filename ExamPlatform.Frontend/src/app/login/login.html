@@ -1,20 +1,71 @@
-<h2 class="text-center">ExamHub Login</h2>
+<!-- Login form — Bootstrap 5 card layout -->
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white text-center">
+          <h4 class="mb-0"><i class="bi bi-mortarboard-fill me-2"></i>ExamHub Login</h4>
+        </div>
+        <div class="card-body p-4">
 
-<!-- A simple form. Plain HTML for now — we'll add Bootstrap styling soon. -->
-<div>
-  <label>Username</label>
-  <!-- Two-way binding: [(ngModel)] keeps loginData.username and this input in sync -->
-  <input type="text" [(ngModel)]="loginData.username" name="username" />
+          <!-- Structural directive: *ngIf shows the alert only when there is an error -->
+          <div *ngIf="errorMessage" class="alert alert-danger">
+            <i class="bi bi-exclamation-circle me-1"></i>{{ errorMessage }}
+          </div>
+
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Email or Username</label>
+              <!-- Two-way binding: [(ngModel)] keeps loginData.emailOrUsername in sync with the input -->
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="loginData.emailOrUsername"
+                name="emailOrUsername"
+                placeholder="your@email.com or username"
+                required
+              />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <!-- Two-way binding -->
+              <input
+                type="password"
+                class="form-control"
+                [(ngModel)]="loginData.password"
+                name="password"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <!-- Event binding: (click) calls handleLoginClick() -->
+            <!-- Property binding: [disabled] disables button while loading -->
+            <button
+              class="btn btn-primary w-100"
+              (click)="handleLoginClick()"
+              [disabled]="isLoading"
+            >
+              <!-- Interpolation: shows spinner text while loading -->
+              <span *ngIf="isLoading"><i class="bi bi-hourglass-split me-1"></i>Logging in...</span>
+              <span *ngIf="!isLoading"><i class="bi bi-box-arrow-in-right me-1"></i>Login</span>
+            </button>
+          </form>
+
+          <hr />
+          <p class="text-center mb-0">
+            New candidate?
+            <!-- RouterModule enables routerLink directive -->
+            <a routerLink="/register">Register here</a>
+          </p>
+        </div>
+
+        <!-- Interpolation: live preview of what the user is typing (teaches concept visually) -->
+        <div class="card-footer text-muted text-center small">
+          Typing as: <strong>{{ loginData.emailOrUsername }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-
-<div>
-  <label>Password</label>
-  <input type="password" [(ngModel)]="loginData.password" name="password" />
-</div>
-
-<!-- Event binding: (click) wires the button to the handleLoginClick method -->
-<button (click)="handleLoginClick()">Login</button>
-
-<!-- Interpolation: shows live what's in the model. Type in the box, watch it update. -->
-<hr/>
-<p>You typed: <strong>{{ loginData.username }}</strong></p>

@@ -1,0 +1,5 @@
+/* Smooth hover transition for option rows */
+.form-check:hover {
+  opacity: 0.88;
+  transition: opacity 0.1s;
+}

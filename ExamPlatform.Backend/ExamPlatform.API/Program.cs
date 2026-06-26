@@ -30,7 +30,15 @@ namespace ExamPlatform.API
             #endregion
 
             #region CORS
-            // Filled when Angular calls the API.
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AngularDev", policy =>
+                {
+                    policy.WithOrigins("http://localhost:4200")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
             #endregion
 
             #region Contexts
@@ -87,7 +95,8 @@ namespace ExamPlatform.API
             #endregion
 
             #region Standard Pipeline
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
+            app.UseCors("AngularDev");
             app.UseAuthentication();
             app.UseAuthorization();
             #endregion

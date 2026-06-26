@@ -1,0 +1,74 @@
+<!-- Manage Examiners (Admin) — create examiner accounts -->
+<div class="container mt-4">
+  <h3><i class="bi bi-person-badge me-2"></i>Create Examiner Account</h3>
+
+  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header">New Examiner</div>
+        <div class="card-body">
+          <form #examinerForm="ngForm" (ngSubmit)="handleCreateClick(examinerForm)">
+
+            <div class="mb-3">
+              <label class="form-label">Full Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="formData.fullName" name="fullName"
+                     required minlength="2" #fnCtrl="ngModel" />
+              <div *ngIf="fnCtrl.invalid && fnCtrl.touched" class="text-danger small mt-1">
+                <span *ngIf="fnCtrl.errors?.['required']">Required.</span>
+                <span *ngIf="fnCtrl.errors?.['minlength']">At least 2 characters.</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Username <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="formData.username" name="username"
+                     required minlength="3" #unCtrl="ngModel" />
+              <div *ngIf="unCtrl.invalid && unCtrl.touched" class="text-danger small mt-1">
+                <span *ngIf="unCtrl.errors?.['required']">Required.</span>
+                <span *ngIf="unCtrl.errors?.['minlength']">At least 3 characters.</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" [(ngModel)]="formData.email" name="email"
+                     required email #emCtrl="ngModel" />
+              <div *ngIf="emCtrl.invalid && emCtrl.touched" class="text-danger small mt-1">
+                <span *ngIf="emCtrl.errors?.['required']">Required.</span>
+                <span *ngIf="emCtrl.errors?.['email']">Invalid email.</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control" [(ngModel)]="formData.password" name="password"
+                     required minlength="6" #pwCtrl="ngModel" />
+              <div *ngIf="pwCtrl.invalid && pwCtrl.touched" class="text-danger small mt-1">
+                <span *ngIf="pwCtrl.errors?.['required']">Required.</span>
+                <span *ngIf="pwCtrl.errors?.['minlength']">At least 6 characters.</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" [disabled]="isLoading">
+              <span *ngIf="isLoading">Creating...</span>
+              <span *ngIf="!isLoading"><i class="bi bi-person-plus me-1"></i>Create Examiner</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recently created examiners -->
+    <div class="col-md-6" *ngIf="createdExaminers.length > 0">
+      <h5>Recently Created</h5>
+      <ul class="list-group">
+        <li *ngFor="let e of createdExaminers" class="list-group-item">
+          <strong>{{ e.fullName }}</strong> <span class="text-muted ms-2">{{ e.email }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

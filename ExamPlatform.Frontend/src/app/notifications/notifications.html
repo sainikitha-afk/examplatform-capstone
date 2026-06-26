@@ -1,0 +1,37 @@
+<!-- Notifications — CONCEPT DEMO: date pipe, *ngFor, [ngClass] for read/unread -->
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3><i class="bi bi-bell me-2"></i>Notifications</h3>
+    <!-- Event binding -->
+    <button class="btn btn-outline-secondary btn-sm" (click)="handleMarkAllReadClick()">
+      <i class="bi bi-check2-all me-1"></i>Mark All Read
+    </button>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && notifications.length === 0 && !errorMessage" class="alert alert-info">
+    No notifications.
+  </div>
+
+  <!-- *ngFor: one row per notification -->
+  <div *ngFor="let n of notifications"
+       class="card mb-2 shadow-sm"
+       [ngClass]="{'border-primary': !n.isRead, 'opacity-75': n.isRead}">
+    <div class="card-body d-flex justify-content-between align-items-start">
+      <div>
+        <!-- Interpolation -->
+        <p class="mb-1" [ngClass]="{'fw-bold': !n.isRead}">{{ n.message }}</p>
+        <!-- date pipe: built-in Angular pipe -->
+        <small class="text-muted">{{ n.createdAt | date:'medium' }}</small>
+        <span class="badge bg-secondary ms-2">{{ n.notifType }}</span>
+      </div>
+      <button *ngIf="!n.isRead"
+              class="btn btn-sm btn-outline-primary ms-2"
+              (click)="handleMarkReadClick(n)">
+        Mark Read
+      </button>
+    </div>
+  </div>
+</div>

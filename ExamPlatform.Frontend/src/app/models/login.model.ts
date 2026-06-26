@@ -1,9 +1,9 @@
-// LoginModel — holds the username + password the user types into the login form.
+// LoginModel — holds the credentials the user types into the login form.
 // Sent to POST /api/auth/login as the request body.
-// Plain TypeScript class. Same shape your backend's LoginDto expects.
+// Backend's LoginDto accepts either email or username in the emailOrUsername field.
 export class LoginModel {
   constructor(
-    public username: string = "",
+    public emailOrUsername: string = "",
     public password: string = ""
   ) {}
 }

@@ -1,3 +1,9 @@
-<h1 style="text-align: center;">ExamPlatform</h1>
-<hr/>
-<app-login></app-login>
+<!-- app.html — Root template: navigation bar + router outlet.
+     CONCEPT DEMO: <router-outlet> — Angular replaces this tag with whatever component
+     matches the current URL in app.routes.ts. -->
+
+<!-- Navigation bar renders on every page -->
+<app-navigation></app-navigation>
+
+<!-- Router outlet: swaps in the route's component here -->
+<router-outlet></router-outlet>
