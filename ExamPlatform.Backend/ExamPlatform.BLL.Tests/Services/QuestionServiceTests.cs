@@ -13,6 +13,7 @@ using ExamPlatform.Domain.Entities;
 using ExamPlatform.Domain.Enums;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -39,6 +40,9 @@ namespace ExamPlatform.BLL.Tests.Services
 
             var options = new DbContextOptionsBuilder<ExamPlatformContext>()
                 .UseInMemoryDatabase($"QSvcDb_{Guid.NewGuid()}")
+                // BulkCreateAsync opens an explicit transaction; the InMemory provider
+                // doesn't support transactions, so ignore the warning (no-op transaction).
+                .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
                 .Options;
             _dbContext = new ExamPlatformContext(options);
 
@@ -154,6 +158,15 @@ namespace ExamPlatform.BLL.Tests.Services
             var act = async () => await _sut.CreateAsync(10, 1, "Q?", marks, "Easy",
                 TestDataBuilder.BuildFourOptionTuples());
             await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task CreateAsync_WithEmptyDifficulty_ThrowsValidationException()
+        {
+            var act = async () => await _sut.CreateAsync(10, 1, "Q?", 10m, "  ",
+                TestDataBuilder.BuildFourOptionTuples());
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*Difficulty*");
         }
 
         [Test]
@@ -481,6 +494,323 @@ namespace ExamPlatform.BLL.Tests.Services
             result.SuccessCount.Should().Be(1);
             result.FailureCount.Should().Be(1);
             result.Errors[0].Should().Contain("Row 2"); // the duplicate row
+        }
+
+        [Test]
+        public async Task ImportFromExcelAsync_EveryInvalidColumnKind_CollectsOneErrorPerRow()
+        {
+            // One bad row per validation rule: catId, marks, difficulty,
+            // missing option, invalid correct letter.
+            var rows = new List<(int, string, decimal, string, string, string, string, string, string)>
+            {
+                (0, "Bad category?",   10m, "Easy",    "A", "B", "C", "D", "A"),
+                (1, "",                10m, "Easy",    "A", "B", "C", "D", "A"), // empty text
+                (1, "Bad marks?",       0m, "Easy",    "A", "B", "C", "D", "A"),
+                (1, "Bad difficulty?", 10m, "Extreme", "A", "B", "C", "D", "A"),
+                (1, "Missing option?", 10m, "Easy",    "",  "B", "C", "D", "A"),
+                (1, "Bad correct?",    10m, "Easy",    "A", "B", "C", "D", "X"),
+            };
+            using var stream = BuildExcelStream(rows);
+
+            var result = await _sut.ImportFromExcelAsync(examinerId: 10, excelStream: stream);
+
+            result.SuccessCount.Should().Be(0);
+            result.FailureCount.Should().Be(6);
+            result.Errors.Should().Contain(e => e.Contains("CategoryId"));
+            result.Errors.Should().Contain(e => e.Contains("QuestionText"));
+            result.Errors.Should().Contain(e => e.Contains("Marks"));
+            result.Errors.Should().Contain(e => e.Contains("Difficulty"));
+            result.Errors.Should().Contain(e => e.Contains("options"));
+            result.Errors.Should().Contain(e => e.Contains("CorrectOption"));
+        }
+
+        [Test]
+        public async Task ImportFromExcelAsync_UnexpectedError_RecordsRowErrorAndContinues()
+        {
+            // Row 2 hits an unexpected repository crash; row 3 still imports.
+            _questionRepoMock
+                .Setup(r => r.IsDuplicateAsync(10, 1, "Crashes the repo?"))
+                .ThrowsAsync(new InvalidOperationException("DB connection lost"));
+            _questionRepoMock
+                .Setup(r => r.GetByIdWithOptionsAsync(It.IsAny<int>()))
+                .ReturnsAsync(TestDataBuilder.BuildQuestion(1, examinerId: 10));
+
+            var rows = new List<(int, string, decimal, string, string, string, string, string, string)>
+            {
+                (1, "Crashes the repo?", 10m, "Easy", "A", "B", "C", "D", "A"),
+                (1, "A valid question?", 10m, "Easy", "A", "B", "C", "D", "A"),
+            };
+            using var stream = BuildExcelStream(rows);
+
+            var result = await _sut.ImportFromExcelAsync(examinerId: 10, excelStream: stream);
+
+            result.SuccessCount.Should().Be(1);
+            result.FailureCount.Should().Be(1);
+            result.Errors[0].Should().Contain("Unexpected error");
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetAllAsync — role-based scoping
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetAllAsync_Examiner_ScopesToOwnQuestions()
+        {
+            _questionRepoMock.Setup(r => r.GetFilteredAsync(10, null, null, null))
+                             .ReturnsAsync(new List<Question>());
+
+            await _sut.GetAllAsync(requesterId: 10, requesterRole: UserRole.Examiner);
+
+            _questionRepoMock.Verify(r => r.GetFilteredAsync(10, null, null, null), Times.Once);
+        }
+
+        [Test]
+        public async Task GetAllAsync_Admin_SeesAllQuestions()
+        {
+            _questionRepoMock.Setup(r => r.GetFilteredAsync(null, 2, "Easy", "di"))
+                             .ReturnsAsync(new List<Question>());
+
+            await _sut.GetAllAsync(requesterId: 99, requesterRole: UserRole.Admin,
+                categoryId: 2, difficulty: "Easy", search: "di");
+
+            // examinerId must be null for admins — no ownership filter.
+            _questionRepoMock.Verify(r => r.GetFilteredAsync(null, 2, "Easy", "di"), Times.Once);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetStatsAsync
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetStatsAsync_ComputesDifficultyAndCategoryCounts()
+        {
+            var cat1 = TestDataBuilder.BuildCategory(1, "C#");
+            var cat2 = TestDataBuilder.BuildCategory(2, "SQL");
+            var q1 = TestDataBuilder.BuildQuestion(1, difficulty: "Easy");   q1.Category = cat1;
+            var q2 = TestDataBuilder.BuildQuestion(2, difficulty: "MEDIUM"); q2.Category = cat1;
+            var q3 = TestDataBuilder.BuildQuestion(3, difficulty: "hard");   q3.Category = cat2; q3.CatId = 2;
+
+            _questionRepoMock.Setup(r => r.GetForStatsAsync(10))
+                             .ReturnsAsync(new List<Question> { q1, q2, q3 });
+
+            var stats = await _sut.GetStatsAsync(requesterId: 10, requesterRole: UserRole.Examiner);
+
+            stats.TotalQuestions.Should().Be(3);
+            stats.Easy.Should().Be(1);
+            stats.Medium.Should().Be(1);   // case-insensitive bucket
+            stats.Hard.Should().Be(1);
+            stats.ByCategory.Should().HaveCount(2);
+            stats.ByCategory.First().Count.Should().Be(2); // most questions first (C#)
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   BulkCreateAsync
+        // ════════════════════════════════════════════════════════════════
+
+        private static (int, string, decimal, string, IEnumerable<(string, bool)>) BulkItem(
+            string text, int catId = 1) =>
+            (catId, text, 10m, "Easy", TestDataBuilder.BuildFourOptionTuples());
+
+        [Test]
+        public async Task BulkCreateAsync_ValidBatch_CreatesAllQuestionsTransactionally()
+        {
+            _questionRepoMock.Setup(r => r.GetByIdWithOptionsAsync(It.IsAny<int>()))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(1, examinerId: 10));
+
+            var result = await _sut.BulkCreateAsync(10, new[]
+            {
+                BulkItem("What is EF Core?"),
+                BulkItem("What is LINQ?"),
+            });
+
+            result.Should().HaveCount(2);
+            _questionRepoMock.Verify(r => r.AddAsync(It.IsAny<Question>()), Times.Exactly(2));
+            _optionRepoMock.Verify(r => r.AddAsync(It.IsAny<QuestionOption>()), Times.Exactly(8));
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_EmptyList_ThrowsValidationException()
+        {
+            var act = async () => await _sut.BulkCreateAsync(10,
+                Array.Empty<(int, string, decimal, string, IEnumerable<(string, bool)>)>());
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_IntraBatchDuplicate_ThrowsValidationException()
+        {
+            var act = async () => await _sut.BulkCreateAsync(10, new[]
+            {
+                BulkItem("Same question?"),
+                BulkItem("  same QUESTION?  ".Trim()), // same after normalisation
+            });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*Duplicate question text*");
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_CategoryDoesNotExist_ThrowsValidationException()
+        {
+            _categoryRepoMock.Setup(r => r.GetByIdAsync(77))
+                             .ReturnsAsync((ExamCategory?)null);
+
+            var act = async () => await _sut.BulkCreateAsync(10, new[] { BulkItem("Q?", catId: 77) });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*does not exist*");
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_DatabaseDuplicate_ThrowsDuplicateQuestionException()
+        {
+            _questionRepoMock
+                .Setup(r => r.IsDuplicateAsync(10, 1, It.IsAny<string>()))
+                .ReturnsAsync(true);
+
+            var act = async () => await _sut.BulkCreateAsync(10, new[] { BulkItem("Existing?") });
+            await act.Should().ThrowAsync<DuplicateQuestionException>();
+        }
+
+        [TestCase("", TestName = "EmptyText")]
+        [TestCase("   ", TestName = "WhitespaceText")]
+        public async Task BulkCreateAsync_InvalidQuestionText_ThrowsValidationException(string text)
+        {
+            var act = async () => await _sut.BulkCreateAsync(10, new[] { BulkItem(text) });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*Question 1*");
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   UpdateAsync / SoftDeleteAsync — remaining validation branches
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task UpdateAsync_QuestionNotFound_ThrowsQuestionNotFoundException()
+        {
+            _questionRepoMock.Setup(r => r.GetByIdWithOptionsAsync(999))
+                             .ReturnsAsync((Question?)null);
+
+            var act = async () => await _sut.UpdateAsync(999, 10, UserRole.Examiner,
+                "Q?", 10m, "Easy", TestDataBuilder.BuildFourOptionTuples());
+            await act.Should().ThrowAsync<QuestionNotFoundException>();
+        }
+
+        [Test]
+        public async Task SoftDeleteAsync_QuestionNotFound_ThrowsQuestionNotFoundException()
+        {
+            _questionRepoMock.Setup(r => r.GetByIdAsync(999))
+                             .ReturnsAsync((Question?)null);
+
+            var act = async () => await _sut.SoftDeleteAsync(999, 10, UserRole.Examiner);
+            await act.Should().ThrowAsync<QuestionNotFoundException>();
+        }
+
+        [Test]
+        public async Task UpdateAsync_EmptyText_ThrowsValidationException()
+        {
+            var q = TestDataBuilder.BuildQuestion(1, examinerId: 10);
+            _questionRepoMock.Setup(r => r.GetByIdWithOptionsAsync(1)).ReturnsAsync(q);
+
+            var act = async () => await _sut.UpdateAsync(1, 10, UserRole.Examiner,
+                "  ", 10m, "Easy", TestDataBuilder.BuildFourOptionTuples());
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task UpdateAsync_ZeroMarks_ThrowsValidationException()
+        {
+            var q = TestDataBuilder.BuildQuestion(1, examinerId: 10);
+            _questionRepoMock.Setup(r => r.GetByIdWithOptionsAsync(1)).ReturnsAsync(q);
+
+            var act = async () => await _sut.UpdateAsync(1, 10, UserRole.Examiner,
+                "Q?", 0m, "Easy", TestDataBuilder.BuildFourOptionTuples());
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task UpdateAsync_ThreeOptions_ThrowsValidationException()
+        {
+            var q = TestDataBuilder.BuildQuestion(1, examinerId: 10);
+            _questionRepoMock.Setup(r => r.GetByIdWithOptionsAsync(1)).ReturnsAsync(q);
+
+            var act = async () => await _sut.UpdateAsync(1, 10, UserRole.Examiner,
+                "Q?", 10m, "Easy", new List<(string, bool)> { ("A", true), ("B", false), ("C", false) });
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task UpdateAsync_TwoCorrectOptions_ThrowsValidationException()
+        {
+            var q = TestDataBuilder.BuildQuestion(1, examinerId: 10);
+            _questionRepoMock.Setup(r => r.GetByIdWithOptionsAsync(1)).ReturnsAsync(q);
+
+            var act = async () => await _sut.UpdateAsync(1, 10, UserRole.Examiner,
+                "Q?", 10m, "Easy",
+                new List<(string, bool)> { ("A", true), ("B", true), ("C", false), ("D", false) });
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_ZeroMarks_ThrowsValidationException()
+        {
+            var act = async () => await _sut.BulkCreateAsync(10, new[]
+            {
+                (1, "Q?", 0m, "Easy", TestDataBuilder.BuildFourOptionTuples().AsEnumerable()
+                    .Select(t => (t.OptionText, t.IsCorrect)))
+            });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*Marks*");
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_EmptyDifficulty_ThrowsValidationException()
+        {
+            var act = async () => await _sut.BulkCreateAsync(10, new[]
+            {
+                (1, "Q?", 10m, " ", TestDataBuilder.BuildFourOptionTuples().AsEnumerable()
+                    .Select(t => (t.OptionText, t.IsCorrect)))
+            });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*Difficulty*");
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_ThreeOptions_ThrowsValidationException()
+        {
+            var threeOptions = new List<(string, bool)> { ("A", true), ("B", false), ("C", false) };
+            var act = async () => await _sut.BulkCreateAsync(10, new[]
+            {
+                (1, "Q?", 10m, "Easy", threeOptions.AsEnumerable())
+            });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*exactly 4 options*");
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_TwoCorrectOptions_ThrowsValidationException()
+        {
+            var twoCorrect = new List<(string, bool)>
+            {
+                ("A", true), ("B", true), ("C", false), ("D", false)
+            };
+            var act = async () => await _sut.BulkCreateAsync(10, new[]
+            {
+                (1, "Q?", 10m, "Easy", twoCorrect.AsEnumerable())
+            });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*Exactly one option*");
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_InsertFailure_RollsBackAndRethrows()
+        {
+            _questionRepoMock.Setup(r => r.SaveChangesAsync())
+                             .ThrowsAsync(new InvalidOperationException("insert failed"));
+
+            var act = async () => await _sut.BulkCreateAsync(10, new[] { BulkItem("Q?") });
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            // Options were never written because the question insert failed.
+            _optionRepoMock.Verify(r => r.AddAsync(It.IsAny<QuestionOption>()), Times.Never);
         }
     }
 }

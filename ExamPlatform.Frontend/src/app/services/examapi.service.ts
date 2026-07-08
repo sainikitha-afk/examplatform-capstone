@@ -34,14 +34,33 @@ export class ExamApiService {
     return this.http.get<ExamDetailModel>(`${this.baseUrl}/${id}`);
   }
 
+  // Converts a datetime-local input value (e.g. "2026-07-08T17:00", no timezone)
+  // to a UTC ISO string. The backend stores timestamps as UTC in PostgreSQL, and
+  // Npgsql rejects timezone-less values — so we convert BEFORE sending.
+  // Empty values become null (end time is optional; the backend defaults it).
+  private toUtcIso(localValue: string): string | null {
+    if (!localValue) return null;
+    return new Date(localValue).toISOString();
+  }
+
   // POST /api/exams (Examiner) — create a draft exam
   createExam(data: CreateExamModel): Observable<ExamSummaryModel> {
-    return this.http.post<ExamSummaryModel>(this.baseUrl, data);
+    const payload = {
+      ...data,
+      startTime: this.toUtcIso(data.startTime),
+      endTime: this.toUtcIso(data.endTime)   // null → backend defaults to +30 days
+    };
+    return this.http.post<ExamSummaryModel>(this.baseUrl, payload);
   }
 
   // PUT /api/exams/{id} (Examiner) — update a draft exam
   updateExam(id: number, data: UpdateExamModel): Observable<ExamSummaryModel> {
-    return this.http.put<ExamSummaryModel>(`${this.baseUrl}/${id}`, data);
+    const payload = {
+      ...data,
+      startTime: this.toUtcIso(data.startTime),
+      endTime: this.toUtcIso(data.endTime)
+    };
+    return this.http.put<ExamSummaryModel>(`${this.baseUrl}/${id}`, payload);
   }
 
   // DELETE /api/exams/{id} (Examiner) → 204

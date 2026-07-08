@@ -130,8 +130,24 @@ namespace ExamPlatform.BLL.Services
                 return fullExisting;
             }
 
+            // ─── ONE ATTEMPT PER CANDIDATE ────────────────────────────
+            // Once a candidate has completed this exam (submitted or timed out),
+            // it is no longer available to them. In-progress resumes were
+            // handled above; this only blocks brand-new attempts.
+            if (await _attemptRepository.HasCompletedAttemptAsync(userId, examId))
+            {
+                _logger.LogWarning(
+                    "User {UserId} tried to re-attempt exam {ExamId} after completing it.",
+                    userId, examId);
+                throw new ExamNotOpenForAttemptException(
+                    "you have already completed this exam. Each exam can only be taken once.");
+            }
+
             // ─── WINDOW CHECK (new attempts only) ────────────────────
             // Only enforce start/end times when creating a brand-new attempt.
+            // NOTE: a candidate who starts BEFORE EndTime always receives the
+            // full duration — starting at 5:29 for a window ending 5:30 is
+            // allowed, and the server timer lets them finish past 5:30.
             var now = DateTime.UtcNow;
             if (now < exam.StartTime)
             {

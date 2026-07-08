@@ -7,8 +7,10 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ExamApiService } from '../services/examapi.service';
 import { QuestionApiService } from '../services/questionapi.service';
+import { CategoryApiService } from '../services/categoryapi.service';
 import { ExamSummaryModel, ExamDetailModel, CreateExamModel, UpdateExamModel } from '../models/exam.model';
 import { QuestionModel } from '../models/question.model';
+import { CategoryModel } from '../models/category.model';
 
 @Component({
   selector: 'app-manage-exams',
@@ -20,6 +22,7 @@ export class ManageExams implements OnInit {
   exams: ExamSummaryModel[] = [];
   selectedExam: ExamDetailModel = new ExamDetailModel();
   questionBank: QuestionModel[] = [];
+  categories: CategoryModel[] = [];
   selectedQuestionIds: Set<number> = new Set();
   isLoading: boolean = false;
   isSaving: boolean = false;
@@ -34,6 +37,7 @@ export class ManageExams implements OnInit {
   constructor(
     private examService: ExamApiService,
     private questionService: QuestionApiService,
+    private categoryService: CategoryApiService,
     private router: Router
   ) {}
 
@@ -42,7 +46,14 @@ export class ManageExams implements OnInit {
     this.router.navigate(['/exam-attempts', examId]);
   }
 
-  ngOnInit(): void { this.loadMyExams(); }
+  ngOnInit(): void {
+    this.loadMyExams();
+    // The create form needs the category dropdown populated.
+    this.categoryService.loadCategories().subscribe({
+      next: (cats) => this.categories = cats,
+      error: () => this.categories = []
+    });
+  }
 
   loadMyExams(): void {
     this.isLoading = true;
@@ -59,6 +70,15 @@ export class ManageExams implements OnInit {
 
   handleCreateClick(): void {
     if (this.isSaving) return;
+    // Client-side validation mirrors the backend rules — the form must not
+    // proceed with missing required fields (end time is intentionally optional).
+    if (!this.createForm.title.trim()) { this.errorMessage = 'Exam title is required.'; return; }
+    if (!this.createForm.catId)        { this.errorMessage = 'Please select a category.'; return; }
+    if (!this.createForm.startTime)    { this.errorMessage = 'Start time is required.'; return; }
+    if (this.createForm.endTime && this.createForm.endTime <= this.createForm.startTime) {
+      this.errorMessage = 'End time must be after the start time.';
+      return;
+    }
     this.isSaving = true;
     this.errorMessage = '';
     this.examService.createExam(this.createForm).subscribe({

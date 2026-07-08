@@ -282,5 +282,115 @@ namespace ExamPlatform.BLL.Tests.Services
             var act = async () => await _sut.RejectAsync(1, adminNote: null);
             await act.Should().ThrowAsync<ExaminerRequestAlreadyProcessedException>();
         }
+
+        // ════════════════════════════════════════════════════════════════
+        //   READ METHODS
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetAllAsync_ReturnsAllRequests()
+        {
+            _requestRepoMock.Setup(r => r.GetAllAsync())
+                            .ReturnsAsync(new List<ExaminerRequest>
+                            {
+                                TestDataBuilder.BuildExaminerRequest(1),
+                                TestDataBuilder.BuildExaminerRequest(2, email: "b@x.com"),
+                            });
+
+            var result = await _sut.GetAllAsync();
+
+            result.Should().HaveCount(2);
+        }
+
+        [Test]
+        public async Task GetPendingAsync_ReturnsOnlyPendingRequests()
+        {
+            _requestRepoMock.Setup(r => r.GetPendingAsync())
+                            .ReturnsAsync(new List<ExaminerRequest>
+                            {
+                                TestDataBuilder.BuildExaminerRequest(1)
+                            });
+
+            var result = await _sut.GetPendingAsync();
+
+            result.Should().HaveCount(1);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   SubmitAsync — remaining validation branches
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task SubmitAsync_EmptyFullName_ThrowsValidationException()
+        {
+            var act = async () => await _sut.SubmitAsync(
+                "", "riya@example.com", "A long enough purpose describing teaching experience.");
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*Full name*");
+        }
+
+        [Test]
+        public async Task SubmitAsync_InvalidEmail_ThrowsValidationException()
+        {
+            var act = async () => await _sut.SubmitAsync(
+                "Riya Sharma", "not-an-email", "A long enough purpose describing teaching experience.");
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*valid email*");
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   ApproveAsync — remaining branches
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task ApproveAsync_EmailAlreadyHasUserAccount_ThrowsDuplicateEmailException()
+        {
+            var request = TestDataBuilder.BuildExaminerRequest(
+                requestId: 1, email: "riya@example.com", status: ExaminerRequestStatus.Pending);
+            _requestRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(request);
+
+            // The applicant already registered as a Candidate with this email.
+            _userRepoMock.Setup(r => r.IsEmailTakenAsync("riya@example.com")).ReturnsAsync(true);
+
+            var act = async () => await _sut.ApproveAsync(1);
+            await act.Should().ThrowAsync<DuplicateEmailException>();
+        }
+
+        [Test]
+        public async Task ApproveAsync_EmailFailure_StillApprovesAndReturnsCredentials()
+        {
+            var request = TestDataBuilder.BuildExaminerRequest(
+                requestId: 1, email: "riya@example.com", status: ExaminerRequestStatus.Pending);
+            _requestRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(request);
+            _userRepoMock.Setup(r => r.IsUsernameTakenAsync("riya")).ReturnsAsync(false);
+            _emailSvcMock.Setup(s => s.SendAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                         .ThrowsAsync(new InvalidOperationException("SMTP down"));
+
+            var result = await _sut.ApproveAsync(1);
+
+            // The account was created; credentials are still in the response.
+            result.Request.Status.Should().Be(ExaminerRequestStatus.Approved);
+            result.TemporaryPassword.Should().NotBeNullOrEmpty();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   RejectAsync — remaining branches
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task RejectAsync_EmailFailure_StillRejectsTheRequest()
+        {
+            var request = TestDataBuilder.BuildExaminerRequest(
+                requestId: 1, status: ExaminerRequestStatus.Pending);
+            _requestRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(request);
+            _emailSvcMock.Setup(s => s.SendAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                         .ThrowsAsync(new InvalidOperationException("SMTP down"));
+
+            var result = await _sut.RejectAsync(1, adminNote: null);
+
+            result.Status.Should().Be(ExaminerRequestStatus.Rejected);
+        }
     }
 }

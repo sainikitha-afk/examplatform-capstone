@@ -26,7 +26,7 @@ namespace ExamPlatform.API.DTOs.Exam
         [Required]
         public DateTime StartTime { get; set; }
 
-        [Required]
-        public DateTime EndTime { get; set; }
+        // Optional — same defaulting rule as CreateExamDto (StartTime + 30 days).
+        public DateTime? EndTime { get; set; }
     }
 }

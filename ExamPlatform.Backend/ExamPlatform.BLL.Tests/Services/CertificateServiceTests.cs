@@ -251,5 +251,76 @@ namespace ExamPlatform.BLL.Tests.Services
             var act = async () => await _sut.RevokeAsync(999);
             await act.Should().ThrowAsync<CertificateNotFoundException>();
         }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetAllPagedAsync
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetAllPagedAsync_ReturnsPagedResult()
+        {
+            var certs = new List<Certificate> { TestDataBuilder.BuildCertificate(1) };
+            _certRepoMock.Setup(r => r.GetAllWithUserAndExamPagedAsync(2, 10))
+                         .ReturnsAsync((certs, 15));
+
+            var result = await _sut.GetAllPagedAsync(page: 2, pageSize: 10);
+
+            result.Items.Should().HaveCount(1);
+            result.Page.Should().Be(2);
+            result.TotalCount.Should().Be(15);
+        }
+
+        [Test]
+        public async Task GetAllPagedAsync_ClampsPageAndPageSize()
+        {
+            _certRepoMock.Setup(r => r.GetAllWithUserAndExamPagedAsync(1, 100))
+                         .ReturnsAsync((new List<Certificate>(), 0));
+
+            var result = await _sut.GetAllPagedAsync(page: 0, pageSize: 5000);
+
+            result.Page.Should().Be(1);
+            result.PageSize.Should().Be(100);
+            _certRepoMock.Verify(r => r.GetAllWithUserAndExamPagedAsync(1, 100), Times.Once);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   RevokeAsync — email outcomes
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task RevokeAsync_SendsCertificateRevokedEmail()
+        {
+            var cert = TestDataBuilder.BuildCertificate(1, userId: 5, status: CertificateStatus.Issued);
+            cert.User = TestDataBuilder.BuildCandidate(5); // email try-block needs User loaded
+            _certRepoMock.Setup(r => r.GetByIdWithUserAndExamAsync(1)).ReturnsAsync(cert);
+            _certRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _notifRepoMock.Setup(r => r.AddAsync(It.IsAny<Notification>()))
+                          .ReturnsAsync((Notification n) => n);
+
+            await _sut.RevokeAsync(1);
+
+            _emailSvcMock.Verify(e => e.SendAsync(
+                cert.User.Email, It.Is<string>(s => s.Contains("Revoked")), It.IsAny<string>(), true),
+                Times.Once);
+        }
+
+        [Test]
+        public async Task RevokeAsync_EmailFailure_DoesNotFailTheRevocation()
+        {
+            var cert = TestDataBuilder.BuildCertificate(1, userId: 5, status: CertificateStatus.Issued);
+            cert.User = TestDataBuilder.BuildCandidate(5);
+            _certRepoMock.Setup(r => r.GetByIdWithUserAndExamAsync(1)).ReturnsAsync(cert);
+            _certRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _notifRepoMock.Setup(r => r.AddAsync(It.IsAny<Notification>()))
+                          .ReturnsAsync((Notification n) => n);
+            _emailSvcMock.Setup(e => e.SendAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                         .ThrowsAsync(new InvalidOperationException("SMTP down"));
+
+            var result = await _sut.RevokeAsync(1);
+
+            // Email failure is non-fatal — the revocation is already committed.
+            result.CertStatus.Should().Be(CertificateStatus.Revoked);
+        }
     }
 }

@@ -112,5 +112,36 @@ namespace ExamPlatform.BLL.Tests.Services
 
             _notifRepoMock.Verify(r => r.MarkAllReadAsync(5), Times.Once);
         }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetByUserPagedAsync
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetByUserPagedAsync_ReturnsPagedResult()
+        {
+            var items = new List<Notification> { TestDataBuilder.BuildNotification(1, userId: 5) };
+            _notifRepoMock.Setup(r => r.GetByUserPagedAsync(5, 2, 10))
+                          .ReturnsAsync((items, 25));
+
+            var result = await _sut.GetByUserPagedAsync(5, page: 2, pageSize: 10);
+
+            result.Items.Should().HaveCount(1);
+            result.Page.Should().Be(2);
+            result.TotalCount.Should().Be(25);
+        }
+
+        [Test]
+        public async Task GetByUserPagedAsync_ClampsPageAndPageSize()
+        {
+            _notifRepoMock.Setup(r => r.GetByUserPagedAsync(5, 1, 100))
+                          .ReturnsAsync((new List<Notification>(), 0));
+
+            var result = await _sut.GetByUserPagedAsync(5, page: -1, pageSize: 999);
+
+            result.Page.Should().Be(1);
+            result.PageSize.Should().Be(100);
+            _notifRepoMock.Verify(r => r.GetByUserPagedAsync(5, 1, 100), Times.Once);
+        }
     }
 }

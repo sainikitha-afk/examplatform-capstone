@@ -29,7 +29,9 @@ namespace ExamPlatform.API.DTOs.Exam
         [Required(ErrorMessage = "Start time is required.")]
         public DateTime StartTime { get; set; }
 
-        [Required(ErrorMessage = "End time is required.")]
-        public DateTime EndTime { get; set; }
+        // Optional: when omitted the exam window defaults to StartTime + 30 days.
+        // Candidates who START before EndTime always get the full duration,
+        // even if they finish after the window closes.
+        public DateTime? EndTime { get; set; }
     }
 }

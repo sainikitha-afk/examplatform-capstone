@@ -155,7 +155,8 @@ namespace ExamPlatform.API.Controllers
             var exam = await _examService.CreateAsync(
                 userId, dto.CatId, dto.Title, dto.Instructions,
                 dto.DurationMinutes, dto.TotalMarks, dto.PassingMarks,
-                dto.StartTime, dto.EndTime);
+                // End time is optional — default to a 30-day window from the start.
+                dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30));
 
             return CreatedAtAction(nameof(GetById), new { id = exam.ExamId }, ToSummaryDto(exam));
         }
@@ -172,7 +173,8 @@ namespace ExamPlatform.API.Controllers
             var exam = await _examService.UpdateAsync(
                 id, userId, dto.Title, dto.Instructions,
                 dto.DurationMinutes, dto.TotalMarks, dto.PassingMarks,
-                dto.StartTime, dto.EndTime);
+                // End time is optional — default to a 30-day window from the start.
+                dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30));
 
             return Ok(ToSummaryDto(exam));
         }

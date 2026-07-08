@@ -120,6 +120,27 @@ namespace ExamPlatform.BLL.Tests.Services
             await act.Should().ThrowAsync<DuplicateEmailException>();
         }
 
+        [Test]
+        public async Task CreateExaminerAsync_WithDuplicateUsername_ThrowsDuplicateUsernameException()
+        {
+            _userRepoMock.Setup(r => r.IsEmailTakenAsync(It.IsAny<string>())).ReturnsAsync(false);
+            _userRepoMock.Setup(r => r.IsUsernameTakenAsync("bob")).ReturnsAsync(true);
+
+            var act = async () => await _sut.CreateExaminerAsync("Bob", "bob", "bob@test.com", "pass123");
+            await act.Should().ThrowAsync<DuplicateUsernameException>();
+        }
+
+        [TestCase("",    "bob", "bob@test.com", "pass123", TestName = "EmptyFullName")]
+        [TestCase("Bob", "ab",  "bob@test.com", "pass123", TestName = "UsernameTooShort")]
+        [TestCase("Bob", "bob", "not-an-email", "pass123", TestName = "InvalidEmail")]
+        [TestCase("Bob", "bob", "bob@test.com", "12345",   TestName = "PasswordTooShort")]
+        public async Task CreateExaminerAsync_WithInvalidInput_ThrowsValidationException(
+            string fullName, string username, string email, string password)
+        {
+            var act = async () => await _sut.CreateExaminerAsync(fullName, username, email, password);
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
         // ════════════════════════════════════════════════════════════════
         //   LoginAsync — HAPPY PATH
         // ════════════════════════════════════════════════════════════════

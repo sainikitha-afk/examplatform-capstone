@@ -10,6 +10,7 @@ using ExamPlatform.Domain.Entities;
 using ExamPlatform.Domain.Enums;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -26,6 +27,7 @@ namespace ExamPlatform.BLL.Tests.Services
         private Mock<ICertificateRepository>    _certRepoMock     = null!;
         private Mock<INotificationRepository>   _notifRepoMock    = null!;
         private Mock<INotificationEmailService> _emailMock        = null!;
+        private Mock<IUserRepository>           _userRepoMock     = null!;
         private Mock<ILogger<ExamService>>      _loggerMock       = null!;
         private ExamPlatformContext _dbContext = null!;
         private ExamService _sut = null!;
@@ -40,17 +42,26 @@ namespace ExamPlatform.BLL.Tests.Services
             _certRepoMock     = new Mock<ICertificateRepository>();
             _notifRepoMock    = new Mock<INotificationRepository>();
             _emailMock        = new Mock<INotificationEmailService>();
+            _userRepoMock     = new Mock<IUserRepository>();
             _loggerMock       = new Mock<ILogger<ExamService>>();
+
+            // PublishAsync announces to candidates — default to an empty list so
+            // existing publish tests don't need to care about notifications.
+            _userRepoMock.Setup(r => r.GetAllByRoleAsync(UserRole.Candidate))
+                         .ReturnsAsync(new List<User>());
 
             var options = new DbContextOptionsBuilder<ExamPlatformContext>()
                 .UseInMemoryDatabase($"ExamSvcDb_{Guid.NewGuid()}")
+                // PublishResultsAsync opens an explicit transaction; the InMemory provider
+                // doesn't support transactions, so ignore the warning (no-op transaction).
+                .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
                 .Options;
             _dbContext = new ExamPlatformContext(options);
 
             _sut = new ExamService(
                 _examRepoMock.Object, _examQRepoMock.Object, _questionRepoMock.Object,
                 _attemptRepoMock.Object, _certRepoMock.Object, _notifRepoMock.Object,
-                _emailMock.Object, _dbContext, _loggerMock.Object);
+                _emailMock.Object, _userRepoMock.Object, _dbContext, _loggerMock.Object);
         }
 
         [TearDown]
@@ -92,6 +103,22 @@ namespace ExamPlatform.BLL.Tests.Services
         {
             var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
                 DateTime.UtcNow.AddHours(3), DateTime.UtcNow.AddHours(1));
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task CreateAsync_InvalidDuration_ThrowsValidationException()
+        {
+            var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 0, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3));
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task CreateAsync_InvalidTotalMarks_ThrowsValidationException()
+        {
+            var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 60, 0m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3));
             await act.Should().ThrowAsync<ValidationException>();
         }
 
@@ -282,6 +309,456 @@ namespace ExamPlatform.BLL.Tests.Services
 
             var act = async () => await _sut.PublishResultsAsync(1, 10);
             await act.Should().ThrowAsync<ExamAlreadyPublishedException>();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   READ METHODS (delegation + paging clamps)
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetPublishedAsync_DelegatesToRepository()
+        {
+            var exams = new List<Exam> { TestDataBuilder.BuildPublishedExam(1, 10) };
+            _examRepoMock.Setup(r => r.GetPublishedAsync(null)).ReturnsAsync(exams);
+
+            var result = await _sut.GetPublishedAsync(null);
+
+            result.Should().HaveCount(1);
+        }
+
+        [Test]
+        public async Task GetPublishedPagedAsync_ClampsPageAndPageSize()
+        {
+            // page 0 → 1, pageSize 500 → 100.
+            _examRepoMock.Setup(r => r.GetPublishedPagedAsync(null, 1, 100))
+                         .ReturnsAsync((new List<Exam>(), 0));
+
+            var result = await _sut.GetPublishedPagedAsync(null, page: 0, pageSize: 500);
+
+            result.Page.Should().Be(1);
+            result.PageSize.Should().Be(100);
+            _examRepoMock.Verify(r => r.GetPublishedPagedAsync(null, 1, 100), Times.Once);
+        }
+
+        [Test]
+        public async Task GetMineAsync_DelegatesToRepository()
+        {
+            _examRepoMock.Setup(r => r.GetByExaminerAsync(10))
+                         .ReturnsAsync(new List<Exam> { TestDataBuilder.BuildDraftExam(1, 10) });
+
+            var result = await _sut.GetMineAsync(10);
+
+            result.Should().HaveCount(1);
+        }
+
+        [Test]
+        public async Task GetMinePagedAsync_ReturnsPagedResult()
+        {
+            _examRepoMock.Setup(r => r.GetByExaminerPagedAsync(10, 2, 5))
+                         .ReturnsAsync((new List<Exam> { TestDataBuilder.BuildDraftExam(1, 10) }, 11));
+
+            var result = await _sut.GetMinePagedAsync(10, page: 2, pageSize: 5);
+
+            result.TotalCount.Should().Be(11);
+            result.Page.Should().Be(2);
+            result.Items.Should().HaveCount(1);
+        }
+
+        [Test]
+        public async Task GetByIdWithQuestionsAndOptionsAsync_Found_ReturnsExam()
+        {
+            var exam = TestDataBuilder.BuildPublishedExam(1, 10);
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+
+            var result = await _sut.GetByIdWithQuestionsAndOptionsAsync(1);
+
+            result.ExamId.Should().Be(1);
+        }
+
+        [Test]
+        public async Task GetByIdWithQuestionsAndOptionsAsync_NotFound_ThrowsExamNotFoundException()
+        {
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(999))
+                         .ReturnsAsync((Exam?)null);
+
+            var act = async () => await _sut.GetByIdWithQuestionsAndOptionsAsync(999);
+            await act.Should().ThrowAsync<ExamNotFoundException>();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   UpdateAsync — HAPPY PATH + VALIDATION
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task UpdateAsync_ValidInput_UpdatesAllFields()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.UpdateAsync(1, 10, "  New Title  ", " notes ", 90, 100m, 40m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(4));
+
+            result.Title.Should().Be("New Title");          // trimmed
+            result.Instructions.Should().Be("notes");        // trimmed
+            result.DurationMinutes.Should().Be(90);
+            _examRepoMock.Verify(r => r.Update(exam), Times.Once);
+        }
+
+        // (title, duration, totalMarks, passingMarks, startOffsetHours, endOffsetHours)
+        [TestCase("",      60, 50, 30, 1, 3, TestName = "Update_EmptyTitle")]
+        [TestCase("Title",  0, 50, 30, 1, 3, TestName = "Update_ZeroDuration")]
+        [TestCase("Title", 60,  0, 30, 1, 3, TestName = "Update_ZeroTotalMarks")]
+        [TestCase("Title", 60, 50, 60, 1, 3, TestName = "Update_PassingExceedsTotal")]
+        [TestCase("Title", 60, 50, 30, 3, 1, TestName = "Update_StartAfterEnd")]
+        public async Task UpdateAsync_InvalidInput_ThrowsValidationException(
+            string title, int duration, decimal total, decimal passing,
+            int startOffset, int endOffset)
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+
+            var act = async () => await _sut.UpdateAsync(1, 10, title, null, duration, total, passing,
+                DateTime.UtcNow.AddHours(startOffset), DateTime.UtcNow.AddHours(endOffset));
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   AttachQuestionsAsync — HAPPY PATH + GUARDS
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task AttachQuestionsAsync_OwnActiveQuestion_AttachesWithNextOrder()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+
+            var q = TestDataBuilder.BuildQuestion(5, examinerId: 10);
+            _questionRepoMock.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(q);
+            _examQRepoMock.Setup(r => r.GetByExamIdAsync(1))
+                          .ReturnsAsync(new List<ExamQuestion>()); // 0 already attached
+            _examQRepoMock.Setup(r => r.ExistsAsync(1, 5)).ReturnsAsync(false);
+            _examQRepoMock.Setup(r => r.AddAsync(It.IsAny<ExamQuestion>()))
+                          .ReturnsAsync((ExamQuestion eq) => eq);
+            _examQRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            await _sut.AttachQuestionsAsync(1, new[] { 5 }, 10);
+
+            _examQRepoMock.Verify(r => r.AddAsync(
+                It.Is<ExamQuestion>(eq => eq.QuestionId == 5 && eq.QuestionOrder == 1)), Times.Once);
+        }
+
+        [Test]
+        public async Task AttachQuestionsAsync_AlreadyAttached_SkipsDuplicate()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+
+            var q = TestDataBuilder.BuildQuestion(5, examinerId: 10);
+            _questionRepoMock.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(q);
+            _examQRepoMock.Setup(r => r.GetByExamIdAsync(1))
+                          .ReturnsAsync(new List<ExamQuestion>());
+            _examQRepoMock.Setup(r => r.ExistsAsync(1, 5)).ReturnsAsync(true); // duplicate
+            _examQRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            await _sut.AttachQuestionsAsync(1, new[] { 5 }, 10);
+
+            _examQRepoMock.Verify(r => r.AddAsync(It.IsAny<ExamQuestion>()), Times.Never);
+        }
+
+        [Test]
+        public async Task AttachQuestionsAsync_InactiveQuestion_ThrowsValidationException()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+
+            var q = TestDataBuilder.BuildQuestion(5, examinerId: 10, isActive: false);
+            _questionRepoMock.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(q);
+            _examQRepoMock.Setup(r => r.GetByExamIdAsync(1))
+                          .ReturnsAsync(new List<ExamQuestion>());
+
+            var act = async () => await _sut.AttachQuestionsAsync(1, new[] { 5 }, 10);
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*does not exist or is inactive*");
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   DetachQuestionAsync
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task DetachQuestionAsync_OwnedDraftExam_Detaches()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+            _examQRepoMock.Setup(r => r.DeleteByExamAndQuestionAsync(1, 5))
+                          .Returns(Task.CompletedTask);
+
+            await _sut.DetachQuestionAsync(1, 5, 10);
+
+            _examQRepoMock.Verify(r => r.DeleteByExamAndQuestionAsync(1, 5), Times.Once);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   PublishAsync — HAPPY PATH + REMAINING RULES
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task PublishAsync_ValidDraftExam_TransitionsToPublished()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, 10, totalMarks: 50m);
+            var q = TestDataBuilder.BuildQuestion(1, marks: 50m); // marks sum == TotalMarks
+            exam.ExamQuestions = new List<ExamQuestion>
+            {
+                new() { ExamId = 1, QuestionId = 1, Question = q, QuestionOrder = 1 }
+            };
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.PublishAsync(1, 10);
+
+            result.ExamStatus.Should().Be(ExamStatus.Published);
+            _examRepoMock.Verify(r => r.Update(exam), Times.Once);
+        }
+
+        [Test]
+        public async Task CreateAsync_UnspecifiedKindDates_AreStoredAsUtc()
+        {
+            // datetime-local browser inputs arrive with Kind=Unspecified;
+            // Postgres timestamptz rejects those — the service must normalize.
+            _examRepoMock.Setup(r => r.AddAsync(It.IsAny<Exam>()))
+                         .ReturnsAsync((Exam e) => e);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var start = DateTime.SpecifyKind(DateTime.UtcNow.AddHours(1), DateTimeKind.Unspecified);
+            var end   = DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3), DateTimeKind.Unspecified);
+
+            var result = await _sut.CreateAsync(10, 1, "Exam", null, 60, 50m, 30m, start, end);
+
+            result.StartTime.Kind.Should().Be(DateTimeKind.Utc);
+            result.EndTime.Kind.Should().Be(DateTimeKind.Utc);
+        }
+
+        [Test]
+        public async Task PublishAsync_NotifiesEveryActiveCandidate()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, 10, totalMarks: 50m);
+            var q = TestDataBuilder.BuildQuestion(1, marks: 50m);
+            exam.ExamQuestions = new List<ExamQuestion>
+            {
+                new() { ExamId = 1, QuestionId = 1, Question = q, QuestionOrder = 1 }
+            };
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            // Two active candidates + one deactivated (must be skipped).
+            _userRepoMock.Setup(r => r.GetAllByRoleAsync(UserRole.Candidate))
+                         .ReturnsAsync(new List<User>
+                         {
+                             TestDataBuilder.BuildCandidate(1),
+                             TestDataBuilder.BuildCandidate(2),
+                             TestDataBuilder.BuildCandidate(3, isActive: false),
+                         });
+            _notifRepoMock.Setup(r => r.AddAsync(It.IsAny<Notification>()))
+                          .ReturnsAsync((Notification n) => n);
+            _notifRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            await _sut.PublishAsync(1, 10);
+
+            _notifRepoMock.Verify(r => r.AddAsync(
+                It.Is<Notification>(n => n.NotifType == NotificationType.ExamPublished)),
+                Times.Exactly(2));
+        }
+
+        [Test]
+        public async Task PublishAsync_NotificationFailure_DoesNotUndoThePublish()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, 10, totalMarks: 50m);
+            var q = TestDataBuilder.BuildQuestion(1, marks: 50m);
+            exam.ExamQuestions = new List<ExamQuestion>
+            {
+                new() { ExamId = 1, QuestionId = 1, Question = q, QuestionOrder = 1 }
+            };
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _userRepoMock.Setup(r => r.GetAllByRoleAsync(UserRole.Candidate))
+                         .ThrowsAsync(new InvalidOperationException("users table down"));
+
+            var result = await _sut.PublishAsync(1, 10);
+
+            // The announcement is best-effort; the publish itself must stand.
+            result.ExamStatus.Should().Be(ExamStatus.Published);
+        }
+
+        [Test]
+        public async Task PublishAsync_PassingMarksExceedTotal_ThrowsExamNotPublishableException()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, 10, totalMarks: 50m, passingMarks: 60m);
+            var q = TestDataBuilder.BuildQuestion(1, marks: 50m);
+            exam.ExamQuestions = new List<ExamQuestion>
+            {
+                new() { ExamId = 1, QuestionId = 1, Question = q, QuestionOrder = 1 }
+            };
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+
+            var act = async () => await _sut.PublishAsync(1, 10);
+            await act.Should().ThrowAsync<ExamNotPublishableException>()
+                     .WithMessage("*PassingMarks*");
+        }
+
+        [Test]
+        public async Task PublishAsync_StartTimeAfterEndTime_ThrowsExamNotPublishableException()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, 10, totalMarks: 50m);
+            exam.StartTime = DateTime.UtcNow.AddHours(5);
+            exam.EndTime   = DateTime.UtcNow.AddHours(1);
+            var q = TestDataBuilder.BuildQuestion(1, marks: 50m);
+            exam.ExamQuestions = new List<ExamQuestion>
+            {
+                new() { ExamId = 1, QuestionId = 1, Question = q, QuestionOrder = 1 }
+            };
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+
+            var act = async () => await _sut.PublishAsync(1, 10);
+            await act.Should().ThrowAsync<ExamNotPublishableException>()
+                     .WithMessage("*StartTime*");
+        }
+
+        [Test]
+        public async Task PublishAsync_WrongOwner_ThrowsExamNotFoundException()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+
+            var act = async () => await _sut.PublishAsync(1, 99);
+            await act.Should().ThrowAsync<ExamNotFoundException>();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   PublishResultsAsync — FULL FLOW
+        // ════════════════════════════════════════════════════════════════
+
+        // Builds a Published exam plus one passing and one failing attempt (with Users),
+        // and wires the default mocks for the happy path.
+        private Exam SetUpPublishResultsScenario(bool certAlreadyExists = false)
+        {
+            var exam = TestDataBuilder.BuildPublishedExam(1, 10, totalMarks: 50m, passingMarks: 30m);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var passer = TestDataBuilder.BuildCandidate(1);
+            var failer = TestDataBuilder.BuildCandidate(2);
+
+            // Passer has TWO attempts (30 and 40) — the best one (40) must win.
+            var passLow  = TestDataBuilder.BuildSubmittedAttempt(1, userId: 1, examId: 1, score: 30m);
+            var passHigh = TestDataBuilder.BuildSubmittedAttempt(2, userId: 1, examId: 1, score: 40m);
+            var fail     = TestDataBuilder.BuildSubmittedAttempt(3, userId: 2, examId: 1, score: 10m, isPassed: false);
+            passLow.User = passer; passHigh.User = passer; fail.User = failer;
+
+            _attemptRepoMock.Setup(r => r.GetByExamIdAsync(1))
+                            .ReturnsAsync(new List<Attempt> { passLow, passHigh, fail });
+
+            _certRepoMock.Setup(r => r.ExistsForUserAndExamAsync(It.IsAny<int>(), 1))
+                         .ReturnsAsync(certAlreadyExists);
+            _certRepoMock.Setup(r => r.AddAsync(It.IsAny<Certificate>()))
+                         .ReturnsAsync((Certificate c) => c);
+            _certRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _notifRepoMock.Setup(r => r.AddAsync(It.IsAny<Notification>()))
+                          .ReturnsAsync((Notification n) => n);
+
+            return exam;
+        }
+
+        [Test]
+        public async Task PublishResultsAsync_HappyPath_IssuesCertificatesNotificationsAndEmails()
+        {
+            var exam = SetUpPublishResultsScenario();
+
+            var result = await _sut.PublishResultsAsync(1, 10);
+
+            result.ExamStatus.Should().Be(ExamStatus.ResultsPublished);
+
+            // One NEW certificate — for the passer's best attempt only.
+            _certRepoMock.Verify(r => r.AddAsync(
+                It.Is<Certificate>(c => c.UserId == 1 && c.AttemptId == 2)), Times.Once);
+
+            // Notifications: 1 CertificateIssued + 2 ResultPublished (pass + fail).
+            _notifRepoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Exactly(3));
+
+            // Emails: ResultPublished ×2 + YouPassed ×1 + CertificateAvailable ×1 = 4.
+            _emailMock.Verify(e => e.SendAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), true), Times.Exactly(4));
+        }
+
+        [Test]
+        public async Task PublishResultsAsync_CertificateAlreadyExists_DoesNotIssueAgain()
+        {
+            SetUpPublishResultsScenario(certAlreadyExists: true);
+
+            await _sut.PublishResultsAsync(1, 10);
+
+            _certRepoMock.Verify(r => r.AddAsync(It.IsAny<Certificate>()), Times.Never);
+            // Only the 2 ResultPublished notifications — no CertificateIssued.
+            _notifRepoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Exactly(2));
+        }
+
+        [Test]
+        public async Task PublishResultsAsync_EmailFailures_DoNotFailThePublish()
+        {
+            SetUpPublishResultsScenario();
+            _emailMock.Setup(e => e.SendAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                      .ThrowsAsync(new InvalidOperationException("SMTP down"));
+
+            var result = await _sut.PublishResultsAsync(1, 10);
+
+            // All three email try/catch blocks swallow the failure.
+            result.ExamStatus.Should().Be(ExamStatus.ResultsPublished);
+        }
+
+        [Test]
+        public async Task PublishResultsAsync_SaveFailure_RollsBackAndRethrows()
+        {
+            SetUpPublishResultsScenario();
+            _examRepoMock.Setup(r => r.SaveChangesAsync())
+                         .ThrowsAsync(new InvalidOperationException("DB down"));
+
+            var act = async () => await _sut.PublishResultsAsync(1, 10);
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            // No emails go out when the transaction fails.
+            _emailMock.Verify(e => e.SendAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   UnpublishAsync — remaining branches
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task UnpublishAsync_AdminBypassesOwnershipCheck()
+        {
+            var exam = TestDataBuilder.BuildPublishedExam(1, examinerId: 10);
+            _examRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.HasAnyForExamAsync(1)).ReturnsAsync(false);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            // Caller 99 is NOT the owner but IS admin.
+            var result = await _sut.UnpublishAsync(1, callerId: 99, isAdmin: true);
+
+            result.ExamStatus.Should().Be(ExamStatus.Draft);
+        }
+
+        [Test]
+        public async Task UnpublishAsync_ExamNotFound_ThrowsExamNotFoundException()
+        {
+            _examRepoMock.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Exam?)null);
+
+            var act = async () => await _sut.UnpublishAsync(999, 10, false);
+            await act.Should().ThrowAsync<ExamNotFoundException>();
         }
     }
 }

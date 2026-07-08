@@ -204,5 +204,85 @@ namespace ExamPlatform.BLL.Tests.Services
             var act = async () => await _sut.DeleteAsync(999);
             await act.Should().ThrowAsync<CategoryNotFoundException>();
         }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetAllAsync
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetAllAsync_ReturnsAllCategories()
+        {
+            _categoryRepoMock.Setup(r => r.GetAllAsync())
+                             .ReturnsAsync(new List<ExamCategory>
+                             {
+                                 TestDataBuilder.BuildCategory(1, "C#"),
+                                 TestDataBuilder.BuildCategory(2, "SQL"),
+                             });
+
+            var result = await _sut.GetAllAsync();
+
+            result.Should().HaveCount(2);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   BulkCreateAsync — name length rule
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task BulkCreateAsync_EmptyNameInBatch_ThrowsValidationException()
+        {
+            var act = async () => await _sut.BulkCreateAsync(
+                new List<(string, string?)> { ("  ", null) });
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*name is required*");
+        }
+
+        [Test]
+        public async Task BulkCreateAsync_NameTooShort_ThrowsValidationException()
+        {
+            var act = async () => await _sut.BulkCreateAsync(
+                new List<(string, string?)> { ("A", null) }); // 1 char < minimum 2
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*between 2 and 100*");
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   UpdateAsync — remaining branches
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task UpdateAsync_EmptyName_ThrowsValidationException()
+        {
+            var act = async () => await _sut.UpdateAsync(1, "  ", null);
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task UpdateAsync_NewNameTakenByAnotherCategory_ThrowsDuplicateCategoryException()
+        {
+            var target = TestDataBuilder.BuildCategory(1, "C#");
+            var other  = TestDataBuilder.BuildCategory(2, "SQL");
+            _categoryRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(target);
+            _categoryRepoMock.Setup(r => r.GetAllAsync())
+                             .ReturnsAsync(new List<ExamCategory> { target, other });
+
+            // Renaming category 1 to "sql" collides with category 2 (case-insensitive).
+            var act = async () => await _sut.UpdateAsync(1, "sql", null);
+            await act.Should().ThrowAsync<DuplicateCategoryException>();
+        }
+
+        [Test]
+        public async Task UpdateAsync_SameNameDifferentCase_SkipsDuplicateCheckAndUpdates()
+        {
+            var target = TestDataBuilder.BuildCategory(1, "C#");
+            _categoryRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(target);
+            _categoryRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            // "c#" equals its own current name case-insensitively — allowed.
+            var result = await _sut.UpdateAsync(1, "c#", "new description");
+
+            result.Description.Should().Be("new description");
+            _categoryRepoMock.Verify(r => r.GetAllAsync(), Times.Never); // dup check skipped
+        }
     }
 }

@@ -10,6 +10,7 @@ namespace ExamPlatform.Domain.Enums
         ExaminerRequestReceived,    // Admin inbox: "New examiner request from <name>."
         ExaminerAccountApproved,    // New examiner: "Your examiner account is ready. Check your email for credentials."
         AttemptResumed,             // Examiner alert: "<candidate> resumed their attempt for <exam> (possible disconnection)."
-        AttemptAutoSubmitted        // Examiner alert: "<candidate>'s attempt for <exam> was auto-submitted when time expired."
+        AttemptAutoSubmitted,       // Examiner alert: "<candidate>'s attempt for <exam> was auto-submitted when time expired."
+        ExamPublished               // Candidate alert: "A new exam '<title>' is now live — take it if you wish!"
     }
 }

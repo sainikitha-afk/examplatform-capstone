@@ -27,6 +27,22 @@ namespace ExamPlatform.DAL.Repositories
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   HasCompletedAttemptAsync
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// True if the user has already submitted (manually or by timeout) an
+        /// attempt for this exam. AnyAsync issues a SQL EXISTS — no rows loaded.
+        /// </summary>
+        public async Task<bool> HasCompletedAttemptAsync(int userId, int examId)
+        {
+            return await _dbSet.AnyAsync(a =>
+                a.UserId == userId &&
+                a.ExamId == examId &&
+                (a.AttemptStatus == AttemptStatus.Submitted ||
+                 a.AttemptStatus == AttemptStatus.AutoSubmitted));
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   GetByUserAsync
         // ════════════════════════════════════════════════════════════════
         /// <summary>Returns all attempts by a user, newest first, with Exam loaded.</summary>

@@ -30,6 +30,12 @@ namespace ExamPlatform.DAL.Interfaces
         // Used for the result view and the resume view.
         Task<Attempt?> GetByIdWithAnswersAndExamAsync(int attemptId);
 
+        // Returns true if the user already has a COMPLETED (Submitted or
+        // AutoSubmitted) attempt for this exam. Used by StartOrResume to
+        // enforce the one-attempt-per-candidate rule: once a candidate has
+        // finished an exam, it is no longer available to them.
+        Task<bool> HasCompletedAttemptAsync(int userId, int examId);
+
         // Returns true if ANY attempt (any status) exists for the given exam.
         // Used by UnpublishAsync to block rollback when candidates have touched
         // the exam — even an InProgress attempt must prevent unpublishing.

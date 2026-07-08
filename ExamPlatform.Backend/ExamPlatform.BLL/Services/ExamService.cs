@@ -35,6 +35,10 @@ namespace ExamPlatform.BLL.Services
         private readonly ICertificateRepository _certRepository;
         private readonly INotificationRepository _notifRepository;
         private readonly INotificationEmailService _emailService;
+
+        // IUserRepository: PublishAsync announces the new exam to every active
+        // candidate with an in-app notification, so it needs the candidate list.
+        private readonly IUserRepository _userRepository;
         private readonly ExamPlatformContext _context; // for transaction only — see file header
 
         private readonly ILogger<ExamService> _logger;
@@ -47,6 +51,7 @@ namespace ExamPlatform.BLL.Services
             ICertificateRepository certRepository,
             INotificationRepository notifRepository,
             INotificationEmailService emailService,
+            IUserRepository userRepository,
             ExamPlatformContext context,
             ILogger<ExamService> logger)
         {
@@ -57,6 +62,7 @@ namespace ExamPlatform.BLL.Services
             _certRepository = certRepository;
             _notifRepository = notifRepository;
             _emailService = emailService;
+            _userRepository = userRepository;
             _context = context;
             _logger = logger;
         }
@@ -145,6 +151,10 @@ namespace ExamPlatform.BLL.Services
             int durationMinutes, decimal totalMarks, decimal passingMarks,
             DateTime startTime, DateTime endTime)
         {
+            // Postgres timestamptz only accepts UTC — normalize before anything else.
+            startTime = EnsureUtc(startTime);
+            endTime   = EnsureUtc(endTime);
+
             // ─── GUARD CLAUSES ────────────────────────────────────────
             if (string.IsNullOrWhiteSpace(title))
                 throw new ValidationException("Exam title is required.");
@@ -191,6 +201,10 @@ namespace ExamPlatform.BLL.Services
             DateTime startTime, DateTime endTime)
         {
             var exam = await LoadOwnedDraftAsync(examId, examinerId);
+
+            // Postgres timestamptz only accepts UTC — normalize before anything else.
+            startTime = EnsureUtc(startTime);
+            endTime   = EnsureUtc(endTime);
 
             // ─── GUARD CLAUSES ────────────────────────────────────────
             if (string.IsNullOrWhiteSpace(title))
@@ -352,6 +366,33 @@ namespace ExamPlatform.BLL.Services
             _logger.LogInformation(
                 "Exam {ExamId} published by examiner {ExaminerId}: '{Title}' ({QuestionCount} questions, {TotalMarks} total marks).",
                 examId, examinerId, exam.Title, exam.ExamQuestions.Count, exam.TotalMarks);
+
+            // ─── ANNOUNCE TO CANDIDATES ───────────────────────────────
+            // Every active candidate gets an in-app notification that a new exam
+            // is live. Failures here must never undo the publish itself — the
+            // exam status is already committed above, so this block only logs.
+            try
+            {
+                var candidates = await _userRepository.GetAllByRoleAsync(UserRole.Candidate);
+                foreach (var candidate in candidates.Where(c => c.IsActive))
+                {
+                    await _notifRepository.AddAsync(new Notification
+                    {
+                        UserId = candidate.UserId,
+                        NotifType = NotificationType.ExamPublished,
+                        Message = $"New exam available: '{exam.Title}' is now live. Take it from Browse Exams if you wish!",
+                        RelatedExamId = examId,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+                await _notifRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create ExamPublished notifications for exam {ExamId}.", examId);
+            }
 
             return exam;
         }
@@ -642,6 +683,20 @@ namespace ExamPlatform.BLL.Services
         }
 
         // ───────────── PRIVATE HELPERS ─────────────
+
+        /// <summary>
+        /// Normalizes a DateTime to UTC. PostgreSQL 'timestamp with time zone'
+        /// columns reject Kind=Unspecified values (Npgsql throws), and browser
+        /// datetime-local inputs produce exactly those. Unspecified values are
+        /// assumed to already be UTC (the frontend converts before sending);
+        /// Local values are converted.
+        /// </summary>
+        private static DateTime EnsureUtc(DateTime value) => value.Kind switch
+        {
+            DateTimeKind.Utc   => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _                  => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
 
         /// <summary>
         /// Loads an exam, verifies the examiner owns it, and verifies it is in Draft.
