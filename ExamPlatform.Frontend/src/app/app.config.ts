@@ -7,7 +7,7 @@
 //   - provideStore / provideEffects / provideStoreDevtools — NgRx wiring
 //   - provideRouter(routes) — routing
 
-import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
@@ -22,6 +22,13 @@ import { AttemptEffects } from './store/attempt.effects';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+
+    // Zone-based change detection: components across the app set plain fields
+    // (isLoading, errorMessage, list data) inside HTTP subscribe callbacks.
+    // Without zone.js those updates never trigger a re-render — spinners hang
+    // forever and clicks appear to need a second press. eventCoalescing batches
+    // multiple synchronous events into a single change-detection pass.
+    provideZoneChangeDetection({ eventCoalescing: true }),
 
     // CONCEPT DEMO: functional HTTP interceptor attached here.
     provideHttpClient(withInterceptors([authInterceptor])),

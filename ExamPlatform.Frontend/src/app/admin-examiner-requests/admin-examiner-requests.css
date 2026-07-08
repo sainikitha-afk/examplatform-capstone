@@ -1,0 +1,98 @@
+/* Examiner request review cards */
+.req-list { display: flex; flex-direction: column; gap: 1rem; }
+
+.req-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.4rem;
+  transition: var(--transition);
+}
+.req-card:hover { box-shadow: var(--shadow-sm); border-color: var(--primary-200); }
+
+/* Header row inside card */
+.req-card-header { display: flex; align-items: flex-start; gap: 0.9rem; margin-bottom: 1rem; }
+
+.req-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.req-info { flex: 1; min-width: 0; }
+.req-name  { font-weight: 700; font-size: 1rem; color: var(--text); }
+.req-email { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; }
+.req-date  { font-size: 0.75rem; color: var(--text-muted); }
+
+/* Purpose section */
+.req-purpose { margin-bottom: 1.1rem; }
+.req-purpose-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+.req-purpose-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  background: var(--bg-secondary);
+  border-left: 3px solid var(--primary-200);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.65rem 0.9rem;
+  margin: 0;
+}
+
+.req-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ── Reject modal ─────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.18);
+}
+.modal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.modal-card-body   { padding: 1.25rem 1.4rem; }
+.modal-card-footer { padding: 1rem 1.4rem; border-top: 1px solid var(--border); }
+
+.btn-close-custom {
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+.btn-close-custom:hover { background: var(--bg-secondary); color: var(--text); }

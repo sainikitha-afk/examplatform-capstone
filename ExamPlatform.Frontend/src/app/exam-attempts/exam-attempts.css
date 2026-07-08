@@ -1,0 +1,32 @@
+/* exam-attempts.css — examiner attempt monitoring view */
+
+.stat-tile {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text, #111827);
+}
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  margin-top: 0.15rem;
+}
+
+/* Accent bars per tile type */
+.tile-progress  .stat-value { color: #b45309; }
+.tile-submitted .stat-value { color: #15803d; }
+.tile-auto      .stat-value { color: #b91c1c; }
+.tile-passed    .stat-value { color: var(--primary, #2563eb); }

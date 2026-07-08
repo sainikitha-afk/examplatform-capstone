@@ -1,4 +1,5 @@
 using ExamPlatform.Domain.Entities;
+using ExamPlatform.Domain.Enums;
 
 namespace ExamPlatform.DAL.Interfaces
 {
@@ -21,5 +22,11 @@ namespace ExamPlatform.DAL.Interfaces
         // more efficient than fetching the full user just to check existence.
         Task<bool> IsEmailTakenAsync(string email);
         Task<bool> IsUsernameTakenAsync(string username);
+
+        // Returns all users that hold a specific role. Used by
+        // ExaminerRequestService to fan-out admin notifications when a new
+        // request is submitted — we must notify EVERY active admin, not just
+        // one, because admins act independently and any of them may process it.
+        Task<IEnumerable<User>> GetAllByRoleAsync(UserRole role);
     }
 }

@@ -1,0 +1,135 @@
+<!-- exam-attempts.html — Examiner monitoring: every attempt on one exam -->
+
+<div class="container py-4 animate-fade-in">
+
+  <!-- Back link + header -->
+  <a routerLink="/manage-exams" class="back-link mb-3 d-inline-flex align-items-center gap-2">
+    <i class="bi bi-arrow-left"></i>Back to My Exams
+  </a>
+
+  <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>Exam Attempts</h3>
+      <p class="page-header-sub mt-1">{{ exam.title || 'Loading exam...' }}</p>
+    </div>
+    <button class="btn btn-outline-primary btn-sm" (click)="handleRefreshClick()" [disabled]="isRefreshing()">
+      <span *ngIf="isRefreshing()" class="spinner-border spinner-border-sm me-1"></span>
+      <i *ngIf="!isRefreshing()" class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+  </div>
+
+  <div *ngIf="isLoading()" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading attempts...</p>
+  </div>
+
+  <div *ngIf="!isLoading() && !errorMessage">
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4 stagger-children">
+      <div class="col-6 col-md">
+        <div class="stat-tile">
+          <div class="stat-value">{{ totalCount }}</div>
+          <div class="stat-label">Total Attempts</div>
+        </div>
+      </div>
+      <div class="col-6 col-md">
+        <div class="stat-tile tile-progress">
+          <div class="stat-value">{{ inProgressCount }}</div>
+          <div class="stat-label">In Progress</div>
+        </div>
+      </div>
+      <div class="col-6 col-md">
+        <div class="stat-tile tile-submitted">
+          <div class="stat-value">{{ submittedCount }}</div>
+          <div class="stat-label">Submitted</div>
+        </div>
+      </div>
+      <div class="col-6 col-md">
+        <div class="stat-tile tile-auto">
+          <div class="stat-value">{{ autoSubmittedCount }}</div>
+          <div class="stat-label">Auto-submitted</div>
+        </div>
+      </div>
+      <div class="col-6 col-md">
+        <div class="stat-tile tile-passed">
+          <div class="stat-value">{{ passedCount }}</div>
+          <div class="stat-label">Passed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disconnection hint -->
+    <div *ngIf="autoSubmittedCount > 0 || inProgressCount > 0" class="alert alert-info d-flex align-items-start gap-2">
+      <i class="bi bi-info-circle-fill mt-1"></i>
+      <div style="font-size:0.85rem">
+        <strong>Reading this view:</strong> an <em>In&nbsp;Progress</em> attempt whose answered count
+        isn't moving may be a disconnected candidate — if they reconnect, they resume the same attempt
+        with all answers intact (you'll get a notification). <em>Auto-submitted</em> means the server
+        timer closed the attempt, usually because the candidate never returned.
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="attempts.length === 0" class="empty-state">
+      <span class="empty-icon">🧑‍💻</span>
+      <h5>No attempts yet</h5>
+      <p>No candidate has started this exam so far. Check back after your exam window opens.</p>
+    </div>
+
+    <!-- Attempts table -->
+    <div *ngIf="attempts.length > 0" class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" style="font-size:0.875rem">
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Answered</th>
+                <th class="text-center">Started</th>
+                <th class="text-center">Submitted</th>
+                <th class="text-center">Time Taken</th>
+                <th class="text-center">Score</th>
+                <th class="text-center">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of attempts">
+                <td>
+                  <div class="fw-medium">{{ a.candidateName }}</div>
+                  <div class="text-muted" style="font-size:0.78rem">{{ a.candidateEmail }}</div>
+                </td>
+                <td class="text-center">
+                  <span class="badge-status" [ngClass]="statusBadgeClass(a.attemptStatus)">
+                    {{ statusLabel(a.attemptStatus) }}
+                  </span>
+                </td>
+                <td class="text-center">{{ a.answeredCount }}</td>
+                <td class="text-center text-muted">{{ a.startedAt | date:'MMM d, HH:mm' }}</td>
+                <td class="text-center text-muted">
+                  {{ a.submittedAt ? (a.submittedAt | date:'MMM d, HH:mm') : '—' }}
+                </td>
+                <td class="text-center text-muted">{{ formatDuration(a.timeTakenSeconds) }}</td>
+                <td class="text-center fw-bold" [class.text-primary]="a.score != null">
+                  {{ a.score != null ? a.score : '—' }}
+                </td>
+                <td class="text-center">
+                  <span *ngIf="a.isPassed === true"  class="badge-status badge-published">Passed</span>
+                  <span *ngIf="a.isPassed === false" class="badge-status badge-failed">Failed</span>
+                  <span *ngIf="a.isPassed == null"   class="text-muted">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

@@ -1,65 +1,89 @@
-<!-- Candidate Analytics page -->
-<div class="container mt-4">
-  <h3><i class="bi bi-bar-chart me-2"></i>My Analytics</h3>
+<!-- Candidate Analytics — detailed personal performance page -->
 
-  <div *ngIf="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+<div class="container py-4 animate-fade-in">
+
+  <div class="page-header">
+    <h3><i class="bi bi-bar-chart-line me-2 text-primary"></i>My Analytics</h3>
+    <p class="page-header-sub">Detailed view of your examination performance.</p>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading analytics...</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+  </div>
 
   <div *ngIf="!isLoading && !errorMessage">
-    <div class="row g-3 mb-4">
-      <div class="col-md-3">
-        <div class="card text-center border-primary">
-          <div class="card-body">
-            <i class="bi bi-journal-check display-4 text-primary"></i>
-            <h2>{{ stats.totalAttempts }}</h2>
-            <p class="text-muted mb-0">Total Attempts</p>
-          </div>
+
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4 stagger-children">
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="bi bi-journal-check"></i></div>
+          <div class="stat-value">{{ stats.totalAttempts }}</div>
+          <div class="stat-label">Total Attempts</div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card text-center border-success">
-          <div class="card-body">
-            <i class="bi bi-percent display-4 text-success"></i>
-            <!-- Built-in pipe: number -->
-            <h2>{{ stats.passRate | number:'1.0-1' }}%</h2>
-            <p class="text-muted mb-0">Pass Rate</p>
-          </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-percent"></i></div>
+          <div class="stat-value">{{ stats.passRate | number:'1.0-1' }}%</div>
+          <div class="stat-label">Pass Rate</div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card text-center border-info">
-          <div class="card-body">
-            <i class="bi bi-bar-chart display-4 text-info"></i>
-            <h2>{{ stats.averageScore | number:'1.0-1' }}</h2>
-            <p class="text-muted mb-0">Avg Score</p>
-          </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-graph-up"></i></div>
+          <div class="stat-value">{{ stats.averageScore | number:'1.0-1' }}</div>
+          <div class="stat-label">Average Score</div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card text-center border-warning">
-          <div class="card-body">
-            <i class="bi bi-award display-4 text-warning"></i>
-            <h2>{{ stats.certificatesEarned }}</h2>
-            <p class="text-muted mb-0">Certificates</p>
-          </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fef3c7;color:#92400e"><i class="bi bi-award"></i></div>
+          <div class="stat-value">{{ stats.certificatesEarned }}</div>
+          <div class="stat-label">Certificates Earned</div>
         </div>
       </div>
     </div>
 
-    <!-- Best scores table -->
-    <h5>Best Scores Per Exam</h5>
-    <table class="table table-striped">
-      <thead class="table-primary"><tr><th>Exam</th><th>Best Score</th><th>Passed?</th></tr></thead>
-      <tbody>
-        <tr *ngFor="let s of stats.bestScores">
-          <td>{{ s.examTitle }}</td>
-          <td>{{ s.bestScore }}</td>
-          <td [ngClass]="{'text-success fw-bold': s.isPassed, 'text-danger': !s.isPassed}">
-            {{ s.isPassed ? 'Yes' : 'No' }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="stats.bestScores.length === 0" class="text-muted">No completed exams yet.</p>
+    <!-- Best Scores Table -->
+    <div class="card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-trophy me-2 text-warning"></i>Best Scores Per Exam</h6>
+      </div>
+      <div *ngIf="stats.bestScores.length === 0" class="empty-state">
+        <span class="empty-icon">🎯</span>
+        <h5>No completed exams yet</h5>
+        <p>Take your first exam to see your analytics here.</p>
+        <a routerLink="/browse-exams" class="btn btn-primary mt-2">Browse Exams</a>
+      </div>
+      <div *ngIf="stats.bestScores.length > 0" class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr><th>Exam</th><th class="text-center">Best Score</th><th class="text-center">Status</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of stats.bestScores">
+                <td class="fw-medium">{{ s.examTitle }}</td>
+                <td class="text-center fw-bold text-primary">{{ s.bestScore }}</td>
+                <td class="text-center">
+                  <!-- [ngClass]: pass/fail badge -->
+                  <span class="badge-status" [ngClass]="s.isPassed ? 'badge-passed' : 'badge-failed'">
+                    <i class="bi me-1" [ngClass]="s.isPassed ? 'bi-check-circle' : 'bi-x-circle'"></i>
+                    {{ s.isPassed ? 'Passed' : 'Failed' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>

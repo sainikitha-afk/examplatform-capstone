@@ -1,0 +1,128 @@
+<!-- examiner-request.html — Public "Apply as Examiner" form (no auth) -->
+
+<div class="auth-page">
+
+  <!-- Left panel: branding -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div class="auth-logo">
+        <i class="bi bi-person-badge-fill"></i>
+      </div>
+      <h2>Become an Examiner</h2>
+      <p>Share your expertise with thousands of candidates on ExamHub.</p>
+      <ul class="auth-features">
+        <li><i class="bi bi-check-circle-fill"></i> Build rich question banks</li>
+        <li><i class="bi bi-check-circle-fill"></i> Publish and manage exams</li>
+        <li><i class="bi bi-check-circle-fill"></i> Track candidate performance</li>
+        <li><i class="bi bi-check-circle-fill"></i> Release results & certificates</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Right panel: form or success card -->
+  <div class="auth-right">
+    <div class="auth-card animate-scale-in">
+
+      <!-- ── Success card ── -->
+      <div *ngIf="submitted" class="success-card">
+        <div class="success-icon"><i class="bi bi-check-circle-fill"></i></div>
+        <h4>Application Received!</h4>
+        <p>
+          Thank you for applying. Our admin team will review your request and
+          send a decision to <strong>{{ formData.email }}</strong>.
+        </p>
+        <a routerLink="/login" class="btn btn-primary mt-3">Back to Login</a>
+      </div>
+
+      <!-- ── Application form ── -->
+      <div *ngIf="!submitted">
+        <div class="auth-card-header">
+          <h4>Examiner Application</h4>
+          <p class="auth-card-sub">Tell us a bit about yourself and your goals.</p>
+        </div>
+
+        <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+        </div>
+
+        <!-- #reqForm: template reference variable for NgForm -->
+        <form #reqForm="ngForm" (ngSubmit)="handleSubmitClick(reqForm)" novalidate>
+
+          <!-- Full Name -->
+          <div class="mb-3">
+            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="formData.fullName"
+              name="fullName"
+              required
+              minlength="2"
+              #fnCtrl="ngModel"
+              [class.is-invalid]="fnCtrl.invalid && fnCtrl.touched"
+              placeholder="Jane Smith"
+            />
+            <div class="invalid-feedback">
+              <span *ngIf="fnCtrl.errors?.['required']">Full name is required.</span>
+              <span *ngIf="fnCtrl.errors?.['minlength']">At least 2 characters.</span>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="mb-3">
+            <label class="form-label">Email Address <span class="text-danger">*</span></label>
+            <input
+              type="email"
+              class="form-control"
+              [(ngModel)]="formData.email"
+              name="email"
+              required
+              email
+              #emCtrl="ngModel"
+              [class.is-invalid]="emCtrl.invalid && emCtrl.touched"
+              placeholder="jane@example.com"
+            />
+            <div class="invalid-feedback">
+              <span *ngIf="emCtrl.errors?.['required']">Email is required.</span>
+              <span *ngIf="emCtrl.errors?.['email']">Enter a valid email address.</span>
+            </div>
+          </div>
+
+          <!-- Purpose -->
+          <div class="mb-4">
+            <label class="form-label">Why do you want to be an Examiner? <span class="text-danger">*</span></label>
+            <textarea
+              class="form-control"
+              rows="4"
+              [(ngModel)]="formData.purpose"
+              name="purpose"
+              required
+              minlength="20"
+              #purCtrl="ngModel"
+              [class.is-invalid]="purCtrl.invalid && purCtrl.touched"
+              placeholder="Describe your subject expertise, experience, and what kinds of exams you'd like to create (min. 20 characters)..."
+            ></textarea>
+            <div class="invalid-feedback">
+              <span *ngIf="purCtrl.errors?.['required']">Purpose is required.</span>
+              <span *ngIf="purCtrl.errors?.['minlength']">Please write at least 20 characters.</span>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn btn-primary w-100" [disabled]="isLoading">
+            <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="!isLoading" class="bi bi-send me-2"></i>
+            {{ isLoading ? 'Submitting...' : 'Submit Application' }}
+          </button>
+
+        </form>
+
+        <div class="auth-card-footer mt-4">
+          Already applied? <a routerLink="/login">Sign in to check your status</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

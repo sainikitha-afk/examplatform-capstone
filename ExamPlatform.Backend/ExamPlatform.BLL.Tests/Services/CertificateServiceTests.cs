@@ -2,6 +2,7 @@
 // GetByIdWithDetailsAsync, and RevokeAsync (including notification + idempotency).
 
 using ExamPlatform.BLL.Exceptions;
+using ExamPlatform.BLL.Interfaces;
 using ExamPlatform.BLL.Services;
 using ExamPlatform.BLL.Tests.Helpers;
 using ExamPlatform.DAL.Interfaces;
@@ -17,11 +18,12 @@ namespace ExamPlatform.BLL.Tests.Services
     [TestFixture]
     public class CertificateServiceTests
     {
-        private Mock<ICertificateRepository>   _certRepoMock  = null!;
-        // INotificationRepository is now injected into CertificateService so
-        // RevokeAsync can create a CertificateRevoked in-app notification.
-        private Mock<INotificationRepository>  _notifRepoMock = null!;
-        private Mock<ILogger<CertificateService>> _loggerMock = null!;
+        private Mock<ICertificateRepository>        _certRepoMock  = null!;
+        private Mock<INotificationRepository>       _notifRepoMock = null!;
+        // CertificateService now also injects INotificationEmailService so it can
+        // send revocation emails. Mocked here so tests don't need SMTP.
+        private Mock<INotificationEmailService>     _emailSvcMock  = null!;
+        private Mock<ILogger<CertificateService>>   _loggerMock    = null!;
         private CertificateService _sut = null!;
 
         [SetUp]
@@ -29,11 +31,13 @@ namespace ExamPlatform.BLL.Tests.Services
         {
             _certRepoMock  = new Mock<ICertificateRepository>();
             _notifRepoMock = new Mock<INotificationRepository>();
+            _emailSvcMock  = new Mock<INotificationEmailService>();
             _loggerMock    = new Mock<ILogger<CertificateService>>();
 
             _sut = new CertificateService(
                 _certRepoMock.Object,
                 _notifRepoMock.Object,
+                _emailSvcMock.Object,
                 _loggerMock.Object);
         }
 

@@ -4,6 +4,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ExamApiService } from '../services/examapi.service';
 import { QuestionApiService } from '../services/questionapi.service';
 import { ExamSummaryModel, ExamDetailModel, CreateExamModel, UpdateExamModel } from '../models/exam.model';
@@ -21,6 +22,7 @@ export class ManageExams implements OnInit {
   questionBank: QuestionModel[] = [];
   selectedQuestionIds: Set<number> = new Set();
   isLoading: boolean = false;
+  isSaving: boolean = false;
   errorMessage: string = '';
   successMessage: string = '';
   view: string = 'list';   // 'list' | 'create' | 'edit' | 'questions'
@@ -31,8 +33,14 @@ export class ManageExams implements OnInit {
 
   constructor(
     private examService: ExamApiService,
-    private questionService: QuestionApiService
+    private questionService: QuestionApiService,
+    private router: Router
   ) {}
+
+  // Opens the attempt-monitoring view for one exam.
+  viewAttempts(examId: number): void {
+    this.router.navigate(['/exam-attempts', examId]);
+  }
 
   ngOnInit(): void { this.loadMyExams(); }
 
@@ -50,9 +58,12 @@ export class ManageExams implements OnInit {
   }
 
   handleCreateClick(): void {
+    if (this.isSaving) return;
+    this.isSaving = true;
+    this.errorMessage = '';
     this.examService.createExam(this.createForm).subscribe({
-      next: () => { this.successMessage = 'Exam created!'; this.view = 'list'; this.loadMyExams(); },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Create failed.'
+      next: () => { this.isSaving = false; this.successMessage = 'Exam created!'; this.view = 'list'; this.loadMyExams(); },
+      error: (e) => { this.isSaving = false; this.errorMessage = e?.error?.error ?? 'Create failed.'; }
     });
   }
 
@@ -66,9 +77,12 @@ export class ManageExams implements OnInit {
   }
 
   handleUpdateClick(): void {
+    if (this.isSaving) return;
+    this.isSaving = true;
+    this.errorMessage = '';
     this.examService.updateExam(this.editingExamId, this.updateForm).subscribe({
-      next: () => { this.successMessage = 'Exam updated!'; this.view = 'list'; this.loadMyExams(); },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Update failed.'
+      next: () => { this.isSaving = false; this.successMessage = 'Exam updated!'; this.view = 'list'; this.loadMyExams(); },
+      error: (e) => { this.isSaving = false; this.errorMessage = e?.error?.error ?? 'Update failed.'; }
     });
   }
 
@@ -76,7 +90,7 @@ export class ManageExams implements OnInit {
     if (!confirm('Delete this exam?')) return;
     this.examService.deleteExam(id).subscribe({
       next: () => this.loadMyExams(),
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Delete failed.'
+      error: (e) => this.errorMessage = e?.error?.error ?? 'Delete failed.'
     });
   }
 
@@ -95,17 +109,24 @@ export class ManageExams implements OnInit {
   }
 
   handleAttachClick(): void {
+    if (this.isSaving) return;
     const ids = Array.from(this.selectedQuestionIds);
+    if (ids.length === 0) {
+      this.errorMessage = 'Select at least one question to attach.';
+      return;
+    }
+    this.isSaving = true;
+    this.errorMessage = '';
     this.examService.attachQuestions(this.editingExamId, ids).subscribe({
-      next: () => { this.successMessage = 'Questions attached!'; this.view = 'list'; this.loadMyExams(); },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Attach failed.'
+      next: () => { this.isSaving = false; this.successMessage = 'Questions attached!'; this.view = 'list'; this.loadMyExams(); },
+      error: (e) => { this.isSaving = false; this.errorMessage = e?.error?.error ?? 'Attach failed.'; }
     });
   }
 
   handleDetachClick(examId: number, questionId: number): void {
     this.examService.detachQuestion(examId, questionId).subscribe({
       next: (d) => { this.selectedExam = d; this.successMessage = 'Question detached.'; },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Detach failed.'
+      error: (e) => this.errorMessage = e?.error?.error ?? 'Detach failed.'
     });
   }
 
@@ -113,7 +134,7 @@ export class ManageExams implements OnInit {
     if (!confirm('Publish this exam? It will become visible to candidates.')) return;
     this.examService.publishExam(id).subscribe({
       next: () => { this.successMessage = 'Exam published!'; this.loadMyExams(); },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Publish failed.'
+      error: (e) => this.errorMessage = e?.error?.error ?? 'Publish failed.'
     });
   }
 
@@ -121,7 +142,7 @@ export class ManageExams implements OnInit {
     if (!confirm('Publish results? Candidates will see their scores.')) return;
     this.examService.publishResults(id).subscribe({
       next: () => { this.successMessage = 'Results published!'; this.loadMyExams(); },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Publish results failed.'
+      error: (e) => this.errorMessage = e?.error?.error ?? 'Publish results failed.'
     });
   }
 }

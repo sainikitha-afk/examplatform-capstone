@@ -1,49 +1,116 @@
-<!-- Exam Details — shows full info before the candidate starts -->
-<div class="container mt-4">
+<!-- Exam Details — full exam info before the candidate starts -->
+
+<div class="container py-4 animate-fade-in">
 
   <div *ngIf="isLoading" class="text-center py-5">
-    <div class="spinner-border text-primary"></div>
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading exam details...</p>
   </div>
 
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+  </div>
 
   <div *ngIf="!isLoading && !errorMessage">
-    <div class="card shadow">
-      <div class="card-header bg-primary text-white">
-        <!-- Interpolation -->
-        <h4 class="mb-0">{{ exam.title }}</h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <p><i class="bi bi-clock me-2"></i><strong>Duration:</strong> {{ exam.durationMinutes }} minutes</p>
-            <p><i class="bi bi-star me-2"></i><strong>Total Marks:</strong> {{ exam.totalMarks }}</p>
-            <p><i class="bi bi-check-circle me-2"></i><strong>Passing Marks:</strong> {{ exam.passingMarks }}</p>
+    <!-- Back link -->
+    <a routerLink="/browse-exams" class="back-link mb-3 d-inline-flex align-items-center gap-2">
+      <i class="bi bi-arrow-left"></i>Back to Exams
+    </a>
+
+    <div class="row g-4">
+      <!-- Main detail card -->
+      <div class="col-lg-8">
+        <div class="card exam-detail-card">
+          <div class="exam-detail-header">
+            <span class="badge-status badge-published mb-2 d-inline-block">
+              <i class="bi bi-broadcast me-1"></i>Live
+            </span>
+            <h3 class="exam-detail-title">{{ exam.title }}</h3>
+
+            <!-- Instructions -->
+            <div *ngIf="exam.instructions" class="exam-instructions">
+              <i class="bi bi-info-circle me-2 text-primary"></i>
+              <span>{{ exam.instructions }}</span>
+            </div>
           </div>
-          <div class="col-md-6">
-            <p><i class="bi bi-calendar-event me-2"></i><strong>Start:</strong> {{ exam.startTime | date:'medium' }}</p>
-            <p><i class="bi bi-calendar-x me-2"></i><strong>End:</strong> {{ exam.endTime | date:'medium' }}</p>
-            <p>
-              <i class="bi bi-info-circle me-2"></i><strong>Status:</strong>
-              <span class="badge bg-success ms-1">{{ exam.examStatus }}</span>
+
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <div class="exam-info-item">
+                  <i class="bi bi-clock text-primary"></i>
+                  <div>
+                    <div class="exam-info-label">Duration</div>
+                    <div class="exam-info-val">{{ exam.durationMinutes }} minutes</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="exam-info-item">
+                  <i class="bi bi-star-fill text-warning"></i>
+                  <div>
+                    <div class="exam-info-label">Total Marks</div>
+                    <div class="exam-info-val">{{ exam.totalMarks }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="exam-info-item">
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                  <div>
+                    <div class="exam-info-label">Passing Marks</div>
+                    <div class="exam-info-val">{{ exam.passingMarks }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="exam-info-item">
+                  <i class="bi bi-calendar-event text-primary"></i>
+                  <div>
+                    <div class="exam-info-label">Available Until</div>
+                    <div class="exam-info-val">{{ exam.endTime | date:'mediumDate' }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start panel -->
+      <div class="col-lg-4">
+        <div class="card start-panel">
+          <div class="card-body text-center p-4">
+            <div class="start-icon">
+              <i class="bi bi-play-circle-fill"></i>
+            </div>
+            <h5 class="fw-bold mt-3 mb-1">Ready to begin?</h5>
+            <p class="text-muted small mb-4">
+              Make sure you have {{ exam.durationMinutes }} minutes available. The timer starts immediately.
+            </p>
+            <button class="btn btn-primary w-100 btn-lg" (click)="handleStartExamClick()">
+              <i class="bi bi-play-fill me-2"></i>Start Exam
+            </button>
+            <p class="text-muted mt-3" style="font-size:0.78rem">
+              <i class="bi bi-shield-check me-1"></i>Your progress is auto-saved
             </p>
           </div>
         </div>
 
-        <!-- *ngIf: show instructions block only if there are instructions -->
-        <div *ngIf="exam.instructions" class="alert alert-info mt-3">
-          <strong>Instructions:</strong><br />{{ exam.instructions }}
+        <!-- Pass info card -->
+        <div class="card mt-3 pass-info-card">
+          <div class="card-body text-center">
+            <div class="pass-gauge">
+              <span class="pass-pct">{{ ((exam.passingMarks / exam.totalMarks) * 100) | number:'1.0-0' }}%</span>
+              <span class="pass-label">to pass</span>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+              Score {{ exam.passingMarks }} out of {{ exam.totalMarks }} marks
+            </p>
+          </div>
         </div>
-      </div>
-      <div class="card-footer text-end">
-        <a routerLink="/browse-exams" class="btn btn-outline-secondary me-2">
-          <i class="bi bi-arrow-left me-1"></i>Back
-        </a>
-        <!-- Event binding: start the exam -->
-        <button class="btn btn-primary" (click)="handleStartExamClick()">
-          <i class="bi bi-play-fill me-1"></i>Start Exam
-        </button>
       </div>
     </div>
   </div>
+
 </div>

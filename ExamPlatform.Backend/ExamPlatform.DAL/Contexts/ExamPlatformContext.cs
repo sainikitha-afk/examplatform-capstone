@@ -56,6 +56,7 @@ namespace ExamPlatform.DAL.Contexts
         public DbSet<AttemptAnswer> AttemptAnswers => Set<AttemptAnswer>();
         public DbSet<Certificate> Certificates => Set<Certificate>();
         public DbSet<Notification> Notifications => Set<Notification>();
+        public DbSet<ExaminerRequest> ExaminerRequests => Set<ExaminerRequest>();
 
         // Note on syntax: "=> Set<T>()" is an expression-bodied property,
         // equivalent to "{ get { return Set<T>(); } }". Some codebases use

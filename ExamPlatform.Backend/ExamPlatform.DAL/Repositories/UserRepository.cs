@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ExamPlatform.DAL.Contexts;
 using ExamPlatform.DAL.Interfaces;
 using ExamPlatform.Domain.Entities;
+using ExamPlatform.Domain.Enums;
 
 namespace ExamPlatform.DAL.Repositories
 {
@@ -41,6 +42,18 @@ namespace ExamPlatform.DAL.Repositories
         public async Task<bool> IsUsernameTakenAsync(string username)
         {
             return await _dbSet.AnyAsync(u => u.Username == username);
+        }
+
+        // Loads all active users that hold the given role. Used by
+        // ExaminerRequestService to fan-out a notification to every admin
+        // when a new examiner request arrives.
+        // WhereAsync is not a thing — we use Where().ToListAsync() which
+        // translates to a single: SELECT * FROM users WHERE role = $1 AND is_active = true.
+        public async Task<IEnumerable<User>> GetAllByRoleAsync(UserRole role)
+        {
+            return await _dbSet
+                .Where(u => u.Role == role && u.IsActive)
+                .ToListAsync();
         }
     }
 }

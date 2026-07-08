@@ -20,6 +20,11 @@ namespace ExamPlatform.DAL.Interfaces
         // Eagerly loads the User navigation (for email notification).
         Task<IEnumerable<Attempt>> GetByExamIdAsync(int examId);
 
+        // Returns ALL attempts for an exam (every status, including InProgress),
+        // with User and answer rows loaded, newest first. Powers the examiner
+        // monitoring view (who took the exam, live progress, disconnections).
+        Task<IEnumerable<Attempt>> GetAllByExamIdAsync(int examId);
+
         // Loads a single attempt together with its answers, the answered
         // questions, selected options, and the exam (with questions+options).
         // Used for the result view and the resume view.

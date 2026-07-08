@@ -28,7 +28,15 @@ export class AuthService {
   login(credentials: LoginModel): Observable<AuthResponseModel> {
     return this.http.post<AuthResponseModel>(`${this.baseUrl}/login`, credentials).pipe(
       catchError((err) => {
-        const message = err.error?.message ?? 'Login failed. Check your credentials.';
+        let message: string;
+        if (err.status === 0) {
+          message = 'Cannot reach the server. Make sure the backend is running.';
+        } else if (err.status === 401 || err.status === 403) {
+          message = 'Invalid username or password.';
+        } else {
+          // Backend returns { status, error } — key is "error", not "message"
+          message = err.error?.error ?? 'Login failed. Please try again.';
+        }
         return throwError(() => new Error(message));
       })
     );
@@ -39,7 +47,16 @@ export class AuthService {
   register(data: RegisterModel): Observable<AuthResponseModel> {
     return this.http.post<AuthResponseModel>(`${this.baseUrl}/register`, data).pipe(
       catchError((err) => {
-        const message = err.error?.message ?? 'Registration failed.';
+        let message: string;
+        if (err.status === 0) {
+          message = 'Cannot reach the server. Make sure the backend is running.';
+        } else if (err.status === 409) {
+          message = 'An account with this email or username already exists. Try signing in instead.';
+        } else if (err.status === 400) {
+          message = err.error?.error ?? 'Please check your input and try again.';
+        } else {
+          message = err.error?.error ?? 'Registration failed. Please try again.';
+        }
         return throwError(() => new Error(message));
       })
     );

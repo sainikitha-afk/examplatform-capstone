@@ -25,6 +25,11 @@ namespace ExamPlatform.BLL.Services
         private readonly IAttemptAnswerRepository _answerRepository;
         private readonly IExamRepository _examRepository;
 
+        // INotificationRepository: examiner alerts — a candidate resuming after a
+        // disconnection or being auto-submitted on timeout is operationally
+        // significant to the exam owner, so we drop an in-app notification.
+        private readonly INotificationRepository _notificationRepository;
+
         // ILogger<AttemptService>: attempt events (start, auto-submit, manual submit)
         // are important operational signals — log them so ops can reconstruct
         // what a candidate experienced if they report an issue.
@@ -34,11 +39,13 @@ namespace ExamPlatform.BLL.Services
             IAttemptRepository attemptRepository,
             IAttemptAnswerRepository answerRepository,
             IExamRepository examRepository,
+            INotificationRepository notificationRepository,
             ILogger<AttemptService> logger)
         {
             _attemptRepository = attemptRepository;
             _answerRepository = answerRepository;
             _examRepository = examRepository;
+            _notificationRepository = notificationRepository;
             _logger = logger;
         }
 
@@ -107,6 +114,16 @@ namespace ExamPlatform.BLL.Services
                             "Attempt {AttemptId} timer expired on resume; auto-submitting for user {UserId}.",
                             fullExisting.AttemptId, userId);
                         await EvaluateAndSubmitAsync(fullExisting, AttemptStatus.AutoSubmitted);
+                    }
+                    else
+                    {
+                        // Alert the exam owner: a resume of an InProgress attempt means
+                        // the candidate lost their session (browser crash, connection
+                        // drop, page refresh) and reconnected mid-exam.
+                        await NotifyExaminerAsync(
+                            fullExisting,
+                            NotificationType.AttemptResumed,
+                            $"{fullExisting.User?.FullName ?? "A candidate"} reconnected and resumed their in-progress attempt for '{exam.Title}' (possible connection loss).");
                     }
                 }
 
@@ -341,6 +358,37 @@ namespace ExamPlatform.BLL.Services
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   GET BY EXAM (examiner monitoring)
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// Returns every attempt (all statuses) for an exam so the examiner can
+        /// monitor who took it, live progress, disconnections, and outcomes.
+        /// Examiners may only view their own exams; admins may view any.
+        /// </summary>
+        public async Task<IEnumerable<Attempt>> GetAllByExamForExaminerAsync(
+            int examId, int requesterId, bool isAdmin)
+        {
+            var exam = await _examRepository.GetByIdAsync(examId);
+            if (exam == null)
+            {
+                _logger.LogWarning(
+                    "GetAllByExam: exam {ExamId} not found (requester {UserId}).", examId, requesterId);
+                throw new ExamNotFoundException(examId);
+            }
+
+            // Ownership rule: hide other examiners' exams entirely (404, not 403,
+            // to avoid leaking exam existence) — same convention as ExamService.
+            if (!isAdmin && exam.ExaminerId != requesterId)
+            {
+                _logger.LogWarning(
+                    "GetAllByExam: examiner {UserId} does not own exam {ExamId}.", requesterId, examId);
+                throw new ExamNotFoundException(examId);
+            }
+
+            return await _attemptRepository.GetAllByExamIdAsync(examId);
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   GET RESULT
         // ════════════════════════════════════════════════════════════════
         /// <summary>
@@ -454,6 +502,43 @@ namespace ExamPlatform.BLL.Services
             _logger.LogInformation(
                 "Attempt {AttemptId} evaluated: status={Status}, score={Score}, passed={IsPassed}.",
                 attempt.AttemptId, finalStatus, totalScore, attempt.IsPassed);
+
+            // Alert the exam owner when an attempt is force-closed by the server
+            // timer — a strong signal the candidate disconnected and never returned.
+            if (finalStatus == AttemptStatus.AutoSubmitted)
+            {
+                await NotifyExaminerAsync(
+                    attempt,
+                    NotificationType.AttemptAutoSubmitted,
+                    $"{attempt.User?.FullName ?? "A candidate"}'s attempt for '{attempt.Exam!.Title}' was auto-submitted when time expired (score: {totalScore}).");
+            }
+        }
+
+        /// <summary>
+        /// Creates an in-app notification for the examiner who owns the attempt's exam.
+        /// Failures are logged, never thrown — an alert must not break the candidate flow.
+        /// </summary>
+        private async Task NotifyExaminerAsync(Attempt attempt, NotificationType type, string message)
+        {
+            try
+            {
+                await _notificationRepository.AddAsync(new Notification
+                {
+                    UserId = attempt.Exam!.ExaminerId,
+                    NotifType = type,
+                    Message = message,
+                    RelatedExamId = attempt.ExamId,
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _notificationRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create examiner notification ({Type}) for attempt {AttemptId}.",
+                    type, attempt.AttemptId);
+            }
         }
     }
 }

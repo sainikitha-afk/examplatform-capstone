@@ -1,12 +1,8 @@
-// navigation.ts — Top navigation bar: shows the current user's name, role-aware links,
-//   unread notification badge, and a Logout button.
-// CONCEPTS DEMO:
-//   - BehaviorSubject read via async pipe (currentUser$ | async) — template variable 'user'
-//     used for role comparisons; NO method calls in template for role checks
-//   - signal() for the unread notification count
-//   - ngOnDestroy + Subscription.unsubscribe() to prevent memory leaks
-//   - [ngClass] for role badge styling
-//   - RouterLink / RouterLinkActive
+// navigation.ts — Sticky top navigation bar.
+// Preserves ALL original logic (auth, notifications, logout) and adds:
+//   • Dark/light theme toggle stored in localStorage
+//   • Profile dropdown state signal
+// CONCEPTS DEMO: BehaviorSubject via async pipe, signal(), ngOnDestroy cleanup.
 
 import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -24,44 +20,68 @@ import { currentUser$ } from '../rxjs/auth.subject';
   styleUrl: './navigation.css',
 })
 export class Navigation implements OnInit, OnDestroy {
-  // Expose the BehaviorSubject to the template so the async pipe can subscribe.
-  // CONCEPT DEMO: async pipe subscribes here — NOT in a getter/method.
   currentUser$ = currentUser$;
 
-  // CONCEPT DEMO: signal() — unread count updated reactively, read in template with ().
-  unreadCount = signal(0);
+  // CONCEPT DEMO: signal() — values read in template with ()
+  unreadCount    = signal(0);
+  isDark         = signal(false);
+  profileOpen    = signal(false);
+  mobileMenuOpen = signal(false);
 
   private userSub: Subscription | null = null;
 
   constructor(
     private authService: AuthService,
     private notificationService: NotificationApiService
-  ) {}
+  ) {
+    // Restore saved theme from localStorage on component creation.
+    const saved = localStorage.getItem('examhub-theme');
+    const dark  = saved === 'dark';
+    this.isDark.set(dark);
+    this.applyTheme(dark ? 'dark' : 'light');
+  }
 
-  // Subscribe to the user stream so the badge reloads whenever someone logs in.
-  // Using filter(Boolean) skips the null emissions (logout / initial unauthenticated state).
+  // Sets BOTH theme attributes on <html>:
+  //   data-theme    → our own CSS variables (styles.css)
+  //   data-bs-theme → Bootstrap 5.3's built-in dark mode (tables, modals,
+  //                   dropdowns, form controls would otherwise keep black text)
+  private applyTheme(theme: string): void {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-bs-theme', theme);
+  }
+
   ngOnInit(): void {
     this.userSub = currentUser$
       .pipe(filter(u => u !== null))
       .subscribe(() => this.refreshUnreadCount());
   }
 
-  // Load unread count from the backend and update the signal.
-  // Called once per non-null user emission (i.e., once on login / once on page refresh if
-  // already logged in). HttpClient observables complete after the response — no manual
-  // unsubscribe needed for this inner call.
   private refreshUnreadCount(): void {
     this.notificationService.loadUnreadCount().subscribe({
-      next: (result) => this.unreadCount.set(result.count),
-      error: () => this.unreadCount.set(0)
+      next:  (result) => this.unreadCount.set(result.count),
+      error: ()       => this.unreadCount.set(0)
     });
   }
 
+  // Toggle between light and dark themes and persist the choice.
+  toggleTheme(): void {
+    const dark = !this.isDark();
+    this.isDark.set(dark);
+    const theme = dark ? 'dark' : 'light';
+    this.applyTheme(theme);
+    localStorage.setItem('examhub-theme', theme);
+  }
+
+  toggleProfile(): void   { this.profileOpen.update(v => !v); }
+  closeProfle():   void   { this.profileOpen.set(false); }
+  toggleMobile():  void   { this.mobileMenuOpen.update(v => !v); }
+  closeMobile():   void   { this.mobileMenuOpen.set(false); }
+
   handleLogoutClick(): void {
+    this.profileOpen.set(false);
     this.authService.logout();
   }
 
-  // CONCEPT DEMO: ngOnDestroy — unsubscribe the user stream to prevent memory leaks.
   ngOnDestroy(): void {
     this.userSub?.unsubscribe();
   }

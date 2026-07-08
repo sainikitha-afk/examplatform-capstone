@@ -1,0 +1,89 @@
+/* ─── Result Hero Card ────────────────────────────────────────── */
+.result-hero-card {
+  border-radius: var(--radius-xl);
+  padding: 3rem 2.5rem;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+.result-passed {
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+}
+.result-failed {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+[data-theme="dark"] .result-failed {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.result-emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: 0.75rem;
+}
+.result-verdict {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0.4rem;
+}
+.result-exam-title {
+  color: rgba(255,255,255,0.75);
+  font-size: 1rem;
+  margin-bottom: 2rem;
+}
+
+.result-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+.result-metric {}
+.rm-val   { font-size: 2rem; font-weight: 800; color: white; line-height: 1; }
+.rm-label { font-size: 0.78rem; color: rgba(255,255,255,0.7); margin-top: 0.2rem; }
+
+.result-metric-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255,255,255,0.25);
+}
+
+.result-actions {}
+.btn-result {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1.5px solid rgba(255,255,255,0.4);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.btn-result:hover { background: rgba(255,255,255,0.3); color: white; }
+.btn-result-outline {
+  background: transparent;
+  color: rgba(255,255,255,0.85);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.btn-result-outline:hover { background: rgba(255,255,255,0.1); color: white; }
+
+/* ─── Breakdown Table ─────────────────────────────────────────── */
+.row-correct { border-left: 3px solid var(--success) !important; }
+.row-incorrect { border-left: 3px solid var(--danger) !important; }
+
+@media (max-width: 768px) {
+  .result-hero-card { padding: 2rem 1.25rem; }
+  .result-verdict   { font-size: 1.3rem; }
+  .rm-val           { font-size: 1.5rem; }
+}

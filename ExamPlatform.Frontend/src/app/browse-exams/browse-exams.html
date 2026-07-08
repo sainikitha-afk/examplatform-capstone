@@ -1,61 +1,70 @@
-<!-- Browse Exams — published exam list with category filter -->
-<div class="container mt-4">
-  <h3><i class="bi bi-search me-2"></i>Browse Exams</h3>
+<!-- Browse Exams — published exam cards with category filter -->
 
-  <!-- Category filter — (change) event binding -->
-  <div class="row mb-3">
-    <div class="col-md-4">
-      <select class="form-select" [(ngModel)]="selectedCategoryId" (change)="handleCategoryChange()">
-        <option [value]="null">All Categories</option>
-        <!-- *ngFor: render one option per category -->
-        <option *ngFor="let cat of categories" [value]="cat.catId">{{ cat.catName }}</option>
-      </select>
-    </div>
+<div class="container py-4 animate-fade-in">
+
+  <div class="page-header">
+    <h3><i class="bi bi-search me-2 text-primary"></i>Browse Exams</h3>
+    <p class="page-header-sub">Discover and take published assessments.</p>
   </div>
 
-  <div *ngIf="isLoading" class="text-center py-4">
-    <div class="spinner-border text-primary"></div>
+  <!-- Category filter -->
+  <div class="browse-filter-bar mb-4">
+    <select class="form-select filter-select" [(ngModel)]="selectedCategoryId" (change)="handleCategoryChange()">
+      <option [value]="null">All Categories</option>
+      <option *ngFor="let cat of categories" [value]="cat.catId">{{ cat.catName }}</option>
+    </select>
   </div>
 
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading exams...</p>
+  </div>
 
-  <!-- Exam cards — *ngFor iterates the exams array -->
-  <div class="row g-3" *ngIf="!isLoading">
-    <div class="col-md-4" *ngFor="let exam of exams">
-      <div class="card h-100 shadow-sm">
-        <div class="card-body">
-          <!-- Interpolation: show exam title -->
-          <h5 class="card-title">{{ exam.title }}</h5>
-          <p class="text-muted small">
-            <i class="bi bi-clock me-1"></i>{{ exam.durationMinutes }} min &nbsp;|&nbsp;
-            <i class="bi bi-star me-1"></i>{{ exam.totalMarks }} marks
-          </p>
-          <p class="small">Pass: {{ exam.passingMarks }} marks</p>
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+  </div>
+
+  <!-- Exam Cards Grid -->
+  <div *ngIf="!isLoading" class="row g-3 stagger-children">
+    <div class="col-md-6 col-lg-4" *ngFor="let exam of exams">
+      <div class="exam-card">
+        <div class="exam-card-body">
+          <h5 class="exam-title">{{ exam.title }}</h5>
+          <div class="exam-meta">
+            <span><i class="bi bi-clock me-1"></i>{{ exam.durationMinutes }} min</span>
+            <span><i class="bi bi-star-fill me-1 text-warning"></i>{{ exam.totalMarks }} marks</span>
+            <span class="badge-status badge-published">Live</span>
+          </div>
+          <div class="exam-pass-info">
+            <i class="bi bi-check-circle me-1 text-success"></i>
+            Pass at <strong>{{ exam.passingMarks }}</strong> marks
+          </div>
         </div>
-        <div class="card-footer">
-          <!-- Event binding: navigate to exam details -->
-          <button class="btn btn-primary btn-sm w-100" (click)="viewExamDetails(exam.examId)">
-            <i class="bi bi-eye me-1"></i>View Details
+        <div class="exam-card-footer">
+          <button class="btn btn-primary w-100" (click)="viewExamDetails(exam.examId)">
+            <i class="bi bi-eye me-1"></i>View & Start
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- No results -->
-  <div *ngIf="!isLoading && exams.length === 0 && !errorMessage" class="alert alert-info">
-    No published exams found. Check back later!
+  <!-- Empty state -->
+  <div *ngIf="!isLoading && exams.length === 0 && !errorMessage" class="empty-state">
+    <span class="empty-icon">📋</span>
+    <h5>No exams found</h5>
+    <p>No published exams match your filter. Try a different category or check back later.</p>
   </div>
 
   <!-- Pagination -->
-  <nav *ngIf="totalPages > 1" class="mt-3">
+  <nav *ngIf="totalPages > 1" class="mt-4 d-flex justify-content-center">
     <ul class="pagination">
-      <li class="page-item" *ngFor="let p of [].constructor(totalPages); let i = index">
-        <!-- [ngClass]: active page styling; (click) event binding -->
-        <button class="page-link"
-                [ngClass]="{'active': currentPage === i+1}"
-                (click)="handlePageChange(i+1)">{{ i+1 }}</button>
+      <li class="page-item" *ngFor="let p of [].constructor(totalPages); let i = index"
+          [class.active]="currentPage === i + 1">
+        <button class="page-link" (click)="handlePageChange(i + 1)">{{ i + 1 }}</button>
       </li>
     </ul>
   </nav>
+
 </div>

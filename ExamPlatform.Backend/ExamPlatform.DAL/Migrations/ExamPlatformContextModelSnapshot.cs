@@ -333,6 +333,63 @@ namespace ExamPlatform.DAL.Migrations
                     b.ToTable("exam_questions");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.ExaminerRequest", b =>
+                {
+                    b.Property<int>("ExaminerRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("examiner_request_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ExaminerRequestId"));
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("admin_note");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("full_name");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("purpose");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("status");
+
+                    b.HasKey("ExaminerRequestId")
+                        .HasName("pk_examiner_requests");
+
+                    b.HasIndex("Email")
+                        .HasDatabaseName("ix_examiner_requests_email");
+
+                    b.ToTable("examiner_requests");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Notification", b =>
                 {
                     b.Property<int>("NotificationId")

@@ -1,37 +1,74 @@
-<!-- Notifications — CONCEPT DEMO: date pipe, *ngFor, [ngClass] for read/unread -->
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3><i class="bi bi-bell me-2"></i>Notifications</h3>
-    <!-- Event binding -->
-    <button class="btn btn-outline-secondary btn-sm" (click)="handleMarkAllReadClick()">
+<!-- Notifications — premium inbox with read/unread states -->
+
+<div class="container py-4 animate-fade-in">
+
+  <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h3><i class="bi bi-bell me-2 text-primary"></i>Notifications</h3>
+      <p class="page-header-sub">Your inbox from the platform.</p>
+    </div>
+    <!-- Event binding: mark all read -->
+    <button class="btn btn-outline-primary btn-sm" (click)="handleMarkAllReadClick()">
       <i class="bi bi-check2-all me-1"></i>Mark All Read
     </button>
   </div>
 
-  <div *ngIf="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
-
-  <div *ngIf="!isLoading && notifications.length === 0 && !errorMessage" class="alert alert-info">
-    No notifications.
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading notifications...</p>
   </div>
 
-  <!-- *ngFor: one row per notification -->
-  <div *ngFor="let n of notifications"
-       class="card mb-2 shadow-sm"
-       [ngClass]="{'border-primary': !n.isRead, 'opacity-75': n.isRead}">
-    <div class="card-body d-flex justify-content-between align-items-start">
-      <div>
-        <!-- Interpolation -->
-        <p class="mb-1" [ngClass]="{'fw-bold': !n.isRead}">{{ n.message }}</p>
-        <!-- date pipe: built-in Angular pipe -->
-        <small class="text-muted">{{ n.createdAt | date:'medium' }}</small>
-        <span class="badge bg-secondary ms-2">{{ n.notifType }}</span>
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!isLoading && notifications.length === 0 && !errorMessage" class="empty-state">
+    <span class="empty-icon">🔔</span>
+    <h5>All caught up!</h5>
+    <p>No notifications yet. They'll appear here when your exams or certificates update.</p>
+  </div>
+
+  <!-- Notification list -->
+  <div class="notif-list">
+    <!-- *ngFor: one row per notification -->
+    <div *ngFor="let n of notifications"
+         class="notif-item"
+         [class.notif-unread]="!n.isRead"
+         [class.notif-read]="n.isRead">
+
+      <!-- Icon -->
+      <div class="notif-icon">
+        <i class="bi" [ngClass]="{
+          'bi-award-fill':      n.notifType === 'CertificateIssued' || n.notifType === 'ExaminerAccountApproved',
+          'bi-x-circle-fill':   n.notifType === 'CertificateRevoked',
+          'bi-clipboard-check': n.notifType === 'ResultPublished',
+          'bi-person-badge':    n.notifType === 'ExaminerRequestReceived',
+          'bi-wifi-off':        n.notifType === 'AttemptResumed',
+          'bi-hourglass-bottom': n.notifType === 'AttemptAutoSubmitted',
+          'bi-bell-fill':       !['CertificateIssued','CertificateRevoked','ResultPublished','ExaminerRequestReceived','ExaminerAccountApproved','AttemptResumed','AttemptAutoSubmitted'].includes(n.notifType)
+        }"></i>
       </div>
+
+      <!-- Content -->
+      <div class="notif-content">
+        <!-- [ngClass]: bold for unread; interpolation for message -->
+        <p class="notif-message" [class.fw-600]="!n.isRead">{{ n.message }}</p>
+        <div class="notif-meta">
+          <!-- date pipe: built-in Angular pipe -->
+          <span>{{ n.createdAt | date:'medium' }}</span>
+          <span class="notif-type-badge">{{ n.notifType }}</span>
+        </div>
+      </div>
+
+      <!-- Mark read action -->
       <button *ngIf="!n.isRead"
-              class="btn btn-sm btn-outline-primary ms-2"
+              class="btn btn-sm btn-outline-primary notif-mark-btn"
               (click)="handleMarkReadClick(n)">
         Mark Read
       </button>
     </div>
   </div>
+
 </div>

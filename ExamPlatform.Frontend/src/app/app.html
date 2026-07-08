@@ -1,9 +1,10 @@
 <!-- app.html — Root template: navigation bar + router outlet.
      CONCEPT DEMO: <router-outlet> — Angular replaces this tag with whatever component
-     matches the current URL in app.routes.ts. -->
+     matches the current URL in app.routes.ts.
+     The main-content div adds top padding to push page content below the fixed navbar. -->
 
-<!-- Navigation bar renders on every page -->
 <app-navigation></app-navigation>
 
-<!-- Router outlet: swaps in the route's component here -->
-<router-outlet></router-outlet>
+<main class="main-content">
+  <router-outlet></router-outlet>
+</main>

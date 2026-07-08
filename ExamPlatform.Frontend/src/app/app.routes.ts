@@ -10,6 +10,7 @@ import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
 // Eagerly-loaded components (imported statically — small screens).
+import { Landing } from './landing/landing';
 import { Login } from './login/login';
 import { Register } from './register/register';
 import { CandidateDashboard } from './candidate-dashboard/candidate-dashboard';
@@ -27,12 +28,16 @@ import { PublishResults } from './publish-results/publish-results';
 import { Categories } from './categories/categories';
 import { ManageUsers } from './manage-users/manage-users';
 import { ManageExaminers } from './manage-examiners/manage-examiners';
+import { ExaminerRequest } from './examiner-request/examiner-request';
+import { AdminExaminerRequests } from './admin-examiner-requests/admin-examiner-requests';
 
 export const routes: Routes = [
 
   // ── Public routes (no guard) ──────────────────────────────────────────
+  { path: '',       component: Landing,   pathMatch: 'full' },
   { path: 'login',    component: Login },
   { path: 'register', component: Register },
+  { path: 'apply-as-examiner', component: ExaminerRequest },
 
   // ── Candidate routes ──────────────────────────────────────────────────
   {
@@ -113,6 +118,13 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { role: 'Examiner' }
   },
+  {
+    // Examiner monitoring: every attempt on one exam (:examId route parameter).
+    path: 'exam-attempts/:examId',
+    loadComponent: () => import('./exam-attempts/exam-attempts').then(m => m.ExamAttempts),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Examiner' }
+  },
 
   // ── Admin routes ─────────────────────────────────────────────────────
   {
@@ -139,10 +151,13 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { role: 'Admin' }
   },
+  {
+    path: 'admin/examiner-requests',
+    component: AdminExaminerRequests,
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Admin' }
+  },
 
-  // ── Default + wildcard ───────────────────────────────────────────────
-  // Root: redirect to /login (authGuard will redirect to dashboard if already logged in).
-  { path: '', redirectTo: '/login', pathMatch: 'full' },
-  // Unknown paths fall back to login.
-  { path: '**', redirectTo: '/login' },
+  // ── Wildcard ──────────────────────────────────────────────────────────
+  { path: '**', redirectTo: '/' },
 ];

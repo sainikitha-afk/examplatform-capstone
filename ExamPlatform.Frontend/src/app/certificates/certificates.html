@@ -1,48 +1,69 @@
-<!-- Certificates page — CONCEPT DEMO: date pipe, uppercase pipe, *ngFor -->
-<div class="container mt-4">
-  <h3><i class="bi bi-award me-2"></i>My Certificates</h3>
+<!-- Certificates page — premium certificate card display -->
 
-  <div *ngIf="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+<div class="container py-4 animate-fade-in">
 
-  <div *ngIf="!isLoading && certs.length === 0 && !errorMessage" class="alert alert-info">
-    No certificates yet. Pass an exam to earn one!
+  <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h3><i class="bi bi-award me-2 text-primary"></i>My Certificates</h3>
+      <p class="page-header-sub">Your earned digital credentials.</p>
+    </div>
   </div>
 
-  <div class="row g-3" *ngIf="!isLoading">
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading certificates...</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!isLoading && certs.length === 0 && !errorMessage" class="empty-state">
+    <span class="empty-icon">🏆</span>
+    <h5>No certificates yet</h5>
+    <p>Pass an exam to earn your first digital certificate!</p>
+    <a routerLink="/browse-exams" class="btn btn-primary mt-2">
+      <i class="bi bi-search me-2"></i>Find Exams
+    </a>
+  </div>
+
+  <!-- Certificate Grid -->
+  <div *ngIf="!isLoading && certs.length > 0" class="row g-4 stagger-children">
     <div class="col-md-6" *ngFor="let cert of certs">
-      <div class="card shadow-sm"
-           [ngClass]="{'border-success': cert.certStatus === 'Issued', 'border-secondary': cert.certStatus === 'Revoked'}">
-        <div class="card-body">
-          <h5 class="card-title">
-            <i class="bi bi-award-fill text-warning me-1"></i>
-            <!-- Interpolation -->
-            {{ cert.examTitle }}
-          </h5>
-          <p class="mb-1">
-            <strong>Code:</strong>
-            <!-- uppercase pipe -->
-            {{ cert.certificateCode | uppercase }}
-          </p>
-          <p class="mb-1">
-            <strong>Score:</strong> {{ cert.score }}
-          </p>
-          <p class="mb-1">
-            <strong>Issued:</strong>
-            <!-- CONCEPT DEMO: date pipe with format string -->
-            {{ cert.issuedAt | date:'mediumDate' }}
-          </p>
-          <span class="badge"
-                [ngClass]="{'bg-success': cert.certStatus === 'Issued', 'bg-secondary': cert.certStatus === 'Revoked'}">
-            {{ cert.certStatus }}
-          </span>
+      <div class="cert-card" [class.revoked]="cert.certStatus !== 'Issued'">
+        <!-- Header -->
+        <div class="d-flex align-items-start justify-content-between mb-3">
+          <div>
+            <h5 class="cert-title">{{ cert.examTitle }}</h5>
+            <span class="badge-status" [ngClass]="cert.certStatus === 'Issued' ? 'badge-issued' : 'badge-revoked'">
+              <i class="bi me-1" [ngClass]="cert.certStatus === 'Issued' ? 'bi-patch-check-fill' : 'bi-x-circle'"></i>
+              {{ cert.certStatus }}
+            </span>
+          </div>
+          <div class="cert-score-badge">
+            <div class="csb-val">{{ cert.score }}</div>
+            <div class="csb-label">score</div>
+          </div>
         </div>
-        <div class="card-footer" *ngIf="cert.certStatus === 'Issued'">
+
+        <!-- Code -->
+        <div class="cert-code mb-3">{{ cert.certificateCode | uppercase }}</div>
+
+        <!-- Meta -->
+        <div class="cert-meta">
+          <span><i class="bi bi-calendar-check me-1"></i>Issued {{ cert.issuedAt | date:'mediumDate' }}</span>
+        </div>
+
+        <!-- Download button -->
+        <div *ngIf="cert.certStatus === 'Issued'" class="mt-3">
           <button class="btn btn-outline-primary btn-sm" (click)="handleDownloadClick(cert.certificateId)">
-            <i class="bi bi-download me-1"></i>Download
+            <i class="bi bi-download me-2"></i>Download Certificate
           </button>
         </div>
       </div>
     </div>
   </div>
+
 </div>

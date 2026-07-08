@@ -24,6 +24,9 @@ export class ManageQuestions implements OnInit {
   questions: QuestionModel[] = [];
   categories: CategoryModel[] = [];
   isLoading: boolean = false;
+  isSaving: boolean = false;
+  isImporting: boolean = false;
+  isDownloadingTemplate: boolean = false;
   errorMessage: string = '';
   successMessage: string = '';
 
@@ -78,17 +81,25 @@ export class ManageQuestions implements OnInit {
   }
 
   handleSaveClick(): void {
+    if (this.isSaving) return;
+    this.isSaving = true;
+    this.errorMessage = '';
+
     const obs = this.editingId
       ? this.questionService.updateQuestion(this.editingId, this.formData)
       : this.questionService.createQuestion(this.formData);
 
     obs.subscribe({
       next: () => {
+        this.isSaving = false;
         this.successMessage = 'Question saved!';
         this.view = 'list';
         this.loadQuestions();
       },
-      error: (err) => this.errorMessage = err?.error?.message ?? 'Save failed.'
+      error: (err) => {
+        this.isSaving = false;
+        this.errorMessage = err?.error?.error ?? 'Save failed.';
+      }
     });
   }
 
@@ -109,14 +120,45 @@ export class ManageQuestions implements OnInit {
     const file = this.fileInputRef.nativeElement.files?.[0];
     if (!file) return;
     this.importResult = null;
+    this.isImporting = true;
+    this.errorMessage = '';
     this.questionService.importExcel(file).subscribe({
       next: (result) => {
+        this.isImporting = false;
         this.importResult = result;
         this.loadQuestions();
         // Reset the file input so the same file can be re-selected.
         this.fileInputRef.nativeElement.value = '';
       },
-      error: () => this.errorMessage = 'Import failed.'
+      error: () => {
+        this.isImporting = false;
+        this.errorMessage = 'Import failed. Make sure the file follows the template format.';
+        this.fileInputRef.nativeElement.value = '';
+      }
+    });
+  }
+
+  // Downloads the pre-formatted Excel template so examiners know the exact
+  // column layout (CategoryId | QuestionText | Marks | Difficulty | OptionA-D | CorrectOption).
+  handleDownloadTemplateClick(): void {
+    if (this.isDownloadingTemplate) return;
+    this.isDownloadingTemplate = true;
+    this.errorMessage = '';
+    this.questionService.downloadImportTemplate().subscribe({
+      next: (blob) => {
+        this.isDownloadingTemplate = false;
+        // Trigger a browser download from the received blob.
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'questions_template.xlsx';
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.isDownloadingTemplate = false;
+        this.errorMessage = 'Could not download the template. Please try again.';
+      }
     });
   }
 

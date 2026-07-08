@@ -26,6 +26,10 @@ export class ExaminerDashboard implements OnInit {
   publishedCount: number = 0;
   resultsPublishedCount: number = 0;
 
+  // Non-draft exams — candidates can (or could) attempt these, so the dashboard
+  // offers a direct "View Attempts" monitoring link for each.
+  liveExams: ExamSummaryModel[] = [];
+
   constructor(private examService: ExamApiService) {}
 
   ngOnInit(): void {
@@ -40,6 +44,7 @@ export class ExaminerDashboard implements OnInit {
         this.draftCount           = this.exams.filter(e => e.examStatus === 'Draft').length;
         this.publishedCount       = this.exams.filter(e => e.examStatus === 'Published').length;
         this.resultsPublishedCount = this.exams.filter(e => e.examStatus === 'ResultsPublished').length;
+        this.liveExams            = this.exams.filter(e => e.examStatus !== 'Draft');
         this.isLoading.set(false);
       },
       error: () => {

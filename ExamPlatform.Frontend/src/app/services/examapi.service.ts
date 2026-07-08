@@ -7,6 +7,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ExamSummaryModel, ExamDetailModel, CreateExamModel, UpdateExamModel } from '../models/exam.model';
+import { ExamAttemptMonitorModel } from '../models/attempt.model';
 import { PagedResultModel } from '../models/paged-result.model';
 
 @Injectable({ providedIn: 'root' })
@@ -56,6 +57,11 @@ export class ExamApiService {
   // DELETE /api/exams/{examId}/questions/{questionId} — detach a single question
   detachQuestion(examId: number, questionId: number): Observable<ExamDetailModel> {
     return this.http.delete<ExamDetailModel>(`${this.baseUrl}/${examId}/questions/${questionId}`);
+  }
+
+  // GET /api/exams/{id}/attempts — every attempt on this exam (Examiner monitoring view)
+  loadExamAttempts(examId: number): Observable<ExamAttemptMonitorModel[]> {
+    return this.http.get<ExamAttemptMonitorModel[]>(`${this.baseUrl}/${examId}/attempts`);
   }
 
   // POST /api/exams/{id}/publish — moves exam from Draft → Published

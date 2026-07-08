@@ -17,6 +17,13 @@ export interface AttemptState {
   currentQuestionIndex: number;
   // answers maps questionId → selected optionId (null = skipped/cleared).
   answers: Record<number, number | null>;
+  // pendingSync holds answers not yet confirmed saved by the server.
+  // Entries are added on every selection and removed when the API call succeeds.
+  // If the connection drops, they stay here and are re-sent on reconnect —
+  // this is what guarantees no answer is ever lost.
+  pendingSync: Record<number, number | null>;
+  // True once an auto-save has failed (connection problems detected server-side).
+  isOffline: boolean;
   timeRemaining: number;      // seconds
   status: 'idle' | 'loading' | 'active' | 'submitting' | 'submitted' | 'error';
   errorMessage: string;
@@ -29,6 +36,8 @@ const initialState: AttemptState = {
   questions: [],
   currentQuestionIndex: 0,
   answers: {},
+  pendingSync: {},
+  isOffline: false,
   timeRemaining: 0,
   status: 'idle',
   errorMessage: '',
@@ -58,6 +67,8 @@ export const attemptReducer = createReducer(
       examTitle: attempt.examTitle,
       questions: attempt.questions,
       answers,
+      pendingSync: {},        // fresh start/resume — server state is the source of truth
+      isOffline: false,
       timeRemaining: attempt.remainingSeconds,
       currentQuestionIndex: 0,
       status: 'active' as const,
@@ -77,10 +88,24 @@ export const attemptReducer = createReducer(
     currentQuestionIndex: index,
   })),
 
-  // Record the candidate's answer in the answers map.
+  // Record the candidate's answer in the answers map AND mark it pending sync.
   on(AttemptActions.saveAnswer, (state, { questionId, optionId }) => ({
     ...state,
     answers: { ...state.answers, [questionId]: optionId },
+    pendingSync: { ...state.pendingSync, [questionId]: optionId },
+  })),
+
+  // Server confirmed the save — drop it from pendingSync and clear the offline flag.
+  on(AttemptActions.answerSynced, (state, { questionId }) => {
+    const pendingSync = { ...state.pendingSync };
+    delete pendingSync[questionId];
+    return { ...state, pendingSync, isOffline: false };
+  }),
+
+  // Save failed after retries — keep the entry in pendingSync for the resync pass.
+  on(AttemptActions.answerSyncFailed, (state) => ({
+    ...state,
+    isOffline: true,
   })),
 
   // Decrement the timer by 1 second.
@@ -101,9 +126,12 @@ export const attemptReducer = createReducer(
     status: 'submitted' as const,
   })),
 
+  // Submit failed (usually connection loss). CRITICAL: return to 'active', NOT
+  // 'error' — the candidate must keep their exam screen and answers so they can
+  // retry the submission once the connection is back.
   on(AttemptActions.submitAttemptFailure, (state, { error }) => ({
     ...state,
-    status: 'error' as const,
+    status: 'active' as const,
     errorMessage: error,
   })),
 

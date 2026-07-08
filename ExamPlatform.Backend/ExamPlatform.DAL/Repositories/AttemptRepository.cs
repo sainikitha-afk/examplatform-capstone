@@ -58,6 +58,24 @@ namespace ExamPlatform.DAL.Repositories
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   GetAllByExamIdAsync
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// Returns ALL attempts for an exam (every status, including InProgress),
+        /// with User and answer rows loaded, newest first. Used by the examiner
+        /// monitoring view to show who took the exam and how each attempt went.
+        /// </summary>
+        public async Task<IEnumerable<Attempt>> GetAllByExamIdAsync(int examId)
+        {
+            return await _dbSet
+                .Include(a => a.User)            // candidate name + email
+                .Include(a => a.AttemptAnswers)  // answered count for progress display
+                .Where(a => a.ExamId == examId)
+                .OrderByDescending(a => a.StartedAt)
+                .ToListAsync();
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   GetByIdWithAnswersAndExamAsync
         // ════════════════════════════════════════════════════════════════
         /// <summary>
@@ -68,6 +86,8 @@ namespace ExamPlatform.DAL.Repositories
         public async Task<Attempt?> GetByIdWithAnswersAndExamAsync(int attemptId)
         {
             return await _dbSet
+                // Load the candidate — needed for examiner alerts (resume / auto-submit).
+                .Include(a => a.User)
                 // Load answer rows
                 .Include(a => a.AttemptAnswers)
                     .ThenInclude(aa => aa.SelectedOption) // what the candidate chose

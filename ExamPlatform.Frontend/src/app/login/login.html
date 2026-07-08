@@ -1,71 +1,118 @@
-<!-- Login form — Bootstrap 5 card layout -->
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-5">
-      <div class="card shadow">
-        <div class="card-header bg-primary text-white text-center">
-          <h4 class="mb-0"><i class="bi bi-mortarboard-fill me-2"></i>ExamHub Login</h4>
+<!-- login.html — Modern split-screen login page -->
+
+<div class="auth-page">
+  <div class="auth-left">
+    <div class="auth-brand">
+      <i class="bi bi-mortarboard-fill"></i>
+      <span>ExamHub</span>
+    </div>
+    <div class="auth-left-content">
+      <h2>Welcome back!</h2>
+      <p>Sign in to access your exams, certificates, and analytics.</p>
+      <div class="auth-features">
+        <div class="auth-feature">
+          <i class="bi bi-shield-check"></i>
+          <span>Secure JWT authentication</span>
         </div>
-        <div class="card-body p-4">
-
-          <!-- Structural directive: *ngIf shows the alert only when there is an error -->
-          <div *ngIf="errorMessage" class="alert alert-danger">
-            <i class="bi bi-exclamation-circle me-1"></i>{{ errorMessage }}
-          </div>
-
-          <form>
-            <div class="mb-3">
-              <label class="form-label">Email or Username</label>
-              <!-- Two-way binding: [(ngModel)] keeps loginData.emailOrUsername in sync with the input -->
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="loginData.emailOrUsername"
-                name="emailOrUsername"
-                placeholder="your@email.com or username"
-                required
-              />
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Password</label>
-              <!-- Two-way binding -->
-              <input
-                type="password"
-                class="form-control"
-                [(ngModel)]="loginData.password"
-                name="password"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <!-- Event binding: (click) calls handleLoginClick() -->
-            <!-- Property binding: [disabled] disables button while loading -->
-            <button
-              class="btn btn-primary w-100"
-              (click)="handleLoginClick()"
-              [disabled]="isLoading"
-            >
-              <!-- Interpolation: shows spinner text while loading -->
-              <span *ngIf="isLoading"><i class="bi bi-hourglass-split me-1"></i>Logging in...</span>
-              <span *ngIf="!isLoading"><i class="bi bi-box-arrow-in-right me-1"></i>Login</span>
-            </button>
-          </form>
-
-          <hr />
-          <p class="text-center mb-0">
-            New candidate?
-            <!-- RouterModule enables routerLink directive -->
-            <a routerLink="/register">Register here</a>
-          </p>
+        <div class="auth-feature">
+          <i class="bi bi-clock-history"></i>
+          <span>Auto-save exam progress</span>
         </div>
-
-        <!-- Interpolation: live preview of what the user is typing (teaches concept visually) -->
-        <div class="card-footer text-muted text-center small">
-          Typing as: <strong>{{ loginData.emailOrUsername }}</strong>
+        <div class="auth-feature">
+          <i class="bi bi-award"></i>
+          <span>Earn digital certificates</span>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card animate-scale-in">
+      <div class="auth-card-header">
+        <h3>Sign In</h3>
+        <p class="text-muted">Enter your credentials to continue</p>
+      </div>
+
+      <!-- Error alert -->
+      <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <form>
+        <div class="form-group mb-3">
+          <label class="form-label" for="emailOrUsername">
+            <i class="bi bi-person me-1"></i>Email or Username
+          </label>
+          <!-- Two-way binding: [(ngModel)] keeps loginData.emailOrUsername in sync -->
+          <input
+            id="emailOrUsername"
+            type="text"
+            class="form-control"
+            [(ngModel)]="loginData.emailOrUsername"
+            name="emailOrUsername"
+            placeholder="your@email.com or username"
+            required
+            autocomplete="username"
+          />
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label" for="password">
+            <i class="bi bi-lock me-1"></i>Password
+          </label>
+          <!-- Two-way binding -->
+          <input
+            id="password"
+            type="password"
+            class="form-control"
+            [(ngModel)]="loginData.password"
+            name="password"
+            placeholder="••••••••"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+
+        <!-- Property binding: [disabled] disables button while loading -->
+        <button
+          type="button"
+          class="btn btn-primary w-100 btn-auth"
+          (click)="handleLoginClick()"
+          [disabled]="isLoading"
+        >
+          <!-- *ngIf: shows spinner vs. normal label -->
+          <span *ngIf="isLoading" class="d-flex align-items-center justify-content-center gap-2">
+            <span class="spinner-border spinner-border-sm"></span>
+            Signing in...
+          </span>
+          <span *ngIf="!isLoading" class="d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-box-arrow-in-right"></i>
+            Sign In
+          </span>
+        </button>
+      </form>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <div class="text-center">
+        <p class="text-muted mb-2" style="font-size:0.9rem">New to ExamHub?</p>
+        <!-- RouterModule enables routerLink directive -->
+        <a routerLink="/register" class="btn btn-outline-primary w-100">
+          <i class="bi bi-person-plus me-2"></i>Create Candidate Account
+        </a>
+      </div>
+
+      <div class="auth-back mt-3 text-center">
+        <a routerLink="/" class="text-muted" style="font-size:0.82rem; text-decoration:none">
+          <i class="bi bi-arrow-left me-1"></i>Back to home
+        </a>
+      </div>
+    </div>
+
+    <!-- CONCEPT DEMO: Interpolation — live preview of what the user types -->
+    <div *ngIf="loginData.emailOrUsername" class="auth-preview">
+      <i class="bi bi-eye me-1"></i>Signing in as: <strong>{{ loginData.emailOrUsername }}</strong>
     </div>
   </div>
 </div>

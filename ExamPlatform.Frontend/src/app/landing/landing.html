@@ -1,0 +1,301 @@
+<!-- landing.html — Public landing page with hero, features, stats, testimonials, FAQ, CTA -->
+
+<!-- ═══ HERO ═══════════════════════════════════════════════════════ -->
+<section class="hero-section">
+  <div class="hero-bg"></div>
+  <div class="container hero-content">
+    <div class="row align-items-center min-vh-hero">
+      <div class="col-lg-6 animate-fade-in">
+        <span class="hero-chip">
+          <i class="bi bi-stars me-1"></i>Modern Assessment Platform
+        </span>
+        <h1 class="hero-title">
+          Smarter Exams.<br>
+          <span class="hero-title-accent">Better Outcomes.</span>
+        </h1>
+        <p class="hero-sub">
+          ExamHub brings candidates, examiners, and administrators together on one seamless platform.
+          Take exams, earn certificates, and track your growth — all in one place.
+        </p>
+        <div class="hero-cta-group">
+          <a routerLink="/register" class="btn btn-cta-primary">
+            <i class="bi bi-rocket-takeoff me-2"></i>Get Started Free
+          </a>
+          <a routerLink="/login" class="btn btn-cta-outline">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+          </a>
+        </div>
+        <p class="hero-note"><i class="bi bi-shield-check me-1 text-primary"></i>No credit card required. Free for candidates.</p>
+      </div>
+      <div class="col-lg-6 d-none d-lg-flex justify-content-center">
+        <div class="hero-illustration">
+          <div class="hero-card hero-card-main animate-scale-in">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="hc-avatar">R</div>
+              <div>
+                <div class="hc-name">Riya Sharma</div>
+                <div class="hc-role">Candidate</div>
+              </div>
+              <span class="badge-status badge-passed ms-auto">Passed</span>
+            </div>
+            <div class="hc-exam-title">Java Fundamentals Assessment</div>
+            <div class="hc-score-row">
+              <div>
+                <div class="hc-score-val">42<span>/50</span></div>
+                <div class="hc-score-label">Score</div>
+              </div>
+              <div>
+                <div class="hc-score-val">87<span>%</span></div>
+                <div class="hc-score-label">Pass Rate</div>
+              </div>
+              <div>
+                <div class="hc-score-val">28<span>min</span></div>
+                <div class="hc-score-label">Time Taken</div>
+              </div>
+            </div>
+            <div class="hc-cert">
+              <i class="bi bi-award-fill text-warning me-1"></i>Certificate Issued — CERT-2026-000042
+            </div>
+          </div>
+          <div class="hero-card hero-card-mini animate-scale-in" style="animation-delay:150ms">
+            <i class="bi bi-clock-history text-primary"></i>
+            <span>Timer: <strong>12:34</strong></span>
+          </div>
+          <div class="hero-card hero-card-mini hero-card-mini-2 animate-scale-in" style="animation-delay:1000ms">
+            <i class="bi bi-patch-check-fill text-success"></i>
+            <span>Auto-saved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Wave divider -->
+  <div class="hero-wave">
+    <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="var(--bg)" />
+    </svg>
+  </div>
+</section>
+
+<!-- ═══ STATS COUNTER ═══════════════════════════════════════════════ -->
+<section class="stats-section">
+  <div class="container">
+    <div class="row g-4 stagger-children">
+      <div class="col-6 col-md-3">
+        <div class="stat-counter-card">
+          <div class="sc-value">{{ totalExams() }}+</div>
+          <div class="sc-label">Exams Published</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-counter-card">
+          <div class="sc-value">{{ totalCandidates() | number }}</div>
+          <div class="sc-label">Candidates Served</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-counter-card">
+          <div class="sc-value">{{ passRate() }}%</div>
+          <div class="sc-label">Average Pass Rate</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-counter-card">
+          <div class="sc-value">{{ totalCerts() | number }}</div>
+          <div class="sc-label">Certificates Issued</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURES ════════════════════════════════════════════════════ -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-label">Why ExamHub?</div>
+    <h2 class="section-title">Everything you need for modern assessments</h2>
+    <p class="section-sub">Built for scale, designed for simplicity. One platform for every step of the exam lifecycle.</p>
+
+    <div class="row g-4 mt-2 stagger-children">
+      <div class="col-md-6 col-lg-4" *ngFor="let f of features">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i [class]="'bi ' + f.icon"></i>
+          </div>
+          <h5 class="feature-title">{{ f.title }}</h5>
+          <p class="feature-desc">{{ f.description }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ════════════════════════════════════════════════ -->
+<section class="how-section">
+  <div class="container">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Three roles. One seamless workflow.</h2>
+
+    <div class="row g-4 mt-2">
+      <div class="col-md-4">
+        <div class="how-card how-card-candidate animate-fade-in">
+          <div class="how-role-badge">Candidate</div>
+          <h5>Register &amp; Take Exams</h5>
+          <ol class="how-steps">
+            <li>Create a free candidate account</li>
+            <li>Browse published exams by category</li>
+            <li>Take the exam with a live timer</li>
+            <li>View per-question result breakdown</li>
+            <li>Download your certificate</li>
+          </ol>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="how-card how-card-examiner animate-fade-in" style="animation-delay:80ms">
+          <div class="how-role-badge how-role-badge-examiner">Examiner</div>
+          <h5>Build &amp; Publish Exams</h5>
+          <ol class="how-steps">
+            <li>Request an examiner account</li>
+            <li>Build a question bank (or import via Excel)</li>
+            <li>Create and configure exams</li>
+            <li>Attach questions and publish</li>
+            <li>Release results with one click</li>
+          </ol>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="how-card how-card-admin animate-fade-in" style="animation-delay:160ms">
+          <div class="how-role-badge how-role-badge-admin">Admin</div>
+          <h5>Manage &amp; Oversee</h5>
+          <ol class="how-steps">
+            <li>Review examiner requests</li>
+            <li>Manage categories and users</li>
+            <li>Monitor platform-wide statistics</li>
+            <li>Revoke or audit certificates</li>
+            <li>Keep the platform healthy</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TESTIMONIALS ════════════════════════════════════════════════ -->
+<section class="testimonials-section">
+  <div class="container">
+    <div class="section-label">Testimonials</div>
+    <h2 class="section-title">Loved by candidates and examiners alike</h2>
+
+    <div class="testimonial-carousel mt-4">
+      <div *ngFor="let t of testimonials; let i = index"
+           class="testimonial-card"
+           [class.active]="activeTestimonial() === i">
+        <div class="testimonial-quote"><i class="bi bi-quote"></i></div>
+        <p class="testimonial-text">{{ t.text }}</p>
+        <div class="testimonial-author">
+          <div class="t-avatar">{{ t.avatar }}</div>
+          <div>
+            <div class="t-name">{{ t.name }}</div>
+            <div class="t-role">{{ t.role }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="testimonial-dots">
+      <button *ngFor="let t of testimonials; let i = index"
+              class="t-dot"
+              [class.active]="activeTestimonial() === i"
+              (click)="setTestimonial(i)">
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═════════════════════════════════════════════════════════ -->
+<section class="faq-section" id="faq">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="section-label text-center">FAQ</div>
+        <h2 class="section-title text-center">Frequently Asked Questions</h2>
+
+        <div class="faq-list mt-4">
+          <div *ngFor="let faq of faqs; let i = index" class="faq-item">
+            <button class="faq-question" (click)="toggleFaq(i)" [attr.aria-expanded]="faq.open">
+              <span>{{ faq.question }}</span>
+              <i class="bi" [ngClass]="faq.open ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+            <div class="faq-answer" [class.open]="faq.open">
+              <p>{{ faq.answer }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA ══════════════════════════════════════════════════════════ -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card">
+      <div class="cta-glow"></div>
+      <h2 class="cta-title">Ready to get started?</h2>
+      <p class="cta-sub">Join thousands of candidates already using ExamHub. Sign up free — no credit card needed.</p>
+      <div class="cta-btns">
+        <a routerLink="/register" class="btn btn-cta-primary btn-lg">
+          <i class="bi bi-person-plus me-2"></i>Create Free Account
+        </a>
+        <a routerLink="/login" class="btn btn-cta-outline btn-lg">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════ -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="row g-4 footer-top">
+      <div class="col-lg-4">
+        <div class="footer-brand">
+          <i class="bi bi-mortarboard-fill me-2"></i>ExamHub
+        </div>
+        <p class="footer-brand-sub">Modern online examination platform for candidates, examiners and administrators.</p>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6 class="footer-heading">Platform</h6>
+        <ul class="footer-links">
+          <li><a routerLink="/register">Register</a></li>
+          <li><a routerLink="/login">Sign In</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6 class="footer-heading">Roles</h6>
+        <ul class="footer-links">
+          <li><a>Candidate</a></li>
+          <li><a>Examiner</a></li>
+          <li><a>Admin</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-4">
+        <h6 class="footer-heading">Built With</h6>
+        <div class="tech-badges">
+          <span class="tech-badge">Angular 21</span>
+          <span class="tech-badge">.NET 10</span>
+          <span class="tech-badge">PostgreSQL</span>
+          <span class="tech-badge">NgRx</span>
+          <span class="tech-badge">Bootstrap 5</span>
+          <span class="tech-badge">EF Core</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 ExamHub. Built as a Genspark Capstone Project.</span>
+    </div>
+  </div>
+</footer>

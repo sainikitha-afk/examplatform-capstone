@@ -1,113 +1,165 @@
-<!-- Register form — template-driven validation with Bootstrap 5 -->
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6">
-      <div class="card shadow">
-        <div class="card-header bg-success text-white text-center">
-          <h4 class="mb-0"><i class="bi bi-person-plus-fill me-2"></i>Candidate Registration</h4>
+<!-- register.html — Modern candidate registration page -->
+
+<div class="auth-page">
+  <div class="auth-left">
+    <div class="auth-brand">
+      <i class="bi bi-mortarboard-fill"></i>
+      <span>ExamHub</span>
+    </div>
+    <div class="auth-left-content">
+      <h2>Join ExamHub</h2>
+      <p>Create your free candidate account and start taking exams today. Earn certificates and track your progress.</p>
+      <div class="auth-features">
+        <div class="auth-feature">
+          <i class="bi bi-search"></i>
+          <span>Browse hundreds of published exams</span>
         </div>
-        <div class="card-body p-4">
-
-          <!-- Structural directive: *ngIf shows alerts only when set -->
-          <div *ngIf="errorMessage" class="alert alert-danger">
-            <i class="bi bi-exclamation-circle me-1"></i>{{ errorMessage }}
-          </div>
-          <div *ngIf="successMessage" class="alert alert-success">
-            <i class="bi bi-check-circle me-1"></i>{{ successMessage }}
-          </div>
-
-          <!-- Template reference variable: #regForm lets us pass the NgForm to the handler -->
-          <form #regForm="ngForm" (ngSubmit)="handleRegisterClick(regForm)">
-
-            <!-- Full Name — required, minlength 2 -->
-            <div class="mb-3">
-              <label class="form-label">Full Name</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="registerData.fullName"
-                name="fullName"
-                required
-                minlength="2"
-                #fullNameCtrl="ngModel"
-              />
-              <!-- Template-driven validation error — shown after the field is touched -->
-              <div *ngIf="fullNameCtrl.invalid && fullNameCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="fullNameCtrl.errors?.['required']">Full name is required.</span>
-                <span *ngIf="fullNameCtrl.errors?.['minlength']">At least 2 characters required.</span>
-              </div>
-            </div>
-
-            <!-- Username — required, minlength 3 -->
-            <div class="mb-3">
-              <label class="form-label">Username</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="registerData.username"
-                name="username"
-                required
-                minlength="3"
-                #usernameCtrl="ngModel"
-              />
-              <div *ngIf="usernameCtrl.invalid && usernameCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="usernameCtrl.errors?.['required']">Username is required.</span>
-                <span *ngIf="usernameCtrl.errors?.['minlength']">At least 3 characters required.</span>
-              </div>
-            </div>
-
-            <!-- Email — required -->
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input
-                type="email"
-                class="form-control"
-                [(ngModel)]="registerData.email"
-                name="email"
-                required
-                email
-                #emailCtrl="ngModel"
-              />
-              <div *ngIf="emailCtrl.invalid && emailCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="emailCtrl.errors?.['required']">Email is required.</span>
-                <span *ngIf="emailCtrl.errors?.['email']">Enter a valid email address.</span>
-              </div>
-            </div>
-
-            <!-- Password — required, minlength 6 -->
-            <div class="mb-3">
-              <label class="form-label">Password</label>
-              <input
-                type="password"
-                class="form-control"
-                [(ngModel)]="registerData.password"
-                name="password"
-                required
-                minlength="6"
-                #passwordCtrl="ngModel"
-              />
-              <div *ngIf="passwordCtrl.invalid && passwordCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="passwordCtrl.errors?.['required']">Password is required.</span>
-                <span *ngIf="passwordCtrl.errors?.['minlength']">At least 6 characters required.</span>
-              </div>
-            </div>
-
-            <!-- Event binding via (ngSubmit) on the form -->
-            <button
-              type="submit"
-              class="btn btn-success w-100"
-              [disabled]="isLoading"
-            >
-              <span *ngIf="isLoading"><i class="bi bi-hourglass-split me-1"></i>Registering...</span>
-              <span *ngIf="!isLoading"><i class="bi bi-person-check me-1"></i>Register</span>
-            </button>
-          </form>
-
-          <hr />
-          <p class="text-center mb-0">
-            Already have an account? <a routerLink="/login">Login</a>
-          </p>
+        <div class="auth-feature">
+          <i class="bi bi-bar-chart-line"></i>
+          <span>Personal analytics dashboard</span>
         </div>
+        <div class="auth-feature">
+          <i class="bi bi-file-earmark-check"></i>
+          <span>Verifiable digital certificates</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card animate-scale-in">
+      <div class="auth-card-header">
+        <h3>Create Account</h3>
+        <p class="text-muted">Candidate registration — free forever</p>
+      </div>
+
+      <!-- Alerts -->
+      <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+      <div *ngIf="successMessage" class="alert alert-success d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+        <span>{{ successMessage }}</span>
+      </div>
+
+      <!-- Template reference variable: #regForm lets us pass the NgForm to the handler -->
+      <form #regForm="ngForm" (ngSubmit)="handleRegisterClick(regForm)">
+
+        <!-- Full Name -->
+        <div class="form-group mb-3">
+          <label class="form-label">Full Name</label>
+          <input
+            type="text"
+            class="form-control"
+            [class.is-invalid]="fullNameCtrl.invalid && fullNameCtrl.touched"
+            [(ngModel)]="registerData.fullName"
+            name="fullName"
+            required
+            minlength="2"
+            #fullNameCtrl="ngModel"
+            placeholder="Jane Doe"
+            autocomplete="name"
+          />
+          <div *ngIf="fullNameCtrl.invalid && fullNameCtrl.touched" class="invalid-feedback">
+            <span *ngIf="fullNameCtrl.errors?.['required']">Full name is required.</span>
+            <span *ngIf="fullNameCtrl.errors?.['minlength']">At least 2 characters required.</span>
+          </div>
+        </div>
+
+        <!-- Username -->
+        <div class="form-group mb-3">
+          <label class="form-label">Username</label>
+          <input
+            type="text"
+            class="form-control"
+            [class.is-invalid]="usernameCtrl.invalid && usernameCtrl.touched"
+            [(ngModel)]="registerData.username"
+            name="username"
+            required
+            minlength="3"
+            #usernameCtrl="ngModel"
+            placeholder="janedoe"
+            autocomplete="username"
+          />
+          <div *ngIf="usernameCtrl.invalid && usernameCtrl.touched" class="invalid-feedback">
+            <span *ngIf="usernameCtrl.errors?.['required']">Username is required.</span>
+            <span *ngIf="usernameCtrl.errors?.['minlength']">At least 3 characters required.</span>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group mb-3">
+          <label class="form-label">Email Address</label>
+          <input
+            type="email"
+            class="form-control"
+            [class.is-invalid]="emailCtrl.invalid && emailCtrl.touched"
+            [(ngModel)]="registerData.email"
+            name="email"
+            required
+            email
+            #emailCtrl="ngModel"
+            placeholder="jane@example.com"
+            autocomplete="email"
+          />
+          <div *ngIf="emailCtrl.invalid && emailCtrl.touched" class="invalid-feedback">
+            <span *ngIf="emailCtrl.errors?.['required']">Email is required.</span>
+            <span *ngIf="emailCtrl.errors?.['email']">Enter a valid email address.</span>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group mb-4">
+          <label class="form-label">Password</label>
+          <input
+            type="password"
+            class="form-control"
+            [class.is-invalid]="passwordCtrl.invalid && passwordCtrl.touched"
+            [(ngModel)]="registerData.password"
+            name="password"
+            required
+            minlength="6"
+            #passwordCtrl="ngModel"
+            placeholder="At least 6 characters"
+            autocomplete="new-password"
+          />
+          <div *ngIf="passwordCtrl.invalid && passwordCtrl.touched" class="invalid-feedback">
+            <span *ngIf="passwordCtrl.errors?.['required']">Password is required.</span>
+            <span *ngIf="passwordCtrl.errors?.['minlength']">At least 6 characters required.</span>
+          </div>
+        </div>
+
+        <!-- Submit button — event binding via (ngSubmit) on the form -->
+        <button
+          type="submit"
+          class="btn btn-primary w-100 btn-auth"
+          [disabled]="isLoading"
+        >
+          <span *ngIf="isLoading" class="d-flex align-items-center justify-content-center gap-2">
+            <span class="spinner-border spinner-border-sm"></span>
+            Creating account...
+          </span>
+          <span *ngIf="!isLoading" class="d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-person-check"></i>
+            Create Account
+          </span>
+        </button>
+      </form>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <div class="text-center">
+        <p class="text-muted mb-2" style="font-size:0.9rem">Already have an account?</p>
+        <a routerLink="/login" class="btn btn-outline-primary w-100">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+        </a>
+      </div>
+
+      <div class="auth-back mt-3 text-center">
+        <a routerLink="/" class="text-muted" style="font-size:0.82rem; text-decoration:none">
+          <i class="bi bi-arrow-left me-1"></i>Back to home
+        </a>
       </div>
     </div>
   </div>

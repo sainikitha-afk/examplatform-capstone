@@ -33,6 +33,26 @@ export class AttemptSummaryModel {
   ) {}
 }
 
+// ExamAttemptMonitorModel — one row in the examiner's attempt-monitoring view
+// (GET /api/exams/{id}/attempts). Shows who took the exam, live progress, and
+// how each attempt ended. AutoSubmitted = the server timer closed the attempt,
+// usually because the candidate disconnected and never returned.
+export class ExamAttemptMonitorModel {
+  constructor(
+    public attemptId: number = 0,
+    public userId: number = 0,
+    public candidateName: string = "",
+    public candidateEmail: string = "",
+    public startedAt: string = "",
+    public submittedAt: string | null = null,
+    public attemptStatus: string = "",   // "InProgress" | "Submitted" | "AutoSubmitted"
+    public score: number | null = null,
+    public isPassed: boolean | null = null,
+    public timeTakenSeconds: number | null = null,
+    public answeredCount: number = 0
+  ) {}
+}
+
 // StartAttemptModel — request body for POST /api/attempts/start.
 export class StartAttemptModel {
   constructor(

@@ -16,10 +16,11 @@ namespace ExamPlatform.BLL.Tests.Services
     [TestFixture]
     public class AttemptServiceTests
     {
-        private Mock<IAttemptRepository>       _attemptRepoMock = null!;
-        private Mock<IAttemptAnswerRepository> _answerRepoMock  = null!;
-        private Mock<IExamRepository>          _examRepoMock    = null!;
-        private Mock<ILogger<AttemptService>>  _loggerMock      = null!;
+        private Mock<IAttemptRepository>        _attemptRepoMock = null!;
+        private Mock<IAttemptAnswerRepository>  _answerRepoMock  = null!;
+        private Mock<IExamRepository>           _examRepoMock    = null!;
+        private Mock<INotificationRepository>   _notifRepoMock   = null!;
+        private Mock<ILogger<AttemptService>>   _loggerMock      = null!;
         private AttemptService _sut = null!;
 
         [SetUp]
@@ -28,12 +29,14 @@ namespace ExamPlatform.BLL.Tests.Services
             _attemptRepoMock = new Mock<IAttemptRepository>();
             _answerRepoMock  = new Mock<IAttemptAnswerRepository>();
             _examRepoMock    = new Mock<IExamRepository>();
+            _notifRepoMock   = new Mock<INotificationRepository>();
             _loggerMock      = new Mock<ILogger<AttemptService>>();
 
             _sut = new AttemptService(
                 _attemptRepoMock.Object,
                 _answerRepoMock.Object,
                 _examRepoMock.Object,
+                _notifRepoMock.Object,
                 _loggerMock.Object);
         }
 

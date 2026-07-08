@@ -37,6 +37,8 @@ export class ManageUsers implements OnInit {
   }
 
   handleToggleActiveClick(user: UserModel): void {
+    // Admin accounts must never be deactivated (button is hidden, this is a safety net).
+    if (user.role === 'Admin') return;
     const newStatus = !user.isActive;
     const action = newStatus ? 'activate' : 'deactivate';
     if (!confirm(`Are you sure you want to ${action} ${user.fullName}?`)) return;
@@ -46,7 +48,7 @@ export class ManageUsers implements OnInit {
         user.isActive = updated.isActive;
         this.successMessage = `${user.fullName} has been ${action}d.`;
       },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Failed to update status.'
+      error: (e) => this.errorMessage = e?.error?.error ?? 'Failed to update status.'
     });
   }
 

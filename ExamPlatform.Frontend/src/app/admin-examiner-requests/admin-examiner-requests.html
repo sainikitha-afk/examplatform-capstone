@@ -1,0 +1,101 @@
+<!-- admin-examiner-requests.html — Admin: review pending examiner applications -->
+
+<div class="container py-4 animate-fade-in">
+
+  <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Examiner Requests</h3>
+      <p class="page-header-sub mt-1">Review, approve, or reject pending examiner applications.</p>
+    </div>
+    <button class="btn btn-outline-primary btn-sm" (click)="loadRequests()">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill"></i>{{ successMessage }}</div>
+  <div *ngIf="errorMessage"   class="alert alert-danger  d-flex align-items-center gap-2"><i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}</div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading pending requests...</p>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!isLoading && requests.length === 0 && !errorMessage" class="empty-state">
+    <span class="empty-icon">🎉</span>
+    <h5>No pending requests</h5>
+    <p>All examiner applications have been processed.</p>
+  </div>
+
+  <!-- Request cards -->
+  <div *ngIf="!isLoading && requests.length > 0" class="req-list stagger-children">
+    <div *ngFor="let r of requests" class="req-card">
+
+      <!-- Header row -->
+      <div class="req-card-header">
+        <div class="req-avatar">{{ r.fullName[0] }}</div>
+        <div class="req-info">
+          <div class="req-name">{{ r.fullName }}</div>
+          <div class="req-email"><i class="bi bi-envelope me-1"></i>{{ r.email }}</div>
+        </div>
+        <div class="ms-auto d-flex flex-column align-items-end gap-1">
+          <span class="badge-status badge-pending">Pending</span>
+          <div class="req-date">{{ r.requestedAt | date:'mediumDate' }}</div>
+        </div>
+      </div>
+
+      <!-- Purpose body -->
+      <div class="req-purpose">
+        <div class="req-purpose-label"><i class="bi bi-chat-quote me-1"></i>Application statement</div>
+        <p class="req-purpose-text">{{ r.purpose }}</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="req-actions">
+        <!-- Approve -->
+        <button class="btn btn-success btn-sm" (click)="handleApproveClick(r)"
+                [disabled]="approvingId === r.examinerRequestId">
+          <span *ngIf="approvingId === r.examinerRequestId" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="approvingId !== r.examinerRequestId" class="bi bi-check-circle me-1"></i>
+          {{ approvingId === r.examinerRequestId ? 'Approving...' : 'Approve' }}
+        </button>
+        <!-- Reject — opens inline reject panel -->
+        <button class="btn btn-outline-danger btn-sm" (click)="openRejectModal(r)">
+          <i class="bi bi-x-circle me-1"></i>Reject
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Reject Modal ══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showRejectModal" (click)="closeRejectModal()">
+  <div class="modal-card animate-scale-in" (click)="$event.stopPropagation()">
+    <div class="modal-card-header">
+      <h6 class="mb-0 fw-bold"><i class="bi bi-x-circle me-2 text-danger"></i>Reject Application</h6>
+      <button class="btn-close-custom" (click)="closeRejectModal()"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-card-body">
+      <p class="mb-3" style="color:var(--text-secondary)">
+        You are rejecting <strong>{{ rejectingName }}</strong>'s application.
+        An optional reason will be included in the rejection email.
+      </p>
+      <label class="form-label">Rejection note <span class="text-muted fw-normal">(optional)</span></label>
+      <textarea class="form-control" rows="3"
+                [(ngModel)]="adminNote"
+                placeholder="e.g. Insufficient details provided. Please reapply with a more complete application.">
+      </textarea>
+    </div>
+    <div class="modal-card-footer d-flex gap-2 justify-content-end">
+      <button class="btn btn-outline-secondary btn-sm" (click)="closeRejectModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" (click)="handleConfirmReject()" [disabled]="isRejecting">
+        <span *ngIf="isRejecting" class="spinner-border spinner-border-sm me-1"></span>
+        {{ isRejecting ? 'Rejecting...' : 'Confirm Reject' }}
+      </button>
+    </div>
+  </div>
+</div>

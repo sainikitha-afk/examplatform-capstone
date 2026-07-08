@@ -21,6 +21,14 @@ export const selectAnswers         = createSelector(selectAttemptState, s => s.a
 export const selectTimeRemaining   = createSelector(selectAttemptState, s => s.timeRemaining);
 export const selectAttemptStatus   = createSelector(selectAttemptState, s => s.status);
 export const selectErrorMessage    = createSelector(selectAttemptState, s => s.errorMessage);
+export const selectPendingSync     = createSelector(selectAttemptState, s => s.pendingSync);
+export const selectIsOffline       = createSelector(selectAttemptState, s => s.isOffline);
+
+// Derived selector: how many answers are still waiting for server confirmation.
+export const selectPendingSyncCount = createSelector(
+  selectPendingSync,
+  pending => Object.keys(pending).length
+);
 
 // Derived selector: the question object currently on screen.
 export const selectCurrentQuestion = createSelector(

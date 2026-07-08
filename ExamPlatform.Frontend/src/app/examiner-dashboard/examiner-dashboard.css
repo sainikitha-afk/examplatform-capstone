@@ -1,0 +1,12 @@
+/* Examiner status chips shown below stat values */
+.examiner-status-chip {
+  display: inline-block;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  margin-top: 0.4rem;
+}
+.chip-draft     { background: #f1f5f9; color: #64748b; }
+.chip-published { background: #dcfce7; color: #16a34a; }
+.chip-results   { background: #ede9fe; color: #6d28d9; }

@@ -1,0 +1,21 @@
+/* Certificate page extras */
+.cert-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+
+.cert-score-badge {
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+.csb-val   { font-size: 1.4rem; font-weight: 800; color: var(--primary); line-height: 1; }
+.csb-label { font-size: 0.65rem; color: var(--text-muted); }
+
+.cert-meta { font-size: 0.8rem; color: var(--text-muted); }

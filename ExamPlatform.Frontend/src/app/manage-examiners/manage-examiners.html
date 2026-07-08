@@ -1,74 +1,110 @@
-<!-- Manage Examiners (Admin) — create examiner accounts -->
-<div class="container mt-4">
-  <h3><i class="bi bi-person-badge me-2"></i>Create Examiner Account</h3>
+<!-- manage-examiners.html — Admin: create examiner accounts with template-driven validation -->
 
-  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+<div class="container py-4 animate-fade-in">
 
-  <div class="row">
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header">New Examiner</div>
+  <div class="page-header">
+    <h3><i class="bi bi-person-badge me-2 text-primary"></i>Create Examiner Account</h3>
+    <p class="page-header-sub">Provision a new examiner who can build and publish exams.</p>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill"></i>{{ successMessage }}</div>
+  <div *ngIf="errorMessage"   class="alert alert-danger  d-flex align-items-center gap-2"><i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}</div>
+
+  <div class="row g-4">
+
+    <!-- ── Create Form ───────────────────────────────────────────── -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-person-plus me-2 text-primary"></i>New Examiner</h6>
+        </div>
         <div class="card-body">
+          <!-- #examinerForm: template reference variable for NgForm -->
           <form #examinerForm="ngForm" (ngSubmit)="handleCreateClick(examinerForm)">
 
             <div class="mb-3">
               <label class="form-label">Full Name <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" [(ngModel)]="formData.fullName" name="fullName"
-                     required minlength="2" #fnCtrl="ngModel" />
+              <input type="text" class="form-control"
+                     [(ngModel)]="formData.fullName" name="fullName"
+                     required minlength="2"
+                     #fnCtrl="ngModel"
+                     placeholder="Jane Smith" />
               <div *ngIf="fnCtrl.invalid && fnCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="fnCtrl.errors?.['required']">Required.</span>
+                <span *ngIf="fnCtrl.errors?.['required']">Full name is required.</span>
                 <span *ngIf="fnCtrl.errors?.['minlength']">At least 2 characters.</span>
               </div>
             </div>
 
             <div class="mb-3">
               <label class="form-label">Username <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" [(ngModel)]="formData.username" name="username"
-                     required minlength="3" #unCtrl="ngModel" />
+              <input type="text" class="form-control"
+                     [(ngModel)]="formData.username" name="username"
+                     required minlength="3"
+                     #unCtrl="ngModel"
+                     placeholder="jsmith" />
               <div *ngIf="unCtrl.invalid && unCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="unCtrl.errors?.['required']">Required.</span>
+                <span *ngIf="unCtrl.errors?.['required']">Username is required.</span>
                 <span *ngIf="unCtrl.errors?.['minlength']">At least 3 characters.</span>
               </div>
             </div>
 
             <div class="mb-3">
               <label class="form-label">Email <span class="text-danger">*</span></label>
-              <input type="email" class="form-control" [(ngModel)]="formData.email" name="email"
-                     required email #emCtrl="ngModel" />
+              <input type="email" class="form-control"
+                     [(ngModel)]="formData.email" name="email"
+                     required email
+                     #emCtrl="ngModel"
+                     placeholder="jane@example.com" />
               <div *ngIf="emCtrl.invalid && emCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="emCtrl.errors?.['required']">Required.</span>
-                <span *ngIf="emCtrl.errors?.['email']">Invalid email.</span>
+                <span *ngIf="emCtrl.errors?.['required']">Email is required.</span>
+                <span *ngIf="emCtrl.errors?.['email']">Enter a valid email address.</span>
               </div>
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Password <span class="text-danger">*</span></label>
-              <input type="password" class="form-control" [(ngModel)]="formData.password" name="password"
-                     required minlength="6" #pwCtrl="ngModel" />
+              <label class="form-label">Temporary Password <span class="text-danger">*</span></label>
+              <input type="password" class="form-control"
+                     [(ngModel)]="formData.password" name="password"
+                     required minlength="6"
+                     #pwCtrl="ngModel"
+                     placeholder="Min. 6 characters" />
               <div *ngIf="pwCtrl.invalid && pwCtrl.touched" class="text-danger small mt-1">
-                <span *ngIf="pwCtrl.errors?.['required']">Required.</span>
+                <span *ngIf="pwCtrl.errors?.['required']">Password is required.</span>
                 <span *ngIf="pwCtrl.errors?.['minlength']">At least 6 characters.</span>
               </div>
             </div>
 
             <button type="submit" class="btn btn-primary" [disabled]="isLoading">
-              <span *ngIf="isLoading">Creating...</span>
-              <span *ngIf="!isLoading"><i class="bi bi-person-plus me-1"></i>Create Examiner</span>
+              <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+              <i *ngIf="!isLoading" class="bi bi-person-plus me-1"></i>
+              {{ isLoading ? 'Creating...' : 'Create Examiner' }}
             </button>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- Recently created examiners -->
-    <div class="col-md-6" *ngIf="createdExaminers.length > 0">
-      <h5>Recently Created</h5>
-      <ul class="list-group">
-        <li *ngFor="let e of createdExaminers" class="list-group-item">
-          <strong>{{ e.fullName }}</strong> <span class="text-muted ms-2">{{ e.email }}</span>
-        </li>
-      </ul>
+    <!-- ── Recently Created ──────────────────────────────────────── -->
+    <div class="col-lg-6" *ngIf="createdExaminers.length > 0">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Recently Created</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="created-list">
+            <div *ngFor="let e of createdExaminers" class="created-item">
+              <div class="created-avatar">{{ e.fullName[0] }}</div>
+              <div>
+                <div class="created-name">{{ e.fullName }}</div>
+                <div class="created-email">{{ e.email }}</div>
+              </div>
+              <span class="badge-status badge-published ms-auto">Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
   </div>
 </div>

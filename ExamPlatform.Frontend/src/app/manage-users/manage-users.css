@@ -1,0 +1,19 @@
+/* Manage Users page */
+.row-inactive { opacity: 0.6; }
+
+/* Role colour pills */
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.role-admin     { background: #f3e8ff; color: #7c3aed; }
+.role-examiner  { background: #fef3c7; color: #92400e; }
+.role-candidate { background: #ccfbf1; color: #0f766e; }
+
+[data-theme="dark"] .role-admin     { background: #4c1d95; color: #e9d5ff; }
+[data-theme="dark"] .role-examiner  { background: #78350f; color: #fde68a; }
+[data-theme="dark"] .role-candidate { background: #134e4a; color: #99f6e4; }

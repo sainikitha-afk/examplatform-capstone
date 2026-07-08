@@ -1,96 +1,123 @@
-<!-- Admin Dashboard — platform statistics -->
-<div class="container mt-4">
-  <h3><i class="bi bi-shield-check me-2"></i>Admin Dashboard — {{ fullName }}</h3>
-  <p class="text-muted">Platform-wide overview.</p>
+<!-- Admin Dashboard — platform-wide statistics -->
 
+<div class="container py-4 animate-fade-in">
+
+  <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h3 class="mb-0"><i class="bi bi-shield-check me-2 text-primary"></i>Admin Dashboard</h3>
+      <p class="page-header-sub mt-1">Platform-wide overview — {{ fullName }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a routerLink="/admin/examiners" class="btn btn-primary btn-sm"><i class="bi bi-person-plus me-1"></i>Add Examiner</a>
+      <a routerLink="/admin/users"     class="btn btn-outline-primary btn-sm"><i class="bi bi-people me-1"></i>Manage Users</a>
+    </div>
+  </div>
+
+  <!-- Loading -->
   <div *ngIf="isLoading()" class="text-center py-5">
-    <div class="spinner-border text-primary"></div>
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+    <p class="text-muted mt-3">Loading platform statistics...</p>
   </div>
 
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
+  </div>
 
+  <!-- Stats Grid -->
+  <div *ngIf="!isLoading() && !errorMessage" class="row g-3 mb-4 stagger-children">
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+        <div class="stat-value">{{ stats.totalUsers }}</div>
+        <div class="stat-label">Total Users</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fef3c7;color:#92400e"><i class="bi bi-person-badge-fill"></i></div>
+        <div class="stat-value">{{ stats.totalExaminers }}</div>
+        <div class="stat-label">Examiners</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-person-fill"></i></div>
+        <div class="stat-value">{{ stats.totalCandidates }}</div>
+        <div class="stat-label">Candidates</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-file-earmark-text-fill"></i></div>
+        <div class="stat-value">{{ stats.totalExams }}</div>
+        <div class="stat-label">Total Exams</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#ede9fe;color:#6d28d9"><i class="bi bi-journal-check"></i></div>
+        <div class="stat-value">{{ stats.totalAttempts }}</div>
+        <div class="stat-label">Total Attempts</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fef2f2;color:#dc2626"><i class="bi bi-award-fill"></i></div>
+        <div class="stat-value">{{ stats.totalCertificatesIssued }}</div>
+        <div class="stat-label">Certificates Issued</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#f0fdfa;color:#0f766e"><i class="bi bi-calendar-check-fill"></i></div>
+        <div class="stat-value">{{ stats.examsCompletedLast30Days }}</div>
+        <div class="stat-label">Completed (30 days)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Action Tiles -->
   <div *ngIf="!isLoading() && !errorMessage" class="row g-3">
-
-    <div class="col-md-3">
-      <div class="card text-center border-primary">
-        <div class="card-body">
-          <i class="bi bi-people display-4 text-primary"></i>
-          <h2 class="mt-2">{{ stats.totalUsers }}</h2>
-          <p class="text-muted mb-0">Total Users</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card text-center border-info">
-        <div class="card-body">
-          <i class="bi bi-person-badge display-4 text-info"></i>
-          <h2 class="mt-2">{{ stats.totalExaminers }}</h2>
-          <p class="text-muted mb-0">Examiners</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card text-center border-success">
-        <div class="card-body">
-          <i class="bi bi-person display-4 text-success"></i>
-          <h2 class="mt-2">{{ stats.totalCandidates }}</h2>
-          <p class="text-muted mb-0">Candidates</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card text-center border-warning">
-        <div class="card-body">
-          <i class="bi bi-file-earmark-text display-4 text-warning"></i>
-          <h2 class="mt-2">{{ stats.totalExams }}</h2>
-          <p class="text-muted mb-0">Total Exams</p>
-        </div>
-      </div>
-    </div>
-
     <div class="col-md-4">
-      <div class="card text-center border-secondary">
-        <div class="card-body">
-          <i class="bi bi-journal-check display-4 text-secondary"></i>
-          <h2 class="mt-2">{{ stats.totalAttempts }}</h2>
-          <p class="text-muted mb-0">Total Attempts</p>
+      <a routerLink="/admin/categories" class="admin-tile">
+        <div class="admin-tile-icon"><i class="bi bi-tag-fill"></i></div>
+        <div>
+          <div class="admin-tile-title">Categories</div>
+          <div class="admin-tile-sub">Manage exam categories</div>
         </div>
-      </div>
+        <i class="bi bi-arrow-right ms-auto"></i>
+      </a>
     </div>
-
     <div class="col-md-4">
-      <div class="card text-center border-danger">
-        <div class="card-body">
-          <i class="bi bi-award display-4 text-danger"></i>
-          <h2 class="mt-2">{{ stats.totalCertificatesIssued }}</h2>
-          <p class="text-muted mb-0">Certificates Issued</p>
+      <a routerLink="/admin/users" class="admin-tile">
+        <div class="admin-tile-icon"><i class="bi bi-people-fill"></i></div>
+        <div>
+          <div class="admin-tile-title">Users</div>
+          <div class="admin-tile-sub">Activate or deactivate users</div>
         </div>
-      </div>
+        <i class="bi bi-arrow-right ms-auto"></i>
+      </a>
     </div>
-
     <div class="col-md-4">
-      <div class="card text-center border-dark">
-        <div class="card-body">
-          <i class="bi bi-calendar-check display-4 text-dark"></i>
-          <h2 class="mt-2">{{ stats.examsCompletedLast30Days }}</h2>
-          <p class="text-muted mb-0">Completed (30 days)</p>
+      <a routerLink="/admin/examiners" class="admin-tile">
+        <div class="admin-tile-icon"><i class="bi bi-person-badge-fill"></i></div>
+        <div>
+          <div class="admin-tile-title">Examiners</div>
+          <div class="admin-tile-sub">Create examiner accounts</div>
         </div>
-      </div>
+        <i class="bi bi-arrow-right ms-auto"></i>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a routerLink="/admin/examiner-requests" class="admin-tile">
+        <div class="admin-tile-icon" style="background:#fef3c7;color:#92400e"><i class="bi bi-person-lines-fill"></i></div>
+        <div>
+          <div class="admin-tile-title">Examiner Requests</div>
+          <div class="admin-tile-sub">Review pending applications</div>
+        </div>
+        <i class="bi bi-arrow-right ms-auto"></i>
+      </a>
     </div>
   </div>
 
-  <div class="mt-4">
-    <a routerLink="/admin/categories" class="btn btn-outline-primary me-2">
-      <i class="bi bi-tag me-1"></i>Categories
-    </a>
-    <a routerLink="/admin/users" class="btn btn-outline-secondary me-2">
-      <i class="bi bi-people me-1"></i>Users
-    </a>
-    <a routerLink="/admin/examiners" class="btn btn-outline-info">
-      <i class="bi bi-person-badge me-1"></i>Examiners
-    </a>
-  </div>
 </div>

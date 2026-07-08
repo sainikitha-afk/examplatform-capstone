@@ -31,5 +31,10 @@ namespace ExamPlatform.BLL.Interfaces
         // Returns the detailed result for one attempt.
         // Only available once the exam is in ResultsPublished status.
         Task<Attempt> GetResultAsync(int attemptId, int userId);
+
+        // Returns every attempt (all statuses) for an exam — the examiner
+        // monitoring view. Examiners may only view their own exams; admins any.
+        Task<IEnumerable<Attempt>> GetAllByExamForExaminerAsync(
+            int examId, int requesterId, bool isAdmin);
     }
 }

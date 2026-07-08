@@ -25,7 +25,7 @@ export class QuestionApiService {
   // GET /api/questions?catId=&difficulty=&search=&page= (Examiner/Admin)
   loadQuestions(catId: number | null = null, difficulty: string = '', search: string = '', page: number = 1): Observable<PagedResultModel<QuestionModel>> {
     let params = new HttpParams().set('page', page).set('pageSize', 10);
-    if (catId)      params = params.set('catId', catId);
+    if (catId)      params = params.set('categoryId', catId);
     if (difficulty) params = params.set('difficulty', difficulty);
     if (search)     params = params.set('search', search);
     return this.http.get<PagedResultModel<QuestionModel>>(this.baseUrl, { params });
@@ -49,6 +49,12 @@ export class QuestionApiService {
   // DELETE /api/questions/{id} → 204 (soft-delete)
   deleteQuestion(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  // GET /api/questions/import-template — pre-formatted .xlsx the examiner fills in offline.
+  // responseType 'blob' because the response is a binary file, not JSON.
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/import-template`, { responseType: 'blob' });
   }
 
   // POST /api/questions/import — multipart/form-data Excel upload

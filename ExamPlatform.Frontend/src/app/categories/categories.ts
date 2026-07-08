@@ -78,7 +78,7 @@ export class Categories implements OnInit {
         this.loadCategories();
       },
       error: (err) => {
-        this.errorMessage = err?.error?.message ?? 'Save failed.';
+        this.errorMessage = err?.error?.error ?? 'Save failed.';
       }
     });
   }
@@ -87,7 +87,7 @@ export class Categories implements OnInit {
     if (!confirm(`Delete category "${name}"? This cannot be undone.`)) return;
     this.categoryService.deleteCategory(id).subscribe({
       next: () => { this.successMessage = 'Category deleted.'; this.loadCategories(); },
-      error: (err) => this.errorMessage = err?.error?.message ?? 'Delete failed.'
+      error: (err) => this.errorMessage = err?.error?.error ?? 'Delete failed.'
     });
   }
 }

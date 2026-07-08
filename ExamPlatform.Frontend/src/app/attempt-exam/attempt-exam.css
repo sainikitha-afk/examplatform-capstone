@@ -1,2 +1,165 @@
-/* Sticky timer bar on scroll */
-.bg-light.rounded { position: sticky; top: 0; z-index: 10; }
+/* ─── Exam Shell ─────────────────────────────────────────────── */
+.exam-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.exam-shell { padding-bottom: 3rem; }
+
+/* ─── Top Bar ─────────────────────────────────────────────────── */
+.exam-topbar {
+  position: sticky;
+  top: var(--nav-height);
+  z-index: 100;
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 0;
+}
+.exam-topbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.exam-title-area {
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+.exam-topbar-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-progress-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 0 0 240px;
+}
+.exam-progress-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.exam-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.exam-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* ─── Body ────────────────────────────────────────────────────── */
+.exam-body {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* ─── Question Area ───────────────────────────────────────────── */
+.question-area { }
+
+.question-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.q-number {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--primary);
+}
+.q-meta { display: flex; align-items: center; gap: 0.25rem; font-size: 0.82rem; color: var(--text-muted); }
+
+.q-nav-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+.q-index-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ─── Navigator ───────────────────────────────────────────────── */
+.navigator-card { }
+.sticky-panel {
+  position: sticky;
+  top: calc(var(--nav-height) + 65px);
+}
+
+.nav-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+.leg-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-muted); }
+.leg-dot {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+}
+.dot-current  { background: var(--primary); }
+.dot-answered { background: var(--success); }
+.dot-skipped  { background: var(--border); }
+
+.q-nav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 991px) {
+  .sticky-panel { position: static; }
+  .exam-topbar-inner { gap: 0.75rem; }
+}
+
+/* ── Offline / sync banner ──────────────────────────────────────────── */
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #664d03;
+  background: #fff3cd;
+  border-bottom: 1px solid #ffe69c;
+  animation: slideDown 0.3s ease;
+}
+.offline-banner-danger {
+  color: #fff;
+  background: #dc3545;
+  border-bottom-color: #b02a37;
+}
+.offline-banner i { font-size: 1rem; }
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}

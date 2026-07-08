@@ -68,7 +68,8 @@ namespace ExamPlatform.API.Middleware
                 case CertificateNotFoundException:
                 case QuestionNotFoundException:     // Feature A: question not found or not owned
                 case ExamNotFoundException:         // Feature B: exam not found or not owned
-                case AttemptNotFoundException:      // Feature C: attempt not found or not owned
+                case AttemptNotFoundException:              // Feature C: attempt not found or not owned
+                case ExaminerRequestNotFoundException:      // Examiner request not found
                     statusCode = HttpStatusCode.NotFound;
                     message = exception.Message;
                     break;
@@ -92,7 +93,8 @@ namespace ExamPlatform.API.Middleware
                 case ExamHasAttemptsException:          // Unpublish blocked: candidates have started attempts
                 case ExamNotOpenForAttemptException:    // Feature C: exam not in window or not Published
                 case AttemptAlreadySubmittedException:  // Feature C: double-submit guard
-                case ResultsNotPublishedException:      // Feature C: result requested before publish
+                case ResultsNotPublishedException:              // Feature C: result requested before publish
+                case ExaminerRequestAlreadyProcessedException:  // approve/reject on already-processed request
                     statusCode = HttpStatusCode.Conflict;
                     message = exception.Message;
                     break;

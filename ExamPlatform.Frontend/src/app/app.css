@@ -1,0 +1,6 @@
+/* Root app styles — push main content below the fixed navigation.
+   Extra 1.5rem so page text never touches the navbar edge. */
+.main-content {
+  padding-top: calc(var(--nav-height) + 1.5rem);
+  min-height: 100vh;
+}

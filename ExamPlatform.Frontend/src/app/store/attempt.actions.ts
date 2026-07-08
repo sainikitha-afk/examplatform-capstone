@@ -39,6 +39,23 @@ export const AttemptActions = {
     props<{ questionId: number; optionId: number | null }>()
   ),
 
+  // Dispatched by the saveAnswer$ effect when the server confirms an auto-save.
+  answerSynced: createAction(
+    '[Attempt] Answer Synced',
+    props<{ questionId: number }>()
+  ),
+
+  // Dispatched by the saveAnswer$ effect when an auto-save fails after retries
+  // (typically: connection lost). The answer stays in pendingSync for later resync.
+  answerSyncFailed: createAction(
+    '[Attempt] Answer Sync Failed',
+    props<{ questionId: number }>()
+  ),
+
+  // Dispatched when the browser fires 'online' (or the user clicks "Sync now") —
+  // the syncPendingAnswers$ effect re-saves every answer still awaiting confirmation.
+  syncPendingAnswers: createAction('[Attempt] Sync Pending Answers'),
+
   // Dispatched every second by the setInterval in attempt-exam.ts.
   tickTimer: createAction('[Attempt] Tick Timer'),
 

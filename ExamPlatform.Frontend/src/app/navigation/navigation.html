@@ -1,140 +1,215 @@
-<!-- navigation.html — shown on every page above <router-outlet>
-     CONCEPT DEMO: async pipe — single subscription to the BehaviorSubject via the else-branch
-     pattern. 'as user' binds the emitted value to a template variable used throughout.
-     Using one subscription (not two separate *ngIf + *ngIf="!...") avoids double
-     change-detection triggers on each BehaviorSubject emission. -->
+<!-- navigation.html — Sticky top navigation bar.
+     Shows role-aware links, notifications badge, profile dropdown, and theme toggle.
+     async pipe subscribes to currentUser$ — 'as user' template variable used throughout. -->
 
-<ng-container *ngIf="(currentUser$ | async) as user; else noUser">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary px-3">
+<ng-container *ngIf="(currentUser$ | async) as user; else publicNav">
+  <nav class="app-nav" [class.mobile-open]="mobileMenuOpen()">
+    <div class="nav-inner">
 
-    <!-- Brand -->
-    <a class="navbar-brand fw-bold" routerLink="/candidate">
-      <i class="bi bi-mortarboard-fill me-1"></i>ExamHub
-    </a>
+      <!-- Brand -->
+      <a class="nav-brand" [routerLink]="user.role === 'Candidate' ? '/candidate' : user.role === 'Examiner' ? '/examiner' : '/admin'">
+        <i class="bi bi-mortarboard-fill"></i>
+        <span>ExamHub</span>
+      </a>
 
-    <!-- Bootstrap collapse toggle for mobile -->
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+      <!-- Desktop links -->
+      <ul class="nav-links d-none d-lg-flex">
 
-    <div class="collapse navbar-collapse" id="navMenu">
-      <ul class="navbar-nav me-auto">
-
-        <!-- Candidate links — role compared from template variable, not a method call -->
-        <li class="nav-item" *ngIf="user.role === 'Candidate'">
-          <a class="nav-link"
-             routerLink="/candidate"
-             routerLinkActive="active"
-             [routerLinkActiveOptions]="{exact:true}">
-            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+        <!-- Candidate links -->
+        <li *ngIf="user.role === 'Candidate'">
+          <a routerLink="/candidate" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-link-item">
+            <i class="bi bi-speedometer2"></i>Dashboard
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Candidate'">
-          <a class="nav-link" routerLink="/browse-exams" routerLinkActive="active">
-            <i class="bi bi-search me-1"></i>Browse Exams
+        <li *ngIf="user.role === 'Candidate'">
+          <a routerLink="/browse-exams" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-search"></i>Browse Exams
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Candidate'">
-          <a class="nav-link" routerLink="/my-analytics" routerLinkActive="active">
-            <i class="bi bi-bar-chart me-1"></i>My Analytics
+        <li *ngIf="user.role === 'Candidate'">
+          <a routerLink="/my-analytics" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-bar-chart-line"></i>Analytics
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Candidate'">
-          <a class="nav-link" routerLink="/my-certificates" routerLinkActive="active">
-            <i class="bi bi-award me-1"></i>Certificates
+        <li *ngIf="user.role === 'Candidate'">
+          <a routerLink="/my-certificates" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-award"></i>Certificates
           </a>
         </li>
 
         <!-- Examiner links -->
-        <li class="nav-item" *ngIf="user.role === 'Examiner'">
-          <a class="nav-link" routerLink="/examiner" routerLinkActive="active"
-             [routerLinkActiveOptions]="{exact:true}">
-            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+        <li *ngIf="user.role === 'Examiner'">
+          <a routerLink="/examiner" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-link-item">
+            <i class="bi bi-speedometer2"></i>Dashboard
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Examiner'">
-          <a class="nav-link" routerLink="/manage-questions" routerLinkActive="active">
-            <i class="bi bi-question-circle me-1"></i>Questions
+        <li *ngIf="user.role === 'Examiner'">
+          <a routerLink="/manage-questions" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-question-circle"></i>Questions
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Examiner'">
-          <a class="nav-link" routerLink="/manage-exams" routerLinkActive="active">
-            <i class="bi bi-file-earmark-text me-1"></i>Exams
+        <li *ngIf="user.role === 'Examiner'">
+          <a routerLink="/manage-exams" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-file-earmark-text"></i>Exams
+          </a>
+        </li>
+        <li *ngIf="user.role === 'Examiner'">
+          <a routerLink="/publish-results" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-broadcast"></i>Publish Results
           </a>
         </li>
 
         <!-- Admin links -->
-        <li class="nav-item" *ngIf="user.role === 'Admin'">
-          <a class="nav-link" routerLink="/admin" routerLinkActive="active"
-             [routerLinkActiveOptions]="{exact:true}">
-            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+        <li *ngIf="user.role === 'Admin'">
+          <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" class="nav-link-item">
+            <i class="bi bi-speedometer2"></i>Dashboard
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Admin'">
-          <a class="nav-link" routerLink="/admin/categories" routerLinkActive="active">
-            <i class="bi bi-tag me-1"></i>Categories
+        <li *ngIf="user.role === 'Admin'">
+          <a routerLink="/admin/categories" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-tag"></i>Categories
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Admin'">
-          <a class="nav-link" routerLink="/admin/users" routerLinkActive="active">
-            <i class="bi bi-people me-1"></i>Users
+        <li *ngIf="user.role === 'Admin'">
+          <a routerLink="/admin/users" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-people"></i>Users
           </a>
         </li>
-        <li class="nav-item" *ngIf="user.role === 'Admin'">
-          <a class="nav-link" routerLink="/admin/examiners" routerLinkActive="active">
-            <i class="bi bi-person-badge me-1"></i>Examiners
+        <li *ngIf="user.role === 'Admin'">
+          <a routerLink="/admin/examiners" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-person-badge"></i>Examiners
+          </a>
+        </li>
+        <li *ngIf="user.role === 'Admin'">
+          <a routerLink="/admin/examiner-requests" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-person-lines-fill"></i>Requests
           </a>
         </li>
 
       </ul>
 
-      <!-- Right side: notifications badge + username + logout -->
-      <ul class="navbar-nav ms-auto align-items-center">
-        <li class="nav-item me-2">
-          <a class="nav-link position-relative" routerLink="/notifications">
-            <i class="bi bi-bell-fill"></i>
-            <!-- CONCEPT DEMO: signal read with () — unreadCount() returns the current value -->
-            <span *ngIf="unreadCount() > 0"
-                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-              {{ unreadCount() }}
-            </span>
-          </a>
-        </li>
+      <!-- Right side actions -->
+      <div class="nav-actions">
 
-        <li class="nav-item me-2">
-          <!-- Interpolation: show the logged-in user's full name -->
-          <span class="navbar-text text-white">
-            <i class="bi bi-person-circle me-1"></i>{{ user.fullName }}
-            <!-- [ngClass] demo: highlight role badge by role value -->
-            <span class="badge ms-1"
-                  [ngClass]="{
-                    'bg-warning text-dark': user.role === 'Admin',
-                    'bg-info text-dark':    user.role === 'Examiner',
-                    'bg-light text-dark':   user.role === 'Candidate'
-                  }">
-              <!-- CONCEPT DEMO: uppercase pipe -->
-              {{ user.role | uppercase }}
-            </span>
-          </span>
-        </li>
+        <!-- Theme toggle -->
+        <button class="nav-icon-btn" (click)="toggleTheme()" [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
+          <i class="bi" [ngClass]="isDark() ? 'bi-sun-fill' : 'bi-moon-fill'"></i>
+        </button>
 
-        <li class="nav-item">
-          <!-- Event binding: (click) calls handleLogoutClick() -->
-          <button class="btn btn-outline-light btn-sm" (click)="handleLogoutClick()">
-            <i class="bi bi-box-arrow-right me-1"></i>Logout
+        <!-- Notifications -->
+        <a routerLink="/notifications" class="nav-icon-btn notif-btn" aria-label="Notifications">
+          <i class="bi bi-bell-fill"></i>
+          <span *ngIf="unreadCount() > 0" class="notif-badge">{{ unreadCount() }}</span>
+        </a>
+
+        <!-- Profile dropdown -->
+        <div class="profile-dropdown" (clickOutside)="closeProfle()">
+          <button class="profile-btn" (click)="toggleProfile()" [class.active]="profileOpen()">
+            <div class="profile-avatar">{{ user.fullName.charAt(0).toUpperCase() }}</div>
+            <div class="profile-info d-none d-xl-block">
+              <span class="profile-name">{{ user.fullName }}</span>
+              <span class="profile-role" [ngClass]="{
+                'role-admin':    user.role === 'Admin',
+                'role-examiner': user.role === 'Examiner',
+                'role-candidate': user.role === 'Candidate'
+              }">{{ user.role }}</span>
+            </div>
+            <i class="bi bi-chevron-down profile-chevron d-none d-xl-block" [class.rotated]="profileOpen()"></i>
           </button>
-        </li>
-      </ul>
+
+          <div class="dropdown-menu-custom" [class.show]="profileOpen()">
+            <div class="dropdown-header">
+              <div class="dh-name">{{ user.fullName }}</div>
+              <div class="dh-email">{{ user.role }}</div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a routerLink="/notifications" class="dropdown-item-custom" (click)="closeProfle()">
+              <i class="bi bi-bell me-2"></i>Notifications
+              <span *ngIf="unreadCount() > 0" class="notif-badge-sm">{{ unreadCount() }}</span>
+            </a>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item-custom dropdown-logout" (click)="handleLogoutClick()">
+              <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile hamburger -->
+        <button class="nav-icon-btn d-lg-none" (click)="toggleMobile()" aria-label="Menu">
+          <i class="bi" [ngClass]="mobileMenuOpen() ? 'bi-x-lg' : 'bi-list'"></i>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div class="mobile-menu" [class.open]="mobileMenuOpen()">
+      <div class="mobile-user-info">
+        <div class="profile-avatar">{{ user.fullName.charAt(0).toUpperCase() }}</div>
+        <div>
+          <div class="profile-name">{{ user.fullName }}</div>
+          <div class="profile-role" [ngClass]="{
+            'role-admin':    user.role === 'Admin',
+            'role-examiner': user.role === 'Examiner',
+            'role-candidate': user.role === 'Candidate'
+          }">{{ user.role }}</div>
+        </div>
+      </div>
+
+      <!-- Candidate mobile links -->
+      <ng-container *ngIf="user.role === 'Candidate'">
+        <a routerLink="/candidate"       class="mobile-link" (click)="closeMobile()"><i class="bi bi-speedometer2"></i>Dashboard</a>
+        <a routerLink="/browse-exams"    class="mobile-link" (click)="closeMobile()"><i class="bi bi-search"></i>Browse Exams</a>
+        <a routerLink="/my-analytics"    class="mobile-link" (click)="closeMobile()"><i class="bi bi-bar-chart-line"></i>Analytics</a>
+        <a routerLink="/my-certificates" class="mobile-link" (click)="closeMobile()"><i class="bi bi-award"></i>Certificates</a>
+      </ng-container>
+
+      <!-- Examiner mobile links -->
+      <ng-container *ngIf="user.role === 'Examiner'">
+        <a routerLink="/examiner"          class="mobile-link" (click)="closeMobile()"><i class="bi bi-speedometer2"></i>Dashboard</a>
+        <a routerLink="/manage-questions"  class="mobile-link" (click)="closeMobile()"><i class="bi bi-question-circle"></i>Questions</a>
+        <a routerLink="/manage-exams"      class="mobile-link" (click)="closeMobile()"><i class="bi bi-file-earmark-text"></i>Exams</a>
+        <a routerLink="/publish-results"   class="mobile-link" (click)="closeMobile()"><i class="bi bi-broadcast"></i>Publish Results</a>
+      </ng-container>
+
+      <!-- Admin mobile links -->
+      <ng-container *ngIf="user.role === 'Admin'">
+        <a routerLink="/admin"            class="mobile-link" (click)="closeMobile()"><i class="bi bi-speedometer2"></i>Dashboard</a>
+        <a routerLink="/admin/categories" class="mobile-link" (click)="closeMobile()"><i class="bi bi-tag"></i>Categories</a>
+        <a routerLink="/admin/users"      class="mobile-link" (click)="closeMobile()"><i class="bi bi-people"></i>Users</a>
+        <a routerLink="/admin/examiners"          class="mobile-link" (click)="closeMobile()"><i class="bi bi-person-badge"></i>Examiners</a>
+        <a routerLink="/admin/examiner-requests"  class="mobile-link" (click)="closeMobile()"><i class="bi bi-person-lines-fill"></i>Requests</a>
+      </ng-container>
+
+      <div class="mobile-divider"></div>
+      <a routerLink="/notifications" class="mobile-link" (click)="closeMobile()"><i class="bi bi-bell"></i>Notifications</a>
+      <button class="mobile-link mobile-logout" (click)="handleLogoutClick()">
+        <i class="bi bi-box-arrow-right"></i>Sign Out
+      </button>
     </div>
   </nav>
 </ng-container>
 
-<!-- CONCEPT DEMO: ng-template else clause — Angular swaps this in when the *ngIf is false.
-     Single async subscription covers both branches: no extra subscription needed. -->
-<ng-template #noUser>
-  <nav class="navbar navbar-dark bg-primary px-3">
-    <span class="navbar-brand fw-bold">
-      <i class="bi bi-mortarboard-fill me-1"></i>ExamHub
-    </span>
+<!-- Landing / unauthenticated navigation -->
+<ng-template #publicNav>
+  <nav class="app-nav app-nav-public">
+    <div class="nav-inner">
+      <a class="nav-brand" routerLink="/">
+        <i class="bi bi-mortarboard-fill"></i>
+        <span>ExamHub</span>
+      </a>
+      <ul class="nav-links d-none d-lg-flex">
+        <li><a href="#features" class="nav-link-item">Features</a></li>
+        <li><a href="#faq" class="nav-link-item">FAQ</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="nav-icon-btn" (click)="toggleTheme()" [attr.aria-label]="isDark() ? 'Light mode' : 'Dark mode'">
+          <i class="bi" [ngClass]="isDark() ? 'bi-sun-fill' : 'bi-moon-fill'"></i>
+        </button>
+        <a routerLink="/apply-as-examiner" class="btn btn-ghost btn-sm">Become Examiner</a>
+        <a routerLink="/login"    class="btn btn-ghost btn-sm">Sign In</a>
+        <a routerLink="/register" class="btn btn-primary btn-sm">Get Started</a>
+      </div>
+    </div>
   </nav>
 </ng-template>

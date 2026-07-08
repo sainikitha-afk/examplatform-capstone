@@ -14,6 +14,7 @@
 
 using ExamPlatform.Domain.Entities;
 using ExamPlatform.Domain.Enums;
+#pragma warning disable CA1724 // conflicts with namespace: intentional test helper name
 
 namespace ExamPlatform.BLL.Tests.Helpers
 {
@@ -56,6 +57,23 @@ namespace ExamPlatform.BLL.Tests.Helpers
             Role = UserRole.Admin,
             DateOfJoining = DateTime.UtcNow.AddDays(-90),
             IsActive = true
+        };
+
+        // ─────────────── EXAMINER REQUEST ─────────────────────────────
+
+        public static ExaminerRequest BuildExaminerRequest(
+            int requestId = 1,
+            string email = "riya@example.com",
+            ExaminerRequestStatus status = ExaminerRequestStatus.Pending) => new()
+        {
+            ExaminerRequestId = requestId,
+            FullName    = "Riya Sharma",
+            Email       = email,
+            Purpose     = "I teach Java at XYZ University and want to create coding assessments for my students.",
+            Status      = status,
+            RequestedAt = DateTime.UtcNow.AddMinutes(-5),
+            ProcessedAt = status == ExaminerRequestStatus.Pending ? null : DateTime.UtcNow,
+            AdminNote   = null
         };
 
         // ─────────────── EXAM CATEGORY ────────────────────────────────

@@ -10,7 +10,7 @@
 //   - [ngClass] on question navigator squares
 //   - Subscription cleanup in ngOnDestroy
 
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -20,7 +20,8 @@ import { AttemptActions } from '../store/attempt.actions';
 import {
   selectAttemptId, selectExamTitle, selectQuestions,
   selectCurrentIndex, selectAnswers, selectTimeRemaining,
-  selectAttemptStatus, selectErrorMessage
+  selectAttemptStatus, selectErrorMessage,
+  selectIsOffline, selectPendingSyncCount
 } from '../store/attempt.selectors';
 import { QuestionInAttemptModel } from '../models/question.model';
 
@@ -45,6 +46,13 @@ export class AttemptExam implements OnInit, OnDestroy {
   // CONCEPT DEMO: signal() — updated every second by the timer interval.
   timeDisplay  = signal(0);
   answeredCount = signal(0);
+
+  // Connection-resilience state: browser offline OR server unreachable, plus
+  // how many answers are still waiting to be confirmed by the server.
+  isOffline        = signal(!navigator.onLine);
+  pendingSyncCount = signal(0);
+
+  status: string = 'idle';
 
   // Snapshots kept for use in methods (store values don't need to be re-selected each time).
   questions: QuestionInAttemptModel[] = [];
@@ -97,9 +105,51 @@ export class AttemptExam implements OnInit, OnDestroy {
       }),
 
       this.store.select(selectAttemptStatus).subscribe(s => {
+        this.status = s;
         if (s === 'submitted') this.clearTimer();
-      })
+      }),
+
+      // Connection resilience: reflect sync state in the offline banner.
+      this.store.select(selectIsOffline).subscribe(off => {
+        if (off) this.isOffline.set(true);
+        else if (navigator.onLine) this.isOffline.set(false);
+      }),
+
+      this.store.select(selectPendingSyncCount).subscribe(n => this.pendingSyncCount.set(n))
     );
+  }
+
+  // ── Connection listeners ────────────────────────────────────────────
+  // When the browser regains connectivity, immediately re-send every answer
+  // that failed to save while offline. The exam continues uninterrupted.
+  @HostListener('window:online')
+  handleOnline(): void {
+    this.isOffline.set(false);
+    this.store.dispatch(AttemptActions.syncPendingAnswers());
+  }
+
+  @HostListener('window:offline')
+  handleOffline(): void {
+    this.isOffline.set(true);
+  }
+
+  // Warn before leaving mid-exam (refresh/close). The attempt is resumable —
+  // answers are saved — but the timer keeps running server-side.
+  @HostListener('window:beforeunload', ['$event'])
+  handleBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.status === 'active' || this.status === 'submitting') {
+      event.preventDefault();
+    }
+  }
+
+  // Manual "Sync now" from the offline banner.
+  handleSyncNowClick(): void {
+    this.store.dispatch(AttemptActions.syncPendingAnswers());
+  }
+
+  // Retry loading the exam after a failed start (e.g. connection dropped).
+  handleRetryStartClick(): void {
+    this.store.dispatch(AttemptActions.startAttempt({ examId: this.examId }));
   }
 
   private startTimer(): void {

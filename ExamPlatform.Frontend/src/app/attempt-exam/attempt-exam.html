@@ -1,78 +1,147 @@
-<!-- Attempt Exam Screen — timer, question navigator, and question card -->
-<div class="container-fluid mt-3">
+<!-- attempt-exam.html — Premium exam taking screen with timer, navigator, and question card -->
 
-  <!-- Loading / Error states -->
-  <div *ngIf="(status$ | async) === 'loading'" class="text-center py-5">
-    <div class="spinner-border text-primary"></div>
-    <p class="mt-2">Starting your exam...</p>
+<!-- Loading state -->
+<div *ngIf="(status$ | async) === 'loading'" class="exam-loading-screen">
+  <div class="spinner-border text-primary" style="width:3rem;height:3rem"></div>
+  <p class="mt-3 text-muted">Setting up your exam...</p>
+</div>
+
+<!-- Error state (exam could not be loaded/started) -->
+<div *ngIf="(status$ | async) === 'error'" class="container py-4">
+  <div class="alert alert-danger d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage$ | async }}
+  </div>
+  <div class="text-center mt-3">
+    <button class="btn btn-primary" (click)="handleRetryStartClick()">
+      <i class="bi bi-arrow-clockwise me-1"></i>Try Again
+    </button>
+    <p class="text-muted small mt-2">
+      Your previously saved answers are safe — resuming will restore them.
+    </p>
+  </div>
+</div>
+
+<!-- Active exam layout -->
+<div class="exam-shell" *ngIf="(status$ | async) === 'active' || (status$ | async) === 'submitting'">
+
+  <!-- Offline / sync banner — shown when the connection drops or answers are unsynced -->
+  <div *ngIf="isOffline() || pendingSyncCount() > 0" class="offline-banner"
+       [class.offline-banner-danger]="isOffline()">
+    <i class="bi" [ngClass]="isOffline() ? 'bi-wifi-off' : 'bi-arrow-repeat'"></i>
+    <span *ngIf="isOffline()">
+      Connection lost — keep going! Your answers are saved on this device and will sync automatically when you're back online.
+    </span>
+    <span *ngIf="!isOffline() && pendingSyncCount() > 0">
+      Syncing {{ pendingSyncCount() }} answer(s)...
+    </span>
+    <button *ngIf="isOffline()" class="btn btn-sm btn-light ms-auto" (click)="handleSyncNowClick()">
+      <i class="bi bi-arrow-repeat me-1"></i>Sync now
+    </button>
   </div>
 
-  <div *ngIf="(status$ | async) === 'error'" class="alert alert-danger container">
-    {{ errorMessage$ | async }}
+  <!-- In-exam error (e.g. submit failed while offline) — exam stays usable -->
+  <div *ngIf="(errorMessage$ | async) as errMsg" class="container pt-2">
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-0">
+      <i class="bi bi-exclamation-triangle-fill"></i>{{ errMsg }}
+    </div>
   </div>
 
-  <!-- Main exam layout — shown when status is 'active' or 'submitting' -->
-  <div *ngIf="(status$ | async) === 'active' || (status$ | async) === 'submitting'">
-    <div class="row">
+  <!-- Sticky exam header bar -->
+  <div class="exam-topbar">
+    <div class="exam-topbar-inner">
+      <div class="exam-title-area">
+        <i class="bi bi-mortarboard-fill text-primary me-2"></i>
+        <span class="exam-topbar-title">{{ examTitle$ | async }}</span>
+      </div>
 
-      <!-- LEFT: Question + card -->
-      <div class="col-md-8">
-
-        <!-- Timer bar -->
-        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
-          <h5 class="mb-0">{{ examTitle$ | async }}</h5>
-          <div>
-            <!-- CONCEPT DEMO: signal read with () in template -->
-            <span class="badge fs-5"
-                  [ngClass]="{'bg-danger': timeDisplay() < 120, 'bg-success': timeDisplay() >= 120}">
-              <i class="bi bi-clock me-1"></i>{{ formatTime(timeDisplay()) }}
-            </span>
+      <!-- Progress indicator -->
+      <div class="exam-progress-area d-none d-md-flex">
+        <span class="exam-progress-text">{{ answeredCount() }} / {{ questions.length }} answered</span>
+        <div class="exam-progress-bar">
+          <div class="exam-progress-fill"
+               [style.width.%]="questions.length > 0 ? (answeredCount() / questions.length * 100) : 0">
           </div>
-        </div>
-
-        <!-- QuestionCard child component — @Input and @Output in action -->
-        <!-- CONCEPT DEMO: property binding [question] passes data DOWN to child -->
-        <!-- CONCEPT DEMO: event binding (answerSelected) receives data UP from child -->
-        <app-question-card
-          *ngIf="questions[currentIndex]"
-          [question]="questions[currentIndex]"
-          [selectedOptionId]="answers[questions[currentIndex].questionId] ?? null"
-          (answerSelected)="handleAnswerSelected($event)"
-        ></app-question-card>
-
-        <!-- Navigation buttons -->
-        <div class="d-flex justify-content-between mt-2">
-          <button class="btn btn-outline-secondary"
-                  [disabled]="currentIndex === 0"
-                  (click)="handleNavigateToQuestion(currentIndex - 1)">
-            <i class="bi bi-arrow-left"></i> Prev
-          </button>
-          <button class="btn btn-outline-secondary"
-                  [disabled]="currentIndex === questions.length - 1"
-                  (click)="handleNavigateToQuestion(currentIndex + 1)">
-            Next <i class="bi bi-arrow-right"></i>
-          </button>
         </div>
       </div>
 
-      <!-- RIGHT: Navigator panel -->
-      <div class="col-md-4">
-        <div class="card">
-          <div class="card-header bg-primary text-white">
+      <!-- Timer -->
+      <div class="timer-badge"
+           [ngClass]="{
+             'timer-safe':    timeDisplay() >= 300,
+             'timer-warning': timeDisplay() >= 60 && timeDisplay() < 300,
+             'timer-danger':  timeDisplay() < 60
+           }">
+        <i class="bi bi-clock-fill"></i>
+        <!-- Interpolation + signal read () -->
+        {{ formatTime(timeDisplay()) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="exam-body">
+    <div class="row g-3">
+
+      <!-- LEFT: Question area -->
+      <div class="col-lg-8">
+        <div class="question-area animate-fade-in">
+          <!-- Question number header -->
+          <div class="question-header">
+            <span class="q-number">Question {{ currentIndex + 1 }} of {{ questions.length }}</span>
+            <span *ngIf="questions[currentIndex]" class="q-meta">
+              <span class="badge-status badge-pending me-1">{{ questions[currentIndex].difficulty }}</span>
+              <i class="bi bi-star-fill text-warning me-1"></i>{{ questions[currentIndex].marks }} mark(s)
+            </span>
+          </div>
+
+          <!-- QuestionCard child component — @Input and @Output in action -->
+          <!-- CONCEPT DEMO: property binding [question] passes data DOWN to child -->
+          <!-- CONCEPT DEMO: event binding (answerSelected) receives data UP from child -->
+          <app-question-card
+            *ngIf="questions[currentIndex]"
+            [question]="questions[currentIndex]"
+            [selectedOptionId]="answers[questions[currentIndex].questionId] ?? null"
+            (answerSelected)="handleAnswerSelected($event)"
+          ></app-question-card>
+
+          <!-- Prev / Next navigation -->
+          <div class="q-nav-buttons">
+            <button class="btn btn-outline-secondary"
+                    [disabled]="currentIndex === 0"
+                    (click)="handleNavigateToQuestion(currentIndex - 1)">
+              <i class="bi bi-arrow-left me-1"></i>Previous
+            </button>
+            <span class="q-index-label">{{ currentIndex + 1 }} / {{ questions.length }}</span>
+            <button class="btn btn-outline-secondary"
+                    [disabled]="currentIndex === questions.length - 1"
+                    (click)="handleNavigateToQuestion(currentIndex + 1)">
+              Next<i class="bi bi-arrow-right ms-1"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Navigator + submit panel -->
+      <div class="col-lg-4">
+        <div class="card navigator-card sticky-panel">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-bold" style="font-size:0.875rem">Question Navigator</span>
             <!-- CONCEPT DEMO: signal read — answeredCount() -->
-            <small>{{ answeredCount() }} / {{ questions.length }} answered</small>
+            <span class="badge-status badge-submitted">{{ answeredCount() }}/{{ questions.length }}</span>
           </div>
           <div class="card-body">
-            <p class="small text-muted mb-2">
-              <!-- [ngClass] color legend -->
-              <span class="btn btn-primary btn-sm me-1">Current</span>
-              <span class="btn btn-success btn-sm me-1">Answered</span>
-              <span class="btn btn-outline-secondary btn-sm">Unanswered</span>
-            </p>
+            <!-- Legend -->
+            <div class="nav-legend">
+              <div class="leg-item"><div class="leg-dot dot-current"></div><span>Current</span></div>
+              <div class="leg-item"><div class="leg-dot dot-answered"></div><span>Answered</span></div>
+              <div class="leg-item"><div class="leg-dot dot-skipped"></div><span>Skipped</span></div>
+            </div>
+
             <!-- CONCEPT DEMO: *ngFor + [ngClass] for navigator squares -->
-            <div class="d-flex flex-wrap gap-1">
+            <div class="q-nav-grid">
               <button
                 *ngFor="let q of questions; let i = index"
+                class="q-nav-btn"
                 [ngClass]="getNavSquareClass(q.questionId, i)"
                 (click)="handleNavigateToQuestion(i)"
               >{{ i + 1 }}</button>
@@ -84,15 +153,19 @@
               [disabled]="(status$ | async) === 'submitting'"
               (click)="handleSubmitClick()"
             >
-              <span *ngIf="(status$ | async) === 'submitting'">Submitting...</span>
-              <span *ngIf="(status$ | async) !== 'submitting'">
-                <i class="bi bi-send-check me-1"></i>Submit Exam
+              <span *ngIf="(status$ | async) === 'submitting'"
+                    class="d-flex align-items-center justify-content-center gap-2">
+                <span class="spinner-border spinner-border-sm"></span>Submitting...
+              </span>
+              <span *ngIf="(status$ | async) !== 'submitting'"
+                    class="d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-send-check-fill"></i>Submit Exam
               </span>
             </button>
           </div>
         </div>
       </div>
+
     </div>
   </div>
-
 </div>

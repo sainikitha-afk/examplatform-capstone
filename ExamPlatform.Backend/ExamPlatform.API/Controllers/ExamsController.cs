@@ -9,6 +9,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using ExamPlatform.API.DTOs.Attempt;
 using ExamPlatform.API.DTOs.Common;
 using ExamPlatform.API.DTOs.Exam;
 using ExamPlatform.BLL.Interfaces;
@@ -22,11 +23,16 @@ namespace ExamPlatform.API.Controllers
     public class ExamsController : ControllerBase
     {
         private readonly IExamService _examService;
+        private readonly IAttemptService _attemptService;
         private readonly ILogger<ExamsController> _logger;
 
-        public ExamsController(IExamService examService, ILogger<ExamsController> logger)
+        public ExamsController(
+            IExamService examService,
+            IAttemptService attemptService,
+            ILogger<ExamsController> logger)
         {
             _examService = examService;
+            _attemptService = attemptService;
             _logger = logger;
         }
 
@@ -104,6 +110,37 @@ namespace ExamPlatform.API.Controllers
                 return Ok(ToDetailDto(exam));            // includes IsCorrect
             else
                 return Ok(ToDetailForCandidateDto(exam)); // omits IsCorrect
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GET /api/exams/{id}/attempts  — examiner attempt monitoring
+        //   Every attempt on this exam (all statuses): who took it, live
+        //   progress, disconnect signals (resumes/auto-submits), and scores.
+        //   Examiner must own the exam; Admin can view any exam.
+        // ════════════════════════════════════════════════════════════════
+        [HttpGet("{id:int}/attempts")]
+        [Authorize(Roles = "Examiner,Admin")]
+        public async Task<IActionResult> GetAttempts(int id)
+        {
+            var userId = ExtractUserId();
+            var isAdmin = User.IsInRole("Admin");
+
+            var attempts = await _attemptService.GetAllByExamForExaminerAsync(id, userId, isAdmin);
+
+            return Ok(attempts.Select(a => new ExamAttemptMonitorDto
+            {
+                AttemptId = a.AttemptId,
+                UserId = a.UserId,
+                CandidateName = a.User?.FullName ?? string.Empty,
+                CandidateEmail = a.User?.Email ?? string.Empty,
+                StartedAt = a.StartedAt,
+                SubmittedAt = a.SubmittedAt,
+                AttemptStatus = a.AttemptStatus.ToString(),
+                Score = a.Score,
+                IsPassed = a.IsPassed,
+                TimeTakenSeconds = a.TimeTakenSeconds,
+                AnsweredCount = a.AttemptAnswers?.Count(aa => aa.SelectedOptionId != null) ?? 0
+            }));
         }
 
         // ════════════════════════════════════════════════════════════════

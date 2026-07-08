@@ -1,1 +1,506 @@
-/* You can add global styles to this file, and also import other style files */
+/* ═══════════════════════════════════════════════════════════════
+   EXAMHUB — Global Design System
+   CSS custom properties drive both light and dark mode.
+   Dark mode: add data-theme="dark" to <html>.
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Design Tokens — Light Mode ───────────────────────────────── */
+:root {
+  --primary:          #0d9488;
+  --primary-hover:    #0f766e;
+  --primary-light:    #14b8a6;
+  --primary-50:       #f0fdfa;
+  --primary-100:      #ccfbf1;
+  --primary-200:      #99f6e4;
+
+  --accent:           #f59e0b;
+  --accent-hover:     #d97706;
+
+  --success:          #10b981;
+  --warning:          #f59e0b;
+  --danger:           #ef4444;
+  --info:             #06b6d4;
+
+  --bg:               #f0fdfa;
+  --bg-secondary:     #f1f5f9;
+  --bg-card:          #ffffff;
+  --bg-glass:         rgba(255, 255, 255, 0.72);
+
+  --text:             #0f172a;
+  --text-secondary:   #475569;
+  --text-muted:       #64748b;
+  --text-inverse:     #ffffff;
+
+  --border:           #e2e8f0;
+  --border-light:     #f1f5f9;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08);
+  --shadow:     0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05);
+  --shadow-md:  0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+  --shadow-lg:  0 20px 25px -5px rgba(0,0,0,0.08);
+  --shadow-primary:  0 8px 24px rgba(13, 148, 136, 0.24);
+  --shadow-card:     0 2px 16px rgba(13, 148, 136, 0.10);
+
+  --radius-sm:  8px;
+  --radius:     12px;
+  --radius-lg:  18px;
+  --radius-xl:  24px;
+  --radius-full: 9999px;
+
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --nav-height: 64px;
+}
+
+/* ── Design Tokens — Dark Mode ────────────────────────────────── */
+[data-theme="dark"] {
+  --primary:          #14b8a6;
+  --primary-hover:    #0d9488;
+  --primary-light:    #2dd4bf;
+  --primary-50:       #042f2e;
+  --primary-100:      #134e4a;
+  --primary-200:      #115e59;
+
+  --bg:               #0f172a;
+  --bg-secondary:     #1e293b;
+  --bg-card:          #1e293b;
+  --bg-glass:         rgba(30, 41, 59, 0.80);
+
+  --text:             #f1f5f9;
+  --text-secondary:   #cbd5e1;
+  --text-muted:       #94a3b8;
+  --text-inverse:     #0f172a;
+
+  --border:           #334155;
+  --border-light:     #1e293b;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow:     0 4px 6px -1px rgba(0,0,0,0.4);
+  --shadow-md:  0 10px 15px -3px rgba(0,0,0,0.4);
+  --shadow-lg:  0 20px 25px -5px rgba(0,0,0,0.5);
+  --shadow-primary:  0 8px 24px rgba(20, 184, 166, 0.20);
+  --shadow-card:     0 2px 16px rgba(0,0,0,0.30);
+}
+
+/* ── Base ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  margin: 0;
+}
+
+/* ── Bootstrap Card Overrides ─────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+}
+.card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.card-footer {
+  background: transparent;
+  border-top: 1px solid var(--border);
+}
+.card-body { color: var(--text); }
+.card-title { color: var(--text); font-weight: 600; }
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn {
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: var(--transition);
+  border: none;
+  font-size: 0.9rem;
+}
+.btn-primary {
+  background: var(--primary);
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(13,148,136,0.25);
+}
+.btn-primary:hover, .btn-primary:focus {
+  background: var(--primary-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-primary);
+}
+.btn-outline-primary {
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  background: transparent;
+}
+.btn-outline-primary:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-1px);
+  border-color: var(--primary);
+}
+.btn-success {
+  background: var(--success);
+  color: white !important;
+}
+.btn-success:hover { background: #059669 !important; transform: translateY(-1px); }
+.btn-danger { background: var(--danger); color: white !important; }
+.btn-danger:hover { background: #dc2626 !important; transform: translateY(-1px); }
+.btn-outline-secondary {
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+  background: transparent;
+}
+.btn-outline-secondary:hover {
+  background: var(--bg-secondary);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn-outline-danger { color: var(--danger); border: 1.5px solid var(--danger); background: transparent; }
+.btn-outline-danger:hover { background: var(--danger); color: white; }
+.btn-outline-success { color: var(--success); border: 1.5px solid var(--success); background: transparent; }
+.btn-outline-success:hover { background: var(--success); color: white; }
+.btn-outline-warning { color: var(--accent); border: 1.5px solid var(--accent); background: transparent; }
+.btn-outline-warning:hover { background: var(--accent); color: white; }
+.btn-secondary { background: var(--bg-secondary); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+
+/* ── Forms ────────────────────────────────────────────────────── */
+.form-control, .form-select {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.95rem;
+  padding: 0.6rem 0.9rem;
+  transition: var(--transition);
+}
+.form-control:focus, .form-select:focus {
+  background: var(--bg-card);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13,148,136,0.15);
+  color: var(--text);
+  outline: none;
+}
+.form-control::placeholder { color: var(--text-muted); }
+.form-label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+.input-group-text {
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* ── Tables ───────────────────────────────────────────────────── */
+/* Bootstrap 5.3 colors cells via --bs-table-color (not the color property),
+   so it must be set explicitly or dark mode shows black text. */
+.table {
+  color: var(--text);
+  --bs-table-color: var(--text);
+  --bs-table-striped-color: var(--text);
+  --bs-table-hover-color: var(--text);
+  border-color: var(--border);
+  --bs-table-striped-bg: var(--bg-secondary);
+  --bs-table-hover-bg: var(--primary-50);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--border);
+}
+.table > thead {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: white;
+}
+.table > thead th { border-color: transparent; font-weight: 600; font-size: 0.85rem; }
+.table td, .table th { padding: 0.75rem 1rem; vertical-align: middle; }
+
+/* ── Alerts ───────────────────────────────────────────────────── */
+.alert { border: none; border-radius: var(--radius); font-size: 0.9rem; }
+.alert-danger  { background: #fef2f2; color: #dc2626; }
+.alert-success { background: #f0fdf4; color: #16a34a; }
+.alert-info    { background: #f0fdfa; color: #0f766e; }
+.alert-warning { background: #fffbeb; color: #92400e; }
+[data-theme="dark"] .alert-danger  { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .alert-success { background: #052e16; color: #86efac; }
+[data-theme="dark"] .alert-info    { background: #042f2e; color: #5eead4; }
+[data-theme="dark"] .alert-warning { background: #451a03; color: #fcd34d; }
+
+/* ── Badges ───────────────────────────────────────────────────── */
+.badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 0.35em 0.7em;
+  border-radius: var(--radius-full);
+}
+.badge-status {
+  padding: 0.3em 0.8em;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.badge-draft       { background: #f1f5f9; color: #64748b; }
+.badge-published   { background: #dcfce7; color: #166534; }
+.badge-results     { background: #ede9fe; color: #6d28d9; }
+.badge-pending     { background: #fef9c3; color: #854d0e; }
+.badge-inprogress  { background: #dbeafe; color: #1d4ed8; }
+.badge-submitted   { background: #dcfce7; color: #166534; }
+.badge-passed      { background: #dcfce7; color: #166534; }
+.badge-failed      { background: #fee2e2; color: #991b1b; }
+.badge-issued      { background: #dcfce7; color: #166534; }
+.badge-revoked     { background: #f1f5f9; color: #64748b; }
+[data-theme="dark"] .badge-draft       { background: #1e293b; color: #94a3b8; }
+[data-theme="dark"] .badge-published   { background: #052e16; color: #4ade80; }
+[data-theme="dark"] .badge-results     { background: #2e1065; color: #c4b5fd; }
+[data-theme="dark"] .badge-pending     { background: #422006; color: #fde68a; }
+[data-theme="dark"] .badge-inprogress  { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .badge-submitted   { background: #052e16; color: #4ade80; }
+[data-theme="dark"] .badge-passed      { background: #052e16; color: #4ade80; }
+[data-theme="dark"] .badge-failed      { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .badge-issued      { background: #052e16; color: #4ade80; }
+[data-theme="dark"] .badge-revoked     { background: #1e293b; color: #94a3b8; }
+
+/* ── Progress Bar ─────────────────────────────────────────────── */
+.progress { background: var(--bg-secondary); border-radius: var(--radius-full); height: 8px; }
+.progress-bar {
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+}
+
+/* ── Pagination ───────────────────────────────────────────────── */
+.page-link {
+  background: var(--bg-card);
+  border-color: var(--border);
+  color: var(--primary);
+  border-radius: var(--radius-sm) !important;
+  margin: 0 2px;
+}
+.page-link:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.page-item.active .page-link { background: var(--primary); border-color: var(--primary); }
+
+/* ── Stat Card ────────────────────────────────────────────────── */
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+}
+.stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+.stat-card .stat-icon {
+  width: 48px; height: 48px;
+  background: var(--primary-100);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+[data-theme="dark"] .stat-card .stat-icon { background: var(--primary-100); }
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+.stat-card .stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* ── Page Header ──────────────────────────────────────────────── */
+.page-header { margin-bottom: 1.75rem; }
+.page-header h2, .page-header h3 { font-weight: 700; color: var(--text); margin: 0 0 0.25rem; }
+.page-header-sub { color: var(--text-muted); font-size: 0.95rem; margin: 0; }
+
+/* ── Glassmorphism ────────────────────────────────────────────── */
+.card-glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+[data-theme="dark"] .card-glass { border-color: rgba(255,255,255,0.08); }
+
+/* ── Animations ───────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -468px 0; }
+  100% { background-position: 468px 0; }
+}
+
+.animate-fade-in   { animation: fadeIn 0.4s ease both; }
+.animate-scale-in  { animation: scaleIn 0.3s ease both; }
+
+.stagger-children > * { animation: fadeIn 0.4s ease both; }
+.stagger-children > *:nth-child(1) { animation-delay:   0ms; }
+.stagger-children > *:nth-child(2) { animation-delay:  60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+
+/* ── Exam Timer ───────────────────────────────────────────────── */
+.timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-full);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.timer-safe    { background: var(--primary-100); color: var(--primary); }
+.timer-warning { background: #fef3c7; color: #92400e; }
+.timer-danger  { background: #fee2e2; color: #dc2626; animation: pulse-glow 1s ease infinite; }
+[data-theme="dark"] .timer-warning { background: #422006; color: #fde68a; }
+[data-theme="dark"] .timer-danger  { background: #450a0a; color: #fca5a5; }
+
+/* ── Question Navigator ───────────────────────────────────────── */
+.q-nav-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex; align-items: center; justify-content: center;
+}
+.q-nav-btn.current   { background: var(--primary); color: white; border-color: var(--primary); }
+.q-nav-btn.answered  { background: var(--success);  color: white; border-color: var(--success); }
+.q-nav-btn:hover     { border-color: var(--primary); color: var(--primary); }
+
+/* ── Certificate Card ─────────────────────────────────────────── */
+.cert-card {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 50%, #f0fdf4 100%);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+.cert-card::after {
+  content: '🏆';
+  position: absolute;
+  right: -10px; top: -10px;
+  font-size: 6rem;
+  opacity: 0.07;
+}
+[data-theme="dark"] .cert-card {
+  background: linear-gradient(135deg, #042f2e 0%, #134e4a 50%, #052e16 100%);
+  border-color: var(--primary-200);
+}
+.cert-card.revoked { background: var(--bg-secondary); border-color: var(--border); filter: grayscale(0.6); }
+.cert-code {
+  font-family: 'Courier New', monospace;
+  background: var(--bg-card);
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+  color: var(--primary);
+  letter-spacing: 0.05em;
+  display: inline-block;
+}
+
+/* ── Empty State ──────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-muted);
+}
+.empty-state .empty-icon {
+  font-size: 3.5rem;
+  opacity: 0.3;
+  margin-bottom: 1rem;
+  display: block;
+}
+.empty-state h5 { color: var(--text-secondary); font-weight: 600; }
+
+/* ── Utility ──────────────────────────────────────────────────── */
+.text-primary  { color: var(--primary) !important; }
+.bg-primary    { background-color: var(--primary) !important; }
+.text-muted    { color: var(--text-muted) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.bg-card       { background: var(--bg-card); }
+.bg-page       { background: var(--bg); }
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
+
+/* ── Focus ────────────────────────────────────────────────────── */
+*:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .stat-card .stat-value { font-size: 1.5rem; }
+}
+
+/* ── Interaction smoothness ─────────────────────────────────────────── */
+/* Subtle press feedback on every button — makes single clicks feel
+   registered immediately, even while a request is in flight. */
+button:not(:disabled):active,
+.btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+button, .btn { transition: var(--transition); }
+
+/* Disabled buttons keep their layout but clearly read as busy. */
+.btn:disabled { cursor: not-allowed; opacity: 0.65; }
+
+/* Accessibility: users who prefer reduced motion get instant UI. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

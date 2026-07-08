@@ -1,38 +1,50 @@
-<!-- Manage Questions — CONCEPT DEMO: #fileInput template reference variable -->
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3><i class="bi bi-question-circle me-2"></i>Question Bank</h3>
+<!-- manage-questions.html — Question bank management for examiners -->
+
+<div class="container py-4 animate-fade-in">
+
+  <!-- Header -->
+  <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div>
-      <!-- CONCEPT DEMO: template reference variable #fileInput -->
-      <!-- The hidden input is accessed via @ViewChild in the component -->
+      <h3 class="mb-0"><i class="bi bi-question-circle me-2 text-primary"></i>Question Bank</h3>
+      <p class="page-header-sub mt-1">Create, edit, and organise your MCQ questions.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <!-- CONCEPT DEMO: template reference variable #fileInput — accessed via @ViewChild -->
       <input type="file" accept=".xlsx" #fileInput style="display:none" (change)="handleFileSelected()" />
-      <button class="btn btn-outline-success me-2" (click)="handleUploadClick()">
-        <i class="bi bi-file-earmark-excel me-1"></i>Import Excel
+      <button class="btn btn-outline-primary btn-sm" (click)="handleDownloadTemplateClick()" [disabled]="isDownloadingTemplate"
+              title="Download the Excel template, fill in your questions, then import it back">
+        <span *ngIf="isDownloadingTemplate" class="spinner-border spinner-border-sm me-1"></span>
+        <i *ngIf="!isDownloadingTemplate" class="bi bi-download me-1"></i>Download Template
       </button>
-      <button class="btn btn-primary" (click)="showCreateForm()" *ngIf="view === 'list'">
+      <button class="btn btn-outline-success btn-sm" (click)="handleUploadClick()" [disabled]="isImporting">
+        <span *ngIf="isImporting" class="spinner-border spinner-border-sm me-1"></span>
+        <i *ngIf="!isImporting" class="bi bi-file-earmark-excel me-1"></i>{{ isImporting ? 'Importing...' : 'Import Excel' }}
+      </button>
+      <button *ngIf="view === 'list'" class="btn btn-primary btn-sm" (click)="showCreateForm()">
         <i class="bi bi-plus-circle me-1"></i>New Question
       </button>
-      <button class="btn btn-secondary" (click)="view = 'list'" *ngIf="view !== 'list'">
+      <button *ngIf="view !== 'list'" class="btn btn-outline-secondary btn-sm" (click)="view = 'list'">
         <i class="bi bi-arrow-left me-1"></i>Back to List
       </button>
     </div>
   </div>
 
-  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
-  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+  <!-- Alerts -->
+  <div *ngIf="errorMessage"   class="alert alert-danger  d-flex align-items-center gap-2"><i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="alert alert-success d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill"></i>{{ successMessage }}</div>
 
-  <!-- Import result summary -->
+  <!-- Import result -->
   <div *ngIf="importResult" class="alert alert-info">
-    Import: {{ importResult.successCount }} succeeded, {{ importResult.failureCount }} failed.
-    <ul *ngIf="importResult.errors.length > 0" class="mb-0 mt-1">
-      <li *ngFor="let e of importResult.errors" class="small">{{ e }}</li>
+    <strong>Import complete:</strong> {{ importResult.successCount }} succeeded, {{ importResult.failureCount }} failed.
+    <ul *ngIf="importResult.errors.length > 0" class="mb-0 mt-1 small">
+      <li *ngFor="let e of importResult.errors">{{ e }}</li>
     </ul>
   </div>
 
-  <!-- ── LIST VIEW ───────────────────────────────────────────────────── -->
+  <!-- ══ LIST VIEW ══════════════════════════════════════════════════ -->
   <div *ngIf="view === 'list'">
     <!-- Filters -->
-    <div class="row mb-3 g-2">
+    <div class="row g-2 mb-3">
       <div class="col-md-4">
         <select class="form-select" [(ngModel)]="filterCatId" (change)="loadQuestions()">
           <option [value]="null">All Categories</option>
@@ -47,84 +59,123 @@
       </div>
     </div>
 
-    <div *ngIf="isLoading" class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+    <div *ngIf="isLoading" class="text-center py-4">
+      <div class="spinner-border text-primary"></div>
+    </div>
 
-    <table class="table table-striped table-hover" *ngIf="!isLoading">
-      <thead class="table-dark">
-        <tr><th>#</th><th>Question</th><th>Difficulty</th><th>Marks</th><th>Actions</th></tr>
-      </thead>
-      <tbody>
-        <!-- *ngFor -->
-        <tr *ngFor="let q of questions; let i = index">
-          <td>{{ i + 1 }}</td>
-          <td>{{ q.questionText }}</td>
-          <td>
-            <span class="badge"
-                  [ngClass]="{'bg-success': q.difficulty==='Easy','bg-warning text-dark': q.difficulty==='Medium','bg-danger': q.difficulty==='Hard'}">
-              {{ q.difficulty }}
-            </span>
-          </td>
-          <td>{{ q.marks }}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary me-1" (click)="showEditForm(q)">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" (click)="handleDeleteClick(q.questionId)">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="!isLoading && questions.length === 0" class="text-muted">No questions found.</p>
+    <!-- Empty state -->
+    <div *ngIf="!isLoading && questions.length === 0" class="empty-state">
+      <span class="empty-icon">❓</span>
+      <h5>No questions yet</h5>
+      <p>Create your first question or import from Excel to get started.</p>
+    </div>
+
+    <!-- Questions table -->
+    <div *ngIf="!isLoading && questions.length > 0" class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th style="width:3rem">#</th>
+                <th>Question</th>
+                <th class="text-center">Difficulty</th>
+                <th class="text-center">Marks</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- *ngFor: one row per question -->
+              <tr *ngFor="let q of questions; let i = index">
+                <td class="text-muted" style="font-size:0.82rem">{{ i + 1 }}</td>
+                <td class="fw-medium" style="max-width:400px">
+                  <span class="q-text-truncate">{{ q.questionText }}</span>
+                </td>
+                <td class="text-center">
+                  <!-- [ngClass]: colour badge by difficulty -->
+                  <span class="badge-status"
+                        [ngClass]="{
+                          'badge-published': q.difficulty === 'Easy',
+                          'badge-pending':   q.difficulty === 'Medium',
+                          'badge-failed':    q.difficulty === 'Hard'
+                        }">
+                    {{ q.difficulty }}
+                  </span>
+                </td>
+                <td class="text-center fw-bold text-primary">{{ q.marks }}</td>
+                <td class="text-center">
+                  <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-sm btn-outline-primary" (click)="showEditForm(q)" title="Edit">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="handleDeleteClick(q.questionId)" title="Delete">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- ── CREATE / EDIT FORM ─────────────────────────────────────────── -->
-  <div *ngIf="view === 'create' || view === 'edit'">
-    <div class="card shadow-sm">
-      <div class="card-header">{{ view === 'create' ? 'New Question' : 'Edit Question' }}</div>
+  <!-- ══ CREATE / EDIT FORM ══════════════════════════════════════════ -->
+  <div *ngIf="view === 'create' || view === 'edit'" class="animate-scale-in">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0 fw-bold">
+          <i class="bi me-2" [ngClass]="view === 'create' ? 'bi-plus-circle text-primary' : 'bi-pencil text-primary'"></i>
+          {{ view === 'create' ? 'New Question' : 'Edit Question' }}
+        </h6>
+      </div>
       <div class="card-body">
-
-        <div class="mb-3">
-          <label class="form-label">Category</label>
-          <select class="form-select" [(ngModel)]="formData.catId" name="catId">
-            <option [value]="0" disabled>-- Select --</option>
-            <option *ngFor="let c of categories" [value]="c.catId">{{ c.catName }}</option>
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Question Text</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="formData.questionText" name="questionText"></textarea>
-        </div>
-
-        <div class="row mb-3">
-          <div class="col-md-4">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Category</label>
+            <select class="form-select" [(ngModel)]="formData.catId" name="catId">
+              <option [value]="0" disabled>— Select category —</option>
+              <option *ngFor="let c of categories" [value]="c.catId">{{ c.catName }}</option>
+            </select>
+          </div>
+          <div class="col-md-3">
             <label class="form-label">Marks</label>
             <input type="number" class="form-control" [(ngModel)]="formData.marks" name="marks" min="0.5" step="0.5" />
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label">Difficulty</label>
             <select class="form-select" [(ngModel)]="formData.difficulty" name="difficulty">
               <option>Easy</option><option>Medium</option><option>Hard</option>
             </select>
           </div>
-        </div>
-
-        <label class="form-label">Options (select the correct one)</label>
-        <div *ngFor="let opt of formData.options; let i = index" class="input-group mb-2">
-          <div class="input-group-text">
-            <!-- (change) event binding: marks this option as correct -->
-            <input type="radio" [name]="'correct'" [checked]="opt.isCorrect" (change)="setCorrectOption(i)" />
+          <div class="col-12">
+            <label class="form-label">Question Text</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="formData.questionText" name="questionText" placeholder="Enter the full question..."></textarea>
           </div>
-          <input type="text" class="form-control" [(ngModel)]="opt.optionText" [name]="'opt'+i"
-                 [placeholder]="'Option ' + (i+1)" />
         </div>
 
-        <button class="btn btn-success mt-2" (click)="handleSaveClick()">
-          <i class="bi bi-check-circle me-1"></i>Save
-        </button>
+        <div class="mt-4">
+          <label class="form-label fw-semibold">Answer Options <span class="text-muted fw-normal">(select the correct one)</span></label>
+          <div *ngFor="let opt of formData.options; let i = index" class="option-row mb-2">
+            <div class="option-letter">{{ 'ABCD'[i] }}</div>
+            <!-- CONCEPT DEMO: (change) event binding — marks this option as correct -->
+            <input type="radio" class="option-radio" name="correct" [checked]="opt.isCorrect" (change)="setCorrectOption(i)" />
+            <input type="text" class="form-control" [(ngModel)]="opt.optionText" [name]="'opt'+i"
+                   [placeholder]="'Option ' + 'ABCD'[i] + '...'" />
+            <span *ngIf="opt.isCorrect" class="correct-indicator"><i class="bi bi-check-circle-fill"></i></span>
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-primary" (click)="handleSaveClick()" [disabled]="isSaving">
+            <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="!isSaving" class="bi bi-check-circle me-1"></i>{{ isSaving ? 'Saving...' : 'Save Question' }}
+          </button>
+          <button class="btn btn-outline-secondary" (click)="view = 'list'">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
+
 </div>

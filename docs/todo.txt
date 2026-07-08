@@ -1,0 +1,22 @@
+1. now when admin is creating an examiner with the examiner details should'nt it be like lets say an examiner wants to use this exam platform,
+they should somehow request the admin with details like their full name how theyll be using the platform, which should appear in admin 
+notifications and only then upon approval of that examiner the the admin can create the examiner account and send notification to that particualar
+request and approve. and then the examiner can successfully login. 
+is there any way this feature could be added in our application to make it fancier and as real time as possible.
+
+Some more last minute additions that can be done to make it more interesting 
+1. Add a guided onboarding tour (using a library like Intro.js or Shepherd.js) the first time a user logs in, introducing key features.
+2. Show motivational messages on the candidate dashboard, such as "Ready for your next challenge?" or "You've completed 5 exams this month!"
+3. Add micro-interactions everywhere—buttons that slightly scale on hover, cards that lift subtly, smooth ripple effects on clicks, and animated icons.
+3. Use Lottie animations for empty states, loading screens, and successful submissions instead of static images.
+4. Display a global loading bar at the top of the page during API requests, similar to GitHub or YouTube.
+5. Add breadcrumb navigation on deeper pages so users always know where they are.
+6. Include search, filters, and quick actions wherever lists grow (users, exams, certificates, questions).
+7. Design a custom 404 page and Access Denied (403) page that match the application's theme instead of showing plain messages.
+8. Add a subtle confetti animation when a candidate passes an exam or downloads a certificate to create a memorable experience.
+9. Make dashboard cards interactive, allowing users to click summary widgets (e.g., "Published Exams" or "Certificates") to navigate directly to the relevant page.
+
+Admin Dashboard -
+
+Registering as new candidate 
+-> Loading of resources should happen at once keeps buffering - MAJOR 

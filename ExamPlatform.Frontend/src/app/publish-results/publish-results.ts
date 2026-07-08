@@ -39,7 +39,7 @@ export class PublishResults implements OnInit {
         this.successMessage = `Results published for "${title}".`;
         this.exams = this.exams.filter(e => e.examId !== id);
       },
-      error: (e) => this.errorMessage = e?.error?.message ?? 'Failed to publish results.'
+      error: (e) => this.errorMessage = e?.error?.error ?? 'Failed to publish results.'
     });
   }
 }

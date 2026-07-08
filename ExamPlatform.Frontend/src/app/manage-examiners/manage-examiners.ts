@@ -38,7 +38,7 @@ export class ManageExaminers {
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err?.error?.message ?? 'Failed to create examiner.';
+        this.errorMessage = err?.error?.error ?? 'Failed to create examiner.';
       }
     });
   }
