@@ -29,7 +29,9 @@ export class AttemptSummaryModel {
     public submittedAt: string | null = null,
     public attemptStatus: string = "",
     public score: number | null = null,
-    public isPassed: boolean | null = null
+    public isPassed: boolean | null = null,
+    public chartUrl: string | null = null,
+    public topicScoresUrl: string | null = null
   ) {}
 }
 
@@ -49,7 +51,8 @@ export class ExamAttemptMonitorModel {
     public score: number | null = null,
     public isPassed: boolean | null = null,
     public timeTakenSeconds: number | null = null,
-    public answeredCount: number = 0
+    public answeredCount: number = 0,
+    public topicScoresUrl: string | null = null
   ) {}
 }
 

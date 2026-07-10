@@ -155,16 +155,23 @@ namespace ExamPlatform.API.Controllers
                 remainingSeconds = (int)Math.Max(0, durationSecs - elapsed);
             }
 
-            // Build per-question entries, preserving question order.
+            // Shuffle questions and options deterministically based on the attempt ID.
+            // This ensures every candidate gets a unique question/option order, but it
+            // remains consistent for them if they refresh or resume the attempt.
+            var questionRnd = new Random(a.AttemptId);
+
             // ExamQuestions may be null if the exam was loaded without Include —
             // guard with null-coalescing to return an empty list gracefully.
             var questions = exam?.ExamQuestions?
-                .OrderBy(eq => eq.QuestionOrder)
+                .OrderBy(eq => questionRnd.Next())
                 .Select(eq =>
                 {
                     // Find the candidate's currently saved answer for this question.
                     var savedAnswer = a.AttemptAnswers?
                         .FirstOrDefault(aa => aa.QuestionId == eq.QuestionId);
+
+                    // Seed unique to this attempt + question to shuffle options consistently
+                    var optionRnd = new Random(a.AttemptId + eq.QuestionId);
 
                     return new QuestionInAttemptDto
                     {
@@ -174,11 +181,13 @@ namespace ExamPlatform.API.Controllers
                         Difficulty = eq.Question?.Difficulty ?? string.Empty,
                         SelectedOptionId = savedAnswer?.SelectedOptionId,
                         // Options without IsCorrect — candidate must not see answers.
-                        Options = eq.Question?.Options?.Select(o => new ExamOptionForCandidateDto
-                        {
-                            OptionId = o.OptionId,
-                            OptionText = o.OptionText
-                        }).ToList() ?? new()
+                        Options = eq.Question?.Options?
+                            .OrderBy(o => optionRnd.Next())
+                            .Select(o => new ExamOptionForCandidateDto
+                            {
+                                OptionId = o.OptionId,
+                                OptionText = o.OptionText
+                            }).ToList() ?? new()
                     };
                 }).ToList() ?? new();
 
@@ -204,7 +213,8 @@ namespace ExamPlatform.API.Controllers
             SubmittedAt = a.SubmittedAt,
             AttemptStatus = a.AttemptStatus.ToString(),
             Score = a.Score,
-            IsPassed = a.IsPassed
+            IsPassed = a.IsPassed,
+            TopicScoresUrl = a.TopicScoresUrl
         };
 
         /// <summary>Maps to the full result DTO with per-question breakdown.</summary>
@@ -234,11 +244,12 @@ namespace ExamPlatform.API.Controllers
                         SelectedOptionText = answer?.SelectedOption?.OptionText,
                         CorrectOptionText = correctOption?.OptionText,
                         MarksAwarded = answer?.MarksAwarded,
-                        IsCorrect = answer?.IsCorrect
+                        IsCorrect = answer?.IsCorrect,
+                        AnalyticCategory = eq.AnalyticCategory
                     };
                 }).ToList();
 
-            return new AttemptResultDto
+            var resultDto = new AttemptResultDto
             {
                 AttemptId = a.AttemptId,
                 ExamId = a.ExamId,
@@ -247,8 +258,10 @@ namespace ExamPlatform.API.Controllers
                 PassingMarks = exam.PassingMarks,
                 IsPassed = a.IsPassed,
                 TimeTakenSeconds = a.TimeTakenSeconds,
+                TopicScoresUrl = a.TopicScoresUrl,
                 Questions = questionResults
             };
+            return resultDto;
         }
     }
 }

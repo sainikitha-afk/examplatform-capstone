@@ -47,7 +47,7 @@ namespace ExamPlatform.BLL.Services
                         <span style="display:inline-block;background:{badgeColor};color:#fff;padding:8px 24px;border-radius:20px;font-size:15px;font-weight:bold;letter-spacing:1px;">{badgeLabel}</span>
                       </div>
                       <p style="color:#374151;text-align:center;">{scoreDetail}</p>
-                      <p style="color:#6b7280;font-size:14px;">Log in to the Exam Platform to view your detailed results.</p>
+                      <p style="color:#6b7280;font-size:14px;">Log in to the Exam Platform dashboard to view your detailed results and interactive performance chart.</p>
                     </div>
                     {Footer}
                   </div>

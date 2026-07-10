@@ -24,5 +24,7 @@ namespace ExamPlatform.API.DTOs.Attempt
         // How many questions have a saved answer — lets the examiner see live
         // progress on in-progress attempts (and partial work on abandoned ones).
         public int AnsweredCount { get; set; }
+
+        public string? TopicScoresUrl { get; set; }
     }
 }

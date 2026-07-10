@@ -36,6 +36,10 @@ namespace ExamPlatform.Domain.Entities
         // displayed on user dashboard).
         public int? TimeTakenSeconds { get; set; }
 
+        // Local URL path to the JSON file containing the topic scores.
+        public string? TopicScoresUrl { get; set; }
+
+
         // ───────────── NAVIGATION ─────────────
         public User User { get; set; } = null!;
         public Exam Exam { get; set; } = null!;

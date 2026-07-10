@@ -139,7 +139,8 @@ namespace ExamPlatform.API.Controllers
                 Score = a.Score,
                 IsPassed = a.IsPassed,
                 TimeTakenSeconds = a.TimeTakenSeconds,
-                AnsweredCount = a.AttemptAnswers?.Count(aa => aa.SelectedOptionId != null) ?? 0
+                AnsweredCount = a.AttemptAnswers?.Count(aa => aa.SelectedOptionId != null) ?? 0,
+                TopicScoresUrl = a.TopicScoresUrl
             }));
         }
 

@@ -25,6 +25,14 @@ namespace ExamPlatform.BLL
             services.AddScoped<IAnalyticsService, AnalyticsService>();
             services.AddScoped<IExaminerRequestService, ExaminerRequestService>();
 
+            // ───────────── BACKGROUND TASK QUEUE & WORKERS ─────────────
+            services.AddSingleton<IBackgroundTaskQueue>(ctx => new BackgroundTaskQueue(100));
+            services.AddHostedService<CommonBackgroundService>();
+            services.AddScoped<IAnalyticsProcessor, AnalyticsProcessor>();
+
+            // ───────────── HTTP SERVICES ─────────────
+            services.AddHttpClient<IAgentService, AgentService>();
+
             // ───────────── EMAIL SETTINGS (Options Pattern) ─────────────
             // Manually maps "Smtp:*" keys from IConfiguration to EmailSettings.
             // We avoid the Configure<T>(IConfigurationSection) extension because

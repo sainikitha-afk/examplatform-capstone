@@ -9,6 +9,7 @@
 **/.angular/
 **/coverage/
 *.log
+
 npm-debug.log*
 .npm/
 

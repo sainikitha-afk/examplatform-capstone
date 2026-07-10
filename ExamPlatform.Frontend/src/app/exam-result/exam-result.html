@@ -45,6 +45,22 @@
       </div>
     </div>
 
+    <!-- Analytics Chart -->
+    <div class="card mb-4" *ngIf="radarChartData">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0">
+        <h6 class="mb-0 fw-bold text-center"><i class="bi bi-radar me-2 text-primary"></i>Performance Analytics</h6>
+      </div>
+      <div class="card-body d-flex justify-content-center align-items-center" style="min-height: 400px;">
+        <div style="width: 100%; max-width: 500px;">
+          <canvas baseChart 
+            [data]="radarChartData" 
+            [options]="radarChartOptions" 
+            [type]="'radar'">
+          </canvas>
+        </div>
+      </div>
+    </div>
+
     <!-- Question Breakdown Table -->
     <div class="card">
       <div class="card-header d-flex align-items-center justify-content-between">

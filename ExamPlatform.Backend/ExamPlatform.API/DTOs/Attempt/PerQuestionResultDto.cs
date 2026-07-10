@@ -12,5 +12,7 @@ namespace ExamPlatform.API.DTOs.Attempt
         public string? CorrectOptionText { get; set; }
         public decimal? MarksAwarded { get; set; }
         public bool? IsCorrect { get; set; }
+        
+        public string? AnalyticCategory { get; set; }
     }
 }

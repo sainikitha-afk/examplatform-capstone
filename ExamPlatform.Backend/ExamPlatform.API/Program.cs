@@ -97,6 +97,18 @@ namespace ExamPlatform.API
             #region Standard Pipeline
             //app.UseHttpsRedirection();
             app.UseCors("AngularDev");
+            
+            // Serve static files from ExamPlatform.BLL/Assets at the /assets URL path
+            var assetsPath = Path.Combine(builder.Environment.ContentRootPath, "..", "ExamPlatform.BLL", "Assets");
+            if (Directory.Exists(assetsPath))
+            {
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(assetsPath),
+                    RequestPath = "/assets"
+                });
+            }
+
             app.UseAuthentication();
             app.UseAuthorization();
             #endregion

@@ -11,8 +11,10 @@ namespace ExamPlatform.API.DTOs.Attempt
         public decimal PassingMarks { get; set; }
         public bool? IsPassed { get; set; }
         public int? TimeTakenSeconds { get; set; }
-        // Per-question breakdown — which answer was chosen, which was correct,
-        // and how many marks were awarded for each.
+
+        public string? TopicScoresUrl { get; set; }
+
+        // Breakdown of each question in the exam and how the candidate answered
         public List<PerQuestionResultDto> Questions { get; set; } = new();
     }
 }
