@@ -36,6 +36,14 @@ namespace ExamPlatform.Domain.Entities
         // displayed on user dashboard).
         public int? TimeTakenSeconds { get; set; }
 
+        // ───────────── PROCTORING / INTEGRITY ─────────────
+        // How many times the candidate left the exam tab/window while the
+        // attempt was InProgress (tab switch, minimise, focus loss). Reported
+        // by the browser and recorded server-side so the examiner can see it
+        // on the attempt. Defaults to 0. This is a signal, not an automatic
+        // penalty — the examiner decides what it means.
+        public int TabSwitchCount { get; set; }
+
         // ───────────── NAVIGATION ─────────────
         public User User { get; set; } = null!;
         public Exam Exam { get; set; } = null!;

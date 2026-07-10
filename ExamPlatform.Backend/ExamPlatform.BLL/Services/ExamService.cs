@@ -260,11 +260,20 @@ namespace ExamPlatform.BLL.Services
             var exam = await LoadOwnedDraftAsync(examId, examinerId);
             var ids = questionIds.ToList();
 
-            // Track the display order for each new question using the current count
-            // of already-attached questions as the starting offset.
-            var existingCount = (await _examQuestionRepository.GetByExamIdAsync(examId)).Count();
+            // Dedupe within the request: the same id twice would violate the
+            // (exam_id, question_id) unique index and 500 on save.
+            ids = ids.Distinct().ToList();
 
-            int order = existingCount;
+            // Load existing bridge rows once — used for the display-order offset
+            // AND for the marks-cap validation (Question is eagerly loaded).
+            var existingRows  = (await _examQuestionRepository.GetByExamIdAsync(examId)).ToList();
+            var existingCount = existingRows.Count;
+            var attachedMarks = existingRows.Sum(eq => eq.Question?.Marks ?? 0m);
+
+            // ─── PHASE 1: VALIDATE EVERYTHING BEFORE ANY WRITE ───────────
+            // Collecting first and writing after makes the operation atomic:
+            // if any question fails validation, nothing is attached.
+            var questionsToAttach = new List<Question>();
             foreach (var qid in ids)
             {
                 // Validate the question exists and is active.
@@ -285,11 +294,35 @@ namespace ExamPlatform.BLL.Services
                 if (await _examQuestionRepository.ExistsAsync(examId, qid))
                     continue;
 
+                questionsToAttach.Add(question);
+            }
+
+            // ─── MARKS-CAP RULE ───────────────────────────────────────────
+            // The attached total may never exceed the exam's configured
+            // TotalMarks (publish additionally requires an EXACT match).
+            var newMarks   = questionsToAttach.Sum(q => q.Marks);
+            var projected  = attachedMarks + newMarks;
+            if (projected > exam.TotalMarks)
+            {
+                var remaining = exam.TotalMarks - attachedMarks;
+                _logger.LogWarning(
+                    "Attach rejected for exam {ExamId}: projected {Projected} exceeds total {Total}.",
+                    examId, projected, exam.TotalMarks);
+                throw new ValidationException(
+                    $"These questions cannot be attached because the exam total would exceed " +
+                    $"{exam.TotalMarks} marks. Currently attached: {attachedMarks} marks; " +
+                    $"only {remaining} marks remain.");
+            }
+
+            // ─── PHASE 2: WRITE (single SaveChangesAsync = atomic) ────────
+            int order = existingCount;
+            foreach (var question in questionsToAttach)
+            {
                 order++;
                 await _examQuestionRepository.AddAsync(new ExamQuestion
                 {
                     ExamId = examId,
-                    QuestionId = qid,
+                    QuestionId = question.QuestionId,
                     QuestionOrder = order
                 });
             }
@@ -368,30 +401,76 @@ namespace ExamPlatform.BLL.Services
                 examId, examinerId, exam.Title, exam.ExamQuestions.Count, exam.TotalMarks);
 
             // ─── ANNOUNCE TO CANDIDATES ───────────────────────────────
-            // Every active candidate gets an in-app notification that a new exam
-            // is live. Failures here must never undo the publish itself — the
-            // exam status is already committed above, so this block only logs.
+            // Every ACTIVE candidate gets (a) an in-app notification and (b) an
+            // email that a new exam is live. Failures here must never undo the
+            // publish itself — the exam status is already committed above.
+            // Duplicate announcements are impossible: publishing requires Draft
+            // status, so a repeated publish call throws before reaching here.
             try
             {
-                var candidates = await _userRepository.GetAllByRoleAsync(UserRole.Candidate);
-                foreach (var candidate in candidates.Where(c => c.IsActive))
+                var candidates = (await _userRepository.GetAllByRoleAsync(UserRole.Candidate))
+                                 .Where(c => c.IsActive)
+                                 .ToList();
+
+                // (a) In-app notifications — committed in one SaveChangesAsync.
+                foreach (var candidate in candidates)
                 {
                     await _notifRepository.AddAsync(new Notification
                     {
                         UserId = candidate.UserId,
                         NotifType = NotificationType.ExamPublished,
-                        Message = $"New exam available: '{exam.Title}' is now live. Take it from Browse Exams if you wish!",
+                        Message = $"New exam available: '{exam.Title}' is now live " +
+                                  $"(starts {exam.StartTime:u}, {exam.DurationMinutes} min). " +
+                                  "Take it from Browse Exams if you wish!",
                         RelatedExamId = examId,
                         IsRead = false,
                         CreatedAt = DateTime.UtcNow
                     });
                 }
                 await _notifRepository.SaveChangesAsync();
+
+                // (b) Emails — one INDIVIDUAL message per candidate so addresses
+                // are never exposed to other recipients (no shared To/CC list).
+                // Each send is try-catched: one bad mailbox never blocks the rest.
+                int emailFailures = 0;
+                foreach (var candidate in candidates)
+                {
+                    try
+                    {
+                        await _emailService.SendAsync(
+                            candidate.Email,
+                            $"New Exam Available: {exam.Title}",
+                            EmailTemplates.NewExamAvailable(
+                                candidate.FullName ?? candidate.Username,
+                                exam.Title, exam.StartTime, exam.EndTime,
+                                exam.DurationMinutes, exam.TotalMarks, exam.PassingMarks),
+                            isHtml: true);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        emailFailures++;
+                        _logger.LogWarning(emailEx,
+                            "Failed to send NewExamAvailable email to user {UserId} for exam {ExamId}.",
+                            candidate.UserId, examId);
+                    }
+                }
+
+                // Escalate to admins if a meaningful share of announcement emails
+                // failed — a crucial workflow partly breaking (likely SMTP) is
+                // something an admin must know about, not just a log line.
+                if (emailFailures > 0)
+                {
+                    await NotifyAdminsAsync(
+                        $"{emailFailures} of {candidates.Count} 'new exam' announcement email(s) " +
+                        $"failed to send for exam '{exam.Title}'. Candidates still received the in-app " +
+                        "notification. Check the email/SMTP configuration.",
+                        examId);
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Failed to create ExamPublished notifications for exam {ExamId}.", examId);
+                    "Failed to announce exam {ExamId} publication to candidates.", examId);
             }
 
             return exam;
@@ -550,6 +629,7 @@ namespace ExamPlatform.BLL.Services
                 //   a) Result Published     → all candidates (pass + fail)
                 //   b) Congratulations      → passing candidates only
                 //   c) Certificate Available → candidates who received a new cert
+                int resultEmailFailures = 0;
                 foreach (var attempt in bestPerCandidate)
                 {
                     var candidateName = attempt.User.FullName ?? attempt.User.Username;
@@ -568,6 +648,7 @@ namespace ExamPlatform.BLL.Services
                     }
                     catch (Exception emailEx)
                     {
+                        resultEmailFailures++;
                         _logger.LogWarning(emailEx,
                             "Failed to send ResultPublished email to user {UserId}.", attempt.UserId);
                     }
@@ -587,6 +668,7 @@ namespace ExamPlatform.BLL.Services
                         }
                         catch (Exception emailEx)
                         {
+                            resultEmailFailures++;
                             _logger.LogWarning(emailEx,
                                 "Failed to send YouPassed email to user {UserId}.", attempt.UserId);
                         }
@@ -605,11 +687,24 @@ namespace ExamPlatform.BLL.Services
                             }
                             catch (Exception emailEx)
                             {
+                                resultEmailFailures++;
                                 _logger.LogWarning(emailEx,
                                     "Failed to send CertificateAvailable email to user {UserId}.", attempt.UserId);
                             }
                         }
                     }
+                }
+
+                // Escalate to admins if result/certificate emails failed to send —
+                // candidates already have their in-app result notification, but a
+                // broken mail path during results publishing needs admin attention.
+                if (resultEmailFailures > 0)
+                {
+                    await NotifyAdminsAsync(
+                        $"{resultEmailFailures} result/certificate email(s) failed to send while " +
+                        $"publishing results for exam '{exam.Title}'. In-app notifications were still " +
+                        "delivered. Check the email/SMTP configuration.",
+                        examId);
                 }
 
                 return exam;
@@ -626,6 +721,40 @@ namespace ExamPlatform.BLL.Services
                     "Transaction rolled back during result publishing for exam {ExamId}.", examId);
                 await transaction.RollbackAsync();
                 throw; // re-throw so GlobalExceptionMiddleware can map it to HTTP
+            }
+        }
+
+        /// <summary>
+        /// Sends an in-app alert to every active admin. Used when a crucial
+        /// workflow partly fails in a way the examiner can't fix (e.g. SMTP is
+        /// down). Best-effort: never throws — an alert must not break the caller.
+        /// </summary>
+        private async Task NotifyAdminsAsync(string message, int? relatedExamId)
+        {
+            try
+            {
+                var admins = (await _userRepository.GetAllByRoleAsync(UserRole.Admin))
+                             .Where(a => a.IsActive)
+                             .ToList();
+                if (admins.Count == 0) return;
+
+                foreach (var admin in admins)
+                {
+                    await _notifRepository.AddAsync(new Notification
+                    {
+                        UserId = admin.UserId,
+                        NotifType = NotificationType.SystemAlert,
+                        Message = message,
+                        RelatedExamId = relatedExamId,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+                await _notifRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send admin alert notification.");
             }
         }
 

@@ -7,6 +7,9 @@ namespace ExamPlatform.API.DTOs.Exam
     // are enforced in ExamService since DataAnnotations can't express them.
     public class CreateExamDto
     {
+        // The exam's category label. Send an existing category id, or any
+        // value <= 0 to label the exam "Mixed" (questions from multiple
+        // categories) — the backend resolves/creates that category by name.
         [Required(ErrorMessage = "Category id is required.")]
         public int CatId { get; set; }
 

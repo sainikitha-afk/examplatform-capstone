@@ -485,6 +485,199 @@ namespace ExamPlatform.BLL.Tests.Services
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   AttachQuestionsAsync — MARKS-CAP RULE
+        // ════════════════════════════════════════════════════════════════
+
+        // Wires the standard happy-path mocks for attach tests.
+        private void SetUpAttachMocks(Exam exam)
+        {
+            _examRepoMock.Setup(r => r.GetByIdAsync(exam.ExamId)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(exam.ExamId)).ReturnsAsync(exam);
+            _examQRepoMock.Setup(r => r.ExistsAsync(exam.ExamId, It.IsAny<int>())).ReturnsAsync(false);
+            _examQRepoMock.Setup(r => r.GetByExamIdAsync(exam.ExamId))
+                          .ReturnsAsync(new List<ExamQuestion>());
+            _examQRepoMock.Setup(r => r.AddAsync(It.IsAny<ExamQuestion>()))
+                          .ReturnsAsync((ExamQuestion eq) => eq);
+            _examQRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+        }
+
+        [Test]
+        public async Task AttachQuestionsAsync_ProjectedTotalExceedsExamMarks_ThrowsAndAttachesNothing()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10, totalMarks: 20m);
+            SetUpAttachMocks(exam);
+
+            // 15 + 10 = 25 > 20 — the whole request must be rejected atomically.
+            _questionRepoMock.Setup(r => r.GetByIdAsync(1))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(1, examinerId: 10, marks: 15m));
+            _questionRepoMock.Setup(r => r.GetByIdAsync(2))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(2, examinerId: 10, marks: 10m));
+
+            var act = async () => await _sut.AttachQuestionsAsync(1, new[] { 1, 2 }, 10);
+
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*would exceed*20 marks*");
+            _examQRepoMock.Verify(r => r.AddAsync(It.IsAny<ExamQuestion>()), Times.Never);
+        }
+
+        [Test]
+        public async Task AttachQuestionsAsync_CountsAlreadyAttachedMarksTowardTheCap()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10, totalMarks: 50m);
+            SetUpAttachMocks(exam);
+
+            // 40 marks already attached; adding a 20-mark question → 60 > 50.
+            var attached = TestDataBuilder.BuildQuestion(9, examinerId: 10, marks: 40m);
+            _examQRepoMock.Setup(r => r.GetByExamIdAsync(1))
+                          .ReturnsAsync(new List<ExamQuestion>
+                          {
+                              new() { ExamId = 1, QuestionId = 9, Question = attached, QuestionOrder = 1 }
+                          });
+            _questionRepoMock.Setup(r => r.GetByIdAsync(2))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(2, examinerId: 10, marks: 20m));
+
+            var act = async () => await _sut.AttachQuestionsAsync(1, new[] { 2 }, 10);
+
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*only 10 marks remain*");
+        }
+
+        [Test]
+        public async Task AttachQuestionsAsync_ExactlyFillingTheTotal_IsAllowed()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10, totalMarks: 20m);
+            SetUpAttachMocks(exam);
+
+            _questionRepoMock.Setup(r => r.GetByIdAsync(1))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(1, examinerId: 10, marks: 15m));
+            _questionRepoMock.Setup(r => r.GetByIdAsync(2))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(2, examinerId: 10, marks: 5m));
+
+            await _sut.AttachQuestionsAsync(1, new[] { 1, 2 }, 10);
+
+            _examQRepoMock.Verify(r => r.AddAsync(It.IsAny<ExamQuestion>()), Times.Exactly(2));
+        }
+
+        [Test]
+        public async Task AttachQuestionsAsync_DuplicateIdsInOneRequest_AttachOnlyOnce()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10, totalMarks: 50m);
+            SetUpAttachMocks(exam);
+
+            _questionRepoMock.Setup(r => r.GetByIdAsync(5))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(5, examinerId: 10, marks: 10m));
+
+            // Same id twice — without deduping this would violate the DB
+            // unique index on (exam_id, question_id).
+            await _sut.AttachQuestionsAsync(1, new[] { 5, 5 }, 10);
+
+            _examQRepoMock.Verify(r => r.AddAsync(
+                It.Is<ExamQuestion>(eq => eq.QuestionId == 5)), Times.Once);
+        }
+
+        [Test]
+        public async Task AttachQuestionsAsync_QuestionsFromDifferentCategories_AreAllAttached()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, examinerId: 10, totalMarks: 30m);
+            SetUpAttachMocks(exam);
+
+            // Three questions from three different categories — multi-category
+            // exams are explicitly supported.
+            _questionRepoMock.Setup(r => r.GetByIdAsync(1))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(1, examinerId: 10, catId: 1));
+            _questionRepoMock.Setup(r => r.GetByIdAsync(2))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(2, examinerId: 10, catId: 2));
+            _questionRepoMock.Setup(r => r.GetByIdAsync(3))
+                             .ReturnsAsync(TestDataBuilder.BuildQuestion(3, examinerId: 10, catId: 7));
+
+            await _sut.AttachQuestionsAsync(1, new[] { 1, 2, 3 }, 10);
+
+            _examQRepoMock.Verify(r => r.AddAsync(It.IsAny<ExamQuestion>()), Times.Exactly(3));
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   PublishAsync — CANDIDATE EMAILS
+        // ════════════════════════════════════════════════════════════════
+
+        // Publishable exam + a mixed candidate list (2 active, 1 inactive).
+        private Exam SetUpPublishableExamWithCandidates()
+        {
+            var exam = TestDataBuilder.BuildDraftExam(1, 10, totalMarks: 50m);
+            var q = TestDataBuilder.BuildQuestion(1, marks: 50m);
+            exam.ExamQuestions = new List<ExamQuestion>
+            {
+                new() { ExamId = 1, QuestionId = 1, Question = q, QuestionOrder = 1 }
+            };
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAsync(1)).ReturnsAsync(exam);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            _userRepoMock.Setup(r => r.GetAllByRoleAsync(UserRole.Candidate))
+                         .ReturnsAsync(new List<User>
+                         {
+                             TestDataBuilder.BuildCandidate(1),
+                             TestDataBuilder.BuildCandidate(2),
+                             TestDataBuilder.BuildCandidate(3, isActive: false),
+                         });
+            _notifRepoMock.Setup(r => r.AddAsync(It.IsAny<Notification>()))
+                          .ReturnsAsync((Notification n) => n);
+            _notifRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+            return exam;
+        }
+
+        [Test]
+        public async Task PublishAsync_EmailsEveryActiveCandidate_ButNotInactiveOnes()
+        {
+            SetUpPublishableExamWithCandidates();
+
+            await _sut.PublishAsync(1, 10);
+
+            // Exactly 2 individual emails (active candidates only) with the
+            // exam title in the subject line.
+            _emailMock.Verify(e => e.SendAsync(
+                It.IsAny<string>(),
+                It.Is<string>(s => s.Contains("New Exam Available")),
+                It.IsAny<string>(), true), Times.Exactly(2));
+            _emailMock.Verify(e => e.SendAsync(
+                "candidate3@test.com", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Test]
+        public async Task PublishAsync_EmailFailure_DoesNotUndoThePublishOrBlockOtherEmails()
+        {
+            SetUpPublishableExamWithCandidates();
+            _emailMock.Setup(e => e.SendAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                      .ThrowsAsync(new InvalidOperationException("SMTP down"));
+
+            var result = await _sut.PublishAsync(1, 10);
+
+            // Both sends were attempted (per-candidate try/catch) and the
+            // publish stands.
+            result.ExamStatus.Should().Be(ExamStatus.Published);
+            _emailMock.Verify(e => e.SendAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()),
+                Times.Exactly(2));
+        }
+
+        [Test]
+        public async Task PublishAsync_EmailFailure_AlertsAdmins()
+        {
+            SetUpPublishableExamWithCandidates();
+            // There is one active admin to receive the escalation.
+            _userRepoMock.Setup(r => r.GetAllByRoleAsync(UserRole.Admin))
+                         .ReturnsAsync(new List<User> { TestDataBuilder.BuildAdmin(99) });
+            _emailMock.Setup(e => e.SendAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+                      .ThrowsAsync(new InvalidOperationException("SMTP down"));
+
+            await _sut.PublishAsync(1, 10);
+
+            // The admin (id 99) receives a SystemAlert about the failed emails.
+            _notifRepoMock.Verify(r => r.AddAsync(It.Is<Notification>(n =>
+                n.UserId == 99 && n.NotifType == NotificationType.SystemAlert)), Times.Once);
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   DetachQuestionAsync
         // ════════════════════════════════════════════════════════════════
 

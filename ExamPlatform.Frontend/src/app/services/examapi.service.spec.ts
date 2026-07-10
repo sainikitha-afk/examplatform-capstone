@@ -113,6 +113,13 @@ describe('ExamApiService', () => {
     httpMock.expectOne(`${baseUrl}/3/publish-results`).flush({});
   });
 
+  it('unpublishExam POSTs to /{id}/unpublish', () => {
+    service.unpublishExam(3).subscribe();
+    const req = httpMock.expectOne(`${baseUrl}/3/unpublish`);
+    expect(req.request.method).toBe('POST');
+    req.flush({});
+  });
+
   it('loadExamAttempts GETs the monitoring list', () => {
     service.loadExamAttempts(3).subscribe();
     const req = httpMock.expectOne(`${baseUrl}/3/attempts`);

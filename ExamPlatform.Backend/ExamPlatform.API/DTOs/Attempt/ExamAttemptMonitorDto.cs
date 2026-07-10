@@ -24,5 +24,9 @@ namespace ExamPlatform.API.DTOs.Attempt
         // How many questions have a saved answer — lets the examiner see live
         // progress on in-progress attempts (and partial work on abandoned ones).
         public int AnsweredCount { get; set; }
+
+        // Proctoring: how many times the candidate left the exam tab/window.
+        // A high count is a possible-malpractice signal for the examiner to weigh.
+        public int TabSwitchCount { get; set; }
     }
 }

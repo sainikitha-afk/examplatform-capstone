@@ -58,6 +58,12 @@ namespace ExamPlatform.DAL.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("submitted_at");
 
+                    b.Property<int>("TabSwitchCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("tab_switch_count");
+
                     b.Property<int?>("TimeTakenSeconds")
                         .HasColumnType("integer")
                         .HasColumnName("time_taken_seconds");
@@ -390,6 +396,71 @@ namespace ExamPlatform.DAL.Migrations
                     b.ToTable("examiner_requests");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.IssueReport", b =>
+                {
+                    b.Property<int>("IssueReportId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("issue_report_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("IssueReportId"));
+
+                    b.Property<int?>("AttemptId")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<int>("CandidateId")
+                        .HasColumnType("integer")
+                        .HasColumnName("candidate_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("ExamId")
+                        .HasColumnType("integer")
+                        .HasColumnName("exam_id");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("message");
+
+                    b.Property<int?>("QuestionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("question_id");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("resolution_note");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.HasKey("IssueReportId")
+                        .HasName("pk_issue_reports");
+
+                    b.HasIndex("CandidateId")
+                        .HasDatabaseName("ix_issue_reports_candidate_id");
+
+                    b.HasIndex("ExamId")
+                        .HasDatabaseName("ix_issue_reports_exam_id");
+
+                    b.HasIndex("QuestionId")
+                        .HasDatabaseName("ix_issue_reports_question_id");
+
+                    b.ToTable("issue_reports");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Notification", b =>
                 {
                     b.Property<int>("NotificationId")
@@ -708,6 +779,35 @@ namespace ExamPlatform.DAL.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_exam_questions__questions_question_id");
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.IssueReport", b =>
+                {
+                    b.HasOne("ExamPlatform.Domain.Entities.User", "Candidate")
+                        .WithMany()
+                        .HasForeignKey("CandidateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_issue_reports__users_candidate_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.Exam", "Exam")
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_issue_reports_exams_exam_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_issue_reports__questions_question_id");
+
+                    b.Navigation("Candidate");
 
                     b.Navigation("Exam");
 

@@ -438,11 +438,11 @@ Covers all 10 API services (method/URL/body per endpoint, error mapping, the dat
 
 ## 13. Excel question import format
 
-Use `QuestionImportTemplate.xlsx` (repo root) or download it from the Manage Questions screen. Row 1 is the header; data starts at row 2:
+Download the template from the Manage Questions screen — it includes a **Categories sheet listing every valid category name**, and its sample row uses a real category from your database. Row 1 is the header; data starts at row 2:
 
 | Col | Field | Rule |
 |---|---|---|
-| A | CategoryId | positive integer, must exist |
+| A | Category | the category **name** as shown in the app (case-insensitive), e.g. `Web Development` — a numeric id is also accepted for backwards compatibility |
 | B | QuestionText | required |
 | C | Marks | positive number |
 | D | Difficulty | `Easy` / `Medium` / `Hard` |

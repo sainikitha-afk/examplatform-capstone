@@ -37,6 +37,11 @@ namespace ExamPlatform.DAL.Configurations
             // either way.
             builder.Property(a => a.Score).HasPrecision(6, 2);
 
+            // Integrity counter — defaults to 0 so existing rows backfill cleanly.
+            builder.Property(a => a.TabSwitchCount)
+                   .IsRequired()
+                   .HasDefaultValue(0);
+
             // User → Attempt: Restrict. Don't allow deleting a candidate who
             // has attempts. Their history must persist (deactivate instead).
             builder.HasOne(a => a.User)

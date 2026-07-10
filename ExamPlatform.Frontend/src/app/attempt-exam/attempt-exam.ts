@@ -12,6 +12,7 @@
 
 import { Component, OnInit, OnDestroy, HostListener, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Observable, Subscription } from 'rxjs';
@@ -24,10 +25,13 @@ import {
   selectIsOffline, selectPendingSyncCount
 } from '../store/attempt.selectors';
 import { QuestionInAttemptModel } from '../models/question.model';
+import { AttemptApiService } from '../services/attemptapi.service';
+import { IssueReportApiService } from '../services/issuereportapi.service';
+import { CreateIssueReportModel } from '../models/issue-report.model';
 
 @Component({
   selector: 'app-attempt-exam',
-  imports: [CommonModule, QuestionCard],
+  imports: [CommonModule, FormsModule, QuestionCard],
   templateUrl: './attempt-exam.html',
   styleUrl: './attempt-exam.css',
 })
@@ -64,9 +68,30 @@ export class AttemptExam implements OnInit, OnDestroy {
   private timerHandle: ReturnType<typeof setInterval> | null = null;
   private subs: Subscription[] = [];
 
+  // ── Flag / "Report a problem" modal state ──────────────────────────────
+  showFlagModal = false;
+  flagAboutQuestion = true;   // checkbox: is this about the current question?
+  flagMessage = '';
+  isSubmittingFlag = false;
+  flagError = '';
+  flagSuccess = false;
+
+  // ── Proctoring: tab-switch warnings ────────────────────────────────────
+  // How many times the candidate has left the exam tab/window this attempt.
+  tabSwitchCount = signal(0);
+  // Whether the "come back to your exam" warning overlay is showing.
+  showTabWarning = signal(false);
+  // The threshold the backend also uses — kept in sync for the message copy.
+  readonly tabSwitchLimit = 3;
+  // Debounce so a single tab switch that fires multiple browser events
+  // (visibilitychange + blur) is only counted once.
+  private lastTabSwitchAt = 0;
+
   constructor(
     private route: ActivatedRoute,
-    private store: Store
+    private store: Store,
+    private attemptApi: AttemptApiService,
+    private issueApi: IssueReportApiService
   ) {
     // Assign Observables here — store is available after super() in the constructor.
     this.examTitle$    = this.store.select(selectExamTitle);
@@ -140,6 +165,86 @@ export class AttemptExam implements OnInit, OnDestroy {
     if (this.status === 'active' || this.status === 'submitting') {
       event.preventDefault();
     }
+  }
+
+  // ── Proctoring: detect leaving the exam tab/window ─────────────────────
+  // visibilitychange is the single most reliable signal (fires on tab switch,
+  // window minimise, and OS app switch). We act only when the page becomes
+  // hidden during an active attempt. A short debounce collapses duplicate
+  // events from one physical switch into a single recorded violation.
+  @HostListener('document:visibilitychange')
+  handleVisibilityChange(): void {
+    if (document.hidden) this.registerTabSwitch();
+  }
+
+  private registerTabSwitch(): void {
+    // Only while the exam is actually running.
+    if (this.status !== 'active' || !this.attemptId) return;
+
+    const now = Date.now();
+    if (now - this.lastTabSwitchAt < 1000) return; // ignore duplicate events
+    this.lastTabSwitchAt = now;
+
+    // Optimistically bump the local counter so the warning shows instantly,
+    // then reconcile with the server's authoritative count.
+    this.tabSwitchCount.update(c => c + 1);
+    this.showTabWarning.set(true);
+
+    this.attemptApi.recordTabSwitch(this.attemptId).subscribe({
+      next: res => this.tabSwitchCount.set(res.tabSwitchCount),
+      // A failed record must never disrupt the exam — the warning still shows.
+      error: () => {}
+    });
+  }
+
+  // Candidate acknowledges the tab-switch warning and returns to the exam.
+  dismissTabWarning(): void {
+    this.showTabWarning.set(false);
+  }
+
+  // ── Flag / "Report a problem" ──────────────────────────────────────────
+  openFlagModal(): void {
+    // Default the "about this question" checkbox on only if there's a current
+    // question to attach it to.
+    this.flagAboutQuestion = !!this.questions[this.currentIndex];
+    this.flagMessage = '';
+    this.flagError = '';
+    this.flagSuccess = false;
+    this.showFlagModal = true;
+  }
+
+  closeFlagModal(): void {
+    this.showFlagModal = false;
+  }
+
+  submitFlag(): void {
+    const message = this.flagMessage.trim();
+    if (message.length < 3) {
+      this.flagError = 'Please describe the problem in a few words.';
+      return;
+    }
+
+    const currentQ = this.questions[this.currentIndex];
+    const questionId = this.flagAboutQuestion && currentQ ? currentQ.questionId : null;
+
+    const payload = new CreateIssueReportModel(
+      this.examId, this.attemptId || null, questionId, message);
+
+    this.isSubmittingFlag = true;
+    this.flagError = '';
+    this.issueApi.raiseIssue(payload).subscribe({
+      next: () => {
+        this.isSubmittingFlag = false;
+        this.flagSuccess = true;
+        // Auto-close shortly after showing the success confirmation.
+        setTimeout(() => this.closeFlagModal(), 1800);
+      },
+      error: err => {
+        this.isSubmittingFlag = false;
+        this.flagError = err?.error?.error
+          || 'Could not send your report. Please try again.';
+      }
+    });
   }
 
   // Manual "Sync now" from the offline banner.

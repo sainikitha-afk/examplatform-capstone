@@ -70,6 +70,7 @@ namespace ExamPlatform.API.Middleware
                 case ExamNotFoundException:         // Feature B: exam not found or not owned
                 case AttemptNotFoundException:              // Feature C: attempt not found or not owned
                 case ExaminerRequestNotFoundException:      // Examiner request not found
+                case IssueReportNotFoundException:          // Candidate issue report not found or not owned
                     statusCode = HttpStatusCode.NotFound;
                     message = exception.Message;
                     break;

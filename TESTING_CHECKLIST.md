@@ -18,53 +18,53 @@ Work top to bottom. Each phase builds on data created in the previous one.
 
 ## Phase 0 — Environment setup
 
-- [ ] Backend running at `http://localhost:5014` (check Swagger loads at `/swagger`)
-- [ ] Frontend running via `ng serve`, loads at `http://localhost:4200` with no console errors
-- [ ] Database is in a known state (ideally fresh/clean so counts are predictable)
-- [ ] **Admin account exists.** Register does NOT allow creating admins (it hardcodes Candidate). If no admin exists in the DB, insert one directly (SQL) or via whatever bootstrap you used before. Verify you can log in as admin before continuing.
-- [ ] Open DevTools → Network tab and keep it open for the whole session (you'll verify API calls and status codes throughout)
+- [*] Backend running at `http://localhost:5014` (check Swagger loads at `/swagger`)
+- [*] Frontend running via `ng serve`, loads at `http://localhost:4200` with no console errors
+- [*] Database is in a known state (ideally fresh/clean so counts are predictable)
+- [*] **Admin account exists.** Register does NOT allow creating admins (it hardcodes Candidate). If no admin exists in the DB, insert one directly (SQL) or via whatever bootstrap you used before. Verify you can log in as admin before continuing.
+- [*] Open DevTools → Network tab and keep it open for the whole session (you'll verify API calls and status codes throughout)
 
 ---
 
 ## Phase 1 — Public pages, registration, login, guards
 
 ### Landing page
-- [ ] `/` loads the landing page while logged out
-- [ ] All landing links/buttons navigate correctly (Login, Register, Apply as Examiner)
-- [ ] Unknown URL (e.g. `/garbage`) redirects to `/` (wildcard route)
+- [*] `/` loads the landing page while logged out
+- [*] All landing links/buttons navigate correctly (Login, Register, Apply as Examiner)
+- [*] Unknown URL (e.g. `/garbage`) redirects to `/` (wildcard route)
 
 ### Registration (candidate)
-- [ ] 👤 CREATE `candidate_one` — register with valid data → success, redirected to login (or logged in, per your design)
-- [ ] Register with an already-taken username → friendly error, no crash
-- [ ] Register with an already-taken email → friendly error
-- [ ] Submit with empty required fields → validation blocks submit
-- [ ] Invalid email format → validation error
-- [ ] Password too short / not meeting rules → error message matches backend rule
-- [ ] Verify the new user appears in Admin → Manage Users later (Phase 2)
+- [*] 👤 CREATE `candidate_one` — register with valid data → success, redirected to login (or logged in, per your design)
+- [*] Register with an already-taken username → friendly error, no crash
+- [*] Register with an already-taken email → friendly error
+- [*] Submit with empty required fields → validation blocks submit
+- [*] Invalid email format → validation error
+- [*] Password too short / not meeting rules → error message matches backend rule
+- [*] Verify the new user appears in Admin → Manage Users later (Phase 2)
 
 ### Apply as Examiner (public form)
-- [ ] Submit a valid examiner request for `examiner_beta` (name, email, reason etc.) → success message
-- [ ] Submit the same request again (same email) → check behavior (duplicate handled gracefully?)
-- [ ] Submit with empty fields → validation blocks
+- [*] Submit a valid examiner request for `examiner_beta` (name, email, reason etc.) → success message
+- [*] Submit the same request again (same email) → check behavior (duplicate handled gracefully?)
+- [*] Submit with empty fields → validation blocks
 
 ### Login
-- [ ] Login as `admin` → lands on `/admin` dashboard
-- [ ] Login as `candidate_one` → lands on `/candidate` dashboard
-- [ ] Wrong password → error alert, stays on login, no token in sessionStorage
-- [ ] Non-existent username → error alert
-- [ ] Empty form submit → validation blocks
-- [ ] After login: `token`, `role`, `username` present in sessionStorage (DevTools → Application)
+- [*] Login as `admin` → lands on `/admin` dashboard
+- [*] Login as `candidate_one` → lands on `/candidate` dashboard
+- [*] Wrong password → error alert, stays on login, no token in sessionStorage
+- [*] Non-existent username → error alert
+- [*] Empty form submit → validation blocks
+- [*] After login: `token`, `role`, `username` present in sessionStorage (DevTools → Application)
 
 ### Guards & session edge cases (do these logged in as `candidate_one`)
-- [ ] Visit `/admin` directly by URL → blocked (redirect, not a broken page)
-- [ ] Visit `/examiner` directly → blocked
-- [ ] Visit `/manage-questions` directly → blocked
-- [ ] Log out → sessionStorage cleared, redirected to login/landing
-- [ ] After logout, press browser Back → guarded pages don't render with data
-- [ ] While logged out, visit `/candidate` directly → redirected to login
-- [ ] Open the app in a **new tab** while logged in → sessionStorage is per-tab, so new tab is logged out. Confirm this is the behavior you expect (known limitation, not a bug)
-- [ ] Manually delete the token in sessionStorage, then click around → app handles 401s without white-screening
-- [ ] Manually change `role` in sessionStorage to `Admin` as a candidate, visit `/admin` → frontend may let you in, but every API call must return 403 (backend is the real enforcement). Page should show errors, not fake data.
+- [*] Visit `/admin` directly by URL → blocked (redirect, not a broken page)
+- [*] Visit `/examiner` directly → blocked
+- [*] Visit `/manage-questions` directly → blocked
+- [*] Log out → sessionStorage cleared, redirected to login/landing
+- [*] After logout, press browser Back → guarded pages don't render with data
+- [*] While logged out, visit `/candidate` directly → redirected to login
+- [*] Open the app in a **new tab** while logged in → sessionStorage is per-tab, so new tab is logged out. Confirm this is the behavior you expect (known limitation, not a bug)
+- [*] Manually delete the token in sessionStorage, then click around → app handles 401s without white-screening
+- [*] Manually change `role` in sessionStorage to `Admin` as a candidate, visit `/admin` → frontend may let you in, but every API call must return 403 (backend is the real enforcement). Page should show errors, not fake data.
 
 ---
 

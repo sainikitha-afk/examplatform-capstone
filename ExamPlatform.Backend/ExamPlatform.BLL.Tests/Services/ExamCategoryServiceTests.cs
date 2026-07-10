@@ -225,6 +225,39 @@ namespace ExamPlatform.BLL.Tests.Services
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   GetOrCreateMixedAsync
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetOrCreateMixedAsync_NoMixedCategoryYet_CreatesIt()
+        {
+            _categoryRepoMock.Setup(r => r.GetAllAsync())
+                             .ReturnsAsync(new List<ExamCategory> { TestDataBuilder.BuildCategory(1, "C#") });
+            _categoryRepoMock.Setup(r => r.AddAsync(It.IsAny<ExamCategory>()))
+                             .ReturnsAsync((ExamCategory c) => c);
+            _categoryRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.GetOrCreateMixedAsync();
+
+            result.CatName.Should().Be("Mixed");
+            _categoryRepoMock.Verify(r => r.AddAsync(
+                It.Is<ExamCategory>(c => c.CatName == "Mixed")), Times.Once);
+        }
+
+        [Test]
+        public async Task GetOrCreateMixedAsync_MixedAlreadyExists_ReusesItCaseInsensitively()
+        {
+            var mixed = TestDataBuilder.BuildCategory(7, "MIXED"); // different casing
+            _categoryRepoMock.Setup(r => r.GetAllAsync())
+                             .ReturnsAsync(new List<ExamCategory> { mixed });
+
+            var result = await _sut.GetOrCreateMixedAsync();
+
+            result.CatId.Should().Be(7);
+            _categoryRepoMock.Verify(r => r.AddAsync(It.IsAny<ExamCategory>()), Times.Never);
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   BulkCreateAsync — name length rule
         // ════════════════════════════════════════════════════════════════
 

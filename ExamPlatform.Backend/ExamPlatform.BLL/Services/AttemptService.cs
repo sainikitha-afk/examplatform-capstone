@@ -234,6 +234,60 @@ namespace ExamPlatform.BLL.Services
         /// Upserts the candidate's answer for one question.
         /// Also enforces the timer — auto-submits if time is up.
         /// </summary>
+        // ════════════════════════════════════════════════════════════════
+        //   RECORD TAB SWITCH (proctoring / integrity)
+        // ════════════════════════════════════════════════════════════════
+        // The examiner is alerted once the candidate crosses this many tab
+        // switches on a single attempt (not on every switch — that would spam
+        // the inbox). Chosen at 3: one accidental switch is human; three is a
+        // pattern worth a look.
+        private const int TabSwitchAlertThreshold = 3;
+
+        /// <summary>
+        /// Increments the attempt's tab-switch counter and alerts the examiner
+        /// once the threshold is crossed. Ownership-checked. Silently no-ops for
+        /// attempts that are no longer InProgress so a late browser event after
+        /// submit can't error the candidate.
+        /// </summary>
+        public async Task<int> RecordTabSwitchAsync(int attemptId, int userId)
+        {
+            var attempt = await _attemptRepository.GetByIdWithAnswersAndExamAsync(attemptId);
+
+            if (attempt == null || attempt.UserId != userId)
+            {
+                _logger.LogWarning(
+                    "RecordTabSwitch: attempt {AttemptId} not found or not owned by user {UserId}.",
+                    attemptId, userId);
+                throw new AttemptNotFoundException(attemptId);
+            }
+
+            // Not InProgress (already submitted / auto-submitted): nothing to
+            // record. Return the stored count without error — a stray blur event
+            // firing right after submit must not surface as a failure.
+            if (attempt.AttemptStatus != AttemptStatus.InProgress)
+                return attempt.TabSwitchCount;
+
+            attempt.TabSwitchCount += 1;
+            _attemptRepository.Update(attempt);
+            await _attemptRepository.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "RecordTabSwitch: attempt {AttemptId} now has {Count} tab switch(es) for user {UserId}.",
+                attemptId, attempt.TabSwitchCount, userId);
+
+            // Alert the examiner exactly once, on the switch that crosses the
+            // threshold. Using '==' (not '>=') means one notification per attempt.
+            if (attempt.TabSwitchCount == TabSwitchAlertThreshold)
+            {
+                await NotifyExaminerAsync(
+                    attempt,
+                    NotificationType.IntegrityFlag,
+                    $"{attempt.User?.FullName ?? "A candidate"} left the exam tab {attempt.TabSwitchCount} times while taking '{attempt.Exam!.Title}'. Review their attempt for possible malpractice.");
+            }
+
+            return attempt.TabSwitchCount;
+        }
+
         public async Task SaveAnswerAsync(
             int attemptId, int questionId, int? selectedOptionId, int userId)
         {

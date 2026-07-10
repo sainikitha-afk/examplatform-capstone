@@ -56,6 +56,7 @@ export class ExamQuestionFullModel {
     public questionId: number = 0,
     public questionOrder: number = 0,
     public questionText: string = "",
+    public catId: number = 0,        // exams can mix categories — shown per question
     public marks: number = 0,
     public difficulty: string = "",
     public options: ExamOptionFullModel[] = []

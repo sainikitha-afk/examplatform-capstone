@@ -12,6 +12,12 @@ namespace ExamPlatform.BLL.Interfaces
         Task<IEnumerable<ExamCategory>> GetAllAsync();
         Task<ExamCategory> GetByIdAsync(int catId);   // throws CategoryNotFoundException if missing
 
+        // Returns the special "Mixed" category, creating it on first use.
+        // Used when an examiner labels an exam as multi-category — the exam's
+        // CatId FK is non-nullable, so "Mixed" is a real category row that is
+        // resolved by NAME (never a hardcoded id) so it works on any database.
+        Task<ExamCategory> GetOrCreateMixedAsync();
+
         // ───────────── WRITE ─────────────
         Task<ExamCategory> CreateAsync(string catName, string? description);
 

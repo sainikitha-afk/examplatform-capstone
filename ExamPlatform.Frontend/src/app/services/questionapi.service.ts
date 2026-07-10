@@ -23,8 +23,10 @@ export class QuestionApiService {
   constructor(private http: HttpClient) {}
 
   // GET /api/questions?catId=&difficulty=&search=&page= (Examiner/Admin)
-  loadQuestions(catId: number | null = null, difficulty: string = '', search: string = '', page: number = 1): Observable<PagedResultModel<QuestionModel>> {
-    let params = new HttpParams().set('page', page).set('pageSize', 10);
+  // pageSize is configurable so the attach-questions screen can load the whole
+  // bank (backend clamps to 100); list screens keep the default of 10.
+  loadQuestions(catId: number | null = null, difficulty: string = '', search: string = '', page: number = 1, pageSize: number = 10): Observable<PagedResultModel<QuestionModel>> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (catId)      params = params.set('categoryId', catId);
     if (difficulty) params = params.set('difficulty', difficulty);
     if (search)     params = params.set('search', search);

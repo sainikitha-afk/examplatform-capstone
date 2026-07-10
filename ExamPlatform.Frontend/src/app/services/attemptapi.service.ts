@@ -38,6 +38,13 @@ export class AttemptApiService {
     return this.http.post<AttemptSummaryModel>(`${this.baseUrl}/${id}/submit`, {});
   }
 
+  // POST /api/attempts/{id}/tab-switch — proctoring signal.
+  // Called when the candidate leaves the exam tab/window mid-attempt.
+  // Returns the running count so the UI can show "Warning N of 3".
+  recordTabSwitch(id: number): Observable<{ tabSwitchCount: number }> {
+    return this.http.post<{ tabSwitchCount: number }>(`${this.baseUrl}/${id}/tab-switch`, {});
+  }
+
   // GET /api/attempts/mine — candidate's attempt history (paginated)
   loadMyAttempts(page: number = 1): Observable<PagedResultModel<AttemptSummaryModel>> {
     return this.http.get<PagedResultModel<AttemptSummaryModel>>(`${this.baseUrl}/mine`);

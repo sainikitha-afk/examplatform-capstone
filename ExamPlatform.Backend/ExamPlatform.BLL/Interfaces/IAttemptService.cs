@@ -22,6 +22,12 @@ namespace ExamPlatform.BLL.Interfaces
         // Manual submit triggered by the candidate.
         Task<Attempt> SubmitAsync(int attemptId, int userId);
 
+        // Records that the candidate left the exam tab/window during an
+        // InProgress attempt (proctoring). Increments the attempt's counter and,
+        // once the warning threshold is crossed, notifies the examiner. Returns
+        // the new total count. No-op (returns current count) if not InProgress.
+        Task<int> RecordTabSwitchAsync(int attemptId, int userId);
+
         // Returns the candidate's full attempt history.
         Task<IEnumerable<Attempt>> GetByUserAsync(int userId);
 

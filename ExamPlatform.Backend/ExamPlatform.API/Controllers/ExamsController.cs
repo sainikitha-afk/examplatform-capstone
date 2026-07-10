@@ -24,15 +24,20 @@ namespace ExamPlatform.API.Controllers
     {
         private readonly IExamService _examService;
         private readonly IAttemptService _attemptService;
+        // Category service: resolves the special "Mixed" category by name when
+        // an examiner creates a multi-category exam (catId <= 0 in the request).
+        private readonly IExamCategoryService _categoryService;
         private readonly ILogger<ExamsController> _logger;
 
         public ExamsController(
             IExamService examService,
             IAttemptService attemptService,
+            IExamCategoryService categoryService,
             ILogger<ExamsController> logger)
         {
             _examService = examService;
             _attemptService = attemptService;
+            _categoryService = categoryService;
             _logger = logger;
         }
 
@@ -139,7 +144,8 @@ namespace ExamPlatform.API.Controllers
                 Score = a.Score,
                 IsPassed = a.IsPassed,
                 TimeTakenSeconds = a.TimeTakenSeconds,
-                AnsweredCount = a.AttemptAnswers?.Count(aa => aa.SelectedOptionId != null) ?? 0
+                AnsweredCount = a.AttemptAnswers?.Count(aa => aa.SelectedOptionId != null) ?? 0,
+                TabSwitchCount = a.TabSwitchCount
             }));
         }
 
@@ -152,8 +158,14 @@ namespace ExamPlatform.API.Controllers
         {
             var userId = ExtractUserId();
 
+            // catId <= 0 means "Mixed" — a multi-category exam. The Mixed
+            // category row is resolved (or created on first use) by name.
+            var catId = dto.CatId;
+            if (catId <= 0)
+                catId = (await _categoryService.GetOrCreateMixedAsync()).CatId;
+
             var exam = await _examService.CreateAsync(
-                userId, dto.CatId, dto.Title, dto.Instructions,
+                userId, catId, dto.Title, dto.Instructions,
                 dto.DurationMinutes, dto.TotalMarks, dto.PassingMarks,
                 // End time is optional — default to a 30-day window from the start.
                 dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30));
@@ -326,6 +338,7 @@ namespace ExamPlatform.API.Controllers
                     QuestionId = eq.QuestionId,
                     QuestionOrder = eq.QuestionOrder,
                     QuestionText = eq.Question?.QuestionText ?? string.Empty,
+                    CatId = eq.Question?.CatId ?? 0,
                     Marks = eq.Question?.Marks ?? 0,
                     Difficulty = eq.Question?.Difficulty ?? string.Empty,
                     Options = eq.Question?.Options?.Select(o => new ExamOptionDto

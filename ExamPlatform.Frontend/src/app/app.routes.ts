@@ -25,6 +25,7 @@ import { Notifications } from './notifications/notifications';
 import { ManageQuestions } from './manage-questions/manage-questions';
 import { ManageExams } from './manage-exams/manage-exams';
 import { PublishResults } from './publish-results/publish-results';
+import { IssueReports } from './issue-reports/issue-reports';
 import { Categories } from './categories/categories';
 import { ManageUsers } from './manage-users/manage-users';
 import { ManageExaminers } from './manage-examiners/manage-examiners';
@@ -115,6 +116,12 @@ export const routes: Routes = [
   {
     path: 'publish-results',
     component: PublishResults,
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Examiner' }
+  },
+  {
+    path: 'issue-reports',
+    component: IssueReports,
     canActivate: [authGuard, roleGuard],
     data: { role: 'Examiner' }
   },

@@ -45,6 +45,7 @@ namespace ExamPlatform.DAL
             services.AddScoped<ICertificateRepository, CertificateRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IExaminerRequestRepository, ExaminerRequestRepository>();
+            services.AddScoped<IIssueReportRepository, IssueReportRepository>();
 
             return services;
         }

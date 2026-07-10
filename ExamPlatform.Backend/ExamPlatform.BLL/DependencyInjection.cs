@@ -24,6 +24,7 @@ namespace ExamPlatform.BLL
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IAnalyticsService, AnalyticsService>();
             services.AddScoped<IExaminerRequestService, ExaminerRequestService>();
+            services.AddScoped<IIssueReportService, IssueReportService>();
 
             // ───────────── EMAIL SETTINGS (Options Pattern) ─────────────
             // Manually maps "Smtp:*" keys from IConfiguration to EmailSettings.

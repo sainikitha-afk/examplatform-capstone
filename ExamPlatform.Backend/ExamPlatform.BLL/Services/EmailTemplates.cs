@@ -127,6 +127,46 @@ namespace ExamPlatform.BLL.Services
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   NEW EXAM AVAILABLE  (sent to all active candidates on publish)
+        // ════════════════════════════════════════════════════════════════
+        public static string NewExamAvailable(
+            string candidateName,
+            string examTitle,
+            DateTime startTime,
+            DateTime endTime,
+            int durationMinutes,
+            decimal totalMarks,
+            decimal passingMarks)
+        {
+            return $"""
+                <!DOCTYPE html>
+                <html lang="en">
+                <head><meta charset="UTF-8" /><title>New Exam Available</title></head>
+                <body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:24px;">
+                  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+                    <div style="background:{Blue};padding:28px 32px;">
+                      <h1 style="color:#fff;margin:0;font-size:22px;">New Exam Available</h1>
+                      <p  style="color:#bfdbfe;margin:6px 0 0;font-size:14px;">A new exam has just been published</p>
+                    </div>
+                    <div style="padding:32px;">
+                      <p style="color:#374151;font-size:16px;">Dear <strong>{candidateName}</strong>,</p>
+                      <p style="color:#374151;">A new exam is now open for attempts:</p>
+                      <div style="background:#f0f9ff;border-left:4px solid {Blue};padding:16px;margin:20px 0;border-radius:4px;">
+                        <p style="margin:0 0 10px;font-size:18px;font-weight:bold;color:#1e3a5f;">{examTitle}</p>
+                        <p style="margin:0 0 4px;color:#374151;font-size:14px;">Available: <strong>{startTime:u}</strong> — <strong>{endTime:u}</strong></p>
+                        <p style="margin:0 0 4px;color:#374151;font-size:14px;">Duration: <strong>{durationMinutes} minutes</strong></p>
+                        <p style="margin:0;color:#374151;font-size:14px;">Total marks: <strong>{totalMarks}</strong> &nbsp;|&nbsp; Passing marks: <strong>{passingMarks}</strong></p>
+                      </div>
+                      <p style="color:#374151;">Log in to the Exam Platform and open <strong>Browse Exams</strong> to take it. Remember: starting before the end time gives you the full duration.</p>
+                    </div>
+                    {Footer}
+                  </div>
+                </body>
+                </html>
+                """;
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   CERTIFICATE REVOKED  (sent when an admin revokes a certificate)
         // ════════════════════════════════════════════════════════════════
         public static string CertificateRevoked(string candidateName, string examTitle)

@@ -92,4 +92,9 @@ export class ExamApiService {
   publishResults(id: number): Observable<ExamSummaryModel> {
     return this.http.post<ExamSummaryModel>(`${this.baseUrl}/${id}/publish-results`, {});
   }
+
+  // POST /api/exams/{id}/unpublish — reverts Published → Draft (only when no attempts exist)
+  unpublishExam(id: number): Observable<ExamSummaryModel> {
+    return this.http.post<ExamSummaryModel>(`${this.baseUrl}/${id}/unpublish`, {});
+  }
 }

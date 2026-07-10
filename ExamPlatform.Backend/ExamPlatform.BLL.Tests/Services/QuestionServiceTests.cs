@@ -61,6 +61,13 @@ namespace ExamPlatform.BLL.Tests.Services
                            .Returns(Task.CompletedTask);
             _categoryRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
                              .ReturnsAsync(TestDataBuilder.BuildCategory(1));
+            // ImportFromExcelAsync resolves column A against ALL categories
+            // (by name or id) — category 1 exists by default.
+            _categoryRepoMock.Setup(r => r.GetAllAsync())
+                             .ReturnsAsync(new List<ExamCategory>
+                             {
+                                 TestDataBuilder.BuildCategory(1, "C# Programming")
+                             });
 
             _sut = new QuestionService(
                 _questionRepoMock.Object,
@@ -494,6 +501,58 @@ namespace ExamPlatform.BLL.Tests.Services
             result.SuccessCount.Should().Be(1);
             result.FailureCount.Should().Be(1);
             result.Errors[0].Should().Contain("Row 2"); // the duplicate row
+        }
+
+        [Test]
+        public async Task ImportFromExcelAsync_CategoryNameInColumnA_ResolvesToTheRightCategory()
+        {
+            // Examiners type the category NAME they see in the app — never a
+            // database id. Resolution is case-insensitive.
+            _questionRepoMock
+                .Setup(r => r.GetByIdWithOptionsAsync(It.IsAny<int>()))
+                .ReturnsAsync(TestDataBuilder.BuildQuestion(1, examinerId: 10));
+
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Questions");
+            ws.Cell(2, 1).Value = "c# programming";   // lower-case name, id is 1
+            ws.Cell(2, 2).Value = "What is LINQ?";
+            ws.Cell(2, 3).Value = 10;
+            ws.Cell(2, 4).Value = "Easy";
+            ws.Cell(2, 5).Value = "A"; ws.Cell(2, 6).Value = "B";
+            ws.Cell(2, 7).Value = "C"; ws.Cell(2, 8).Value = "D";
+            ws.Cell(2, 9).Value = "A";
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms); ms.Position = 0;
+
+            var result = await _sut.ImportFromExcelAsync(examinerId: 10, excelStream: ms);
+
+            result.SuccessCount.Should().Be(1);
+            result.FailureCount.Should().Be(0);
+            // The question was created under category id 1, resolved from the name.
+            _questionRepoMock.Verify(r => r.AddAsync(
+                It.Is<Question>(q => q.CatId == 1)), Times.Once);
+        }
+
+        [Test]
+        public async Task ImportFromExcelAsync_UnknownCategoryName_RecordsHelpfulRowError()
+        {
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Questions");
+            ws.Cell(2, 1).Value = "Underwater Basket Weaving";
+            ws.Cell(2, 2).Value = "Q?";
+            ws.Cell(2, 3).Value = 10;
+            ws.Cell(2, 4).Value = "Easy";
+            ws.Cell(2, 5).Value = "A"; ws.Cell(2, 6).Value = "B";
+            ws.Cell(2, 7).Value = "C"; ws.Cell(2, 8).Value = "D";
+            ws.Cell(2, 9).Value = "A";
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms); ms.Position = 0;
+
+            var result = await _sut.ImportFromExcelAsync(examinerId: 10, excelStream: ms);
+
+            result.SuccessCount.Should().Be(0);
+            result.Errors[0].Should().Contain("'Underwater Basket Weaving' does not exist");
+            result.Errors[0].Should().Contain("exact category name");
         }
 
         [Test]

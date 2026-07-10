@@ -49,7 +49,9 @@ export class ExamAttemptMonitorModel {
     public score: number | null = null,
     public isPassed: boolean | null = null,
     public timeTakenSeconds: number | null = null,
-    public answeredCount: number = 0
+    public answeredCount: number = 0,
+    // Proctoring: times the candidate left the exam tab/window.
+    public tabSwitchCount: number = 0
   ) {}
 }
 

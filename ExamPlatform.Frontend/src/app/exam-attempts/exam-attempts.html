@@ -91,6 +91,7 @@
                 <th>Candidate</th>
                 <th class="text-center">Status</th>
                 <th class="text-center">Answered</th>
+                <th class="text-center" title="Times the candidate left the exam tab/window">Integrity</th>
                 <th class="text-center">Started</th>
                 <th class="text-center">Submitted</th>
                 <th class="text-center">Time Taken</th>
@@ -110,6 +111,15 @@
                   </span>
                 </td>
                 <td class="text-center">{{ a.answeredCount }}</td>
+                <td class="text-center">
+                  <span *ngIf="a.tabSwitchCount > 0"
+                        class="badge"
+                        [ngClass]="a.tabSwitchCount >= 3 ? 'bg-danger' : 'bg-warning text-dark'"
+                        title="Left the exam tab/window {{ a.tabSwitchCount }} time(s)">
+                    <i class="bi bi-eye-slash me-1"></i>{{ a.tabSwitchCount }}
+                  </span>
+                  <span *ngIf="a.tabSwitchCount === 0" class="text-muted">—</span>
+                </td>
                 <td class="text-center text-muted">{{ a.startedAt | date:'MMM d, HH:mm' }}</td>
                 <td class="text-center text-muted">
                   {{ a.submittedAt ? (a.submittedAt | date:'MMM d, HH:mm') : '—' }}

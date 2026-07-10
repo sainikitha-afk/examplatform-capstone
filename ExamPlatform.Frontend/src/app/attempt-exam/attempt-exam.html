@@ -118,6 +118,13 @@
               Next<i class="bi bi-arrow-right ms-1"></i>
             </button>
           </div>
+
+          <!-- Report a problem — always available while taking the exam. -->
+          <div class="text-center mt-3">
+            <button type="button" class="btn btn-link btn-sm text-danger" (click)="openFlagModal()">
+              <i class="bi bi-flag-fill me-1"></i>Report a problem with this question or the exam
+            </button>
+          </div>
         </div>
       </div>
 
@@ -166,6 +173,73 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ── Proctoring: tab-switch warning overlay ─────────────────────────── -->
+  <div *ngIf="showTabWarning()" class="proctor-overlay">
+    <div class="proctor-card">
+      <i class="bi bi-exclamation-octagon-fill text-danger proctor-icon"></i>
+      <h5 class="fw-bold mb-2">Stay on the exam screen</h5>
+      <p class="mb-2">
+        Leaving the exam tab or window is monitored. You have left
+        <strong>{{ tabSwitchCount() }}</strong> time(s).
+      </p>
+      <p class="text-danger small mb-3">
+        Repeatedly leaving the exam ({{ tabSwitchLimit }}+ times) is flagged to your
+        examiner as possible malpractice and may lead to disqualification.
+      </p>
+      <button class="btn btn-primary" (click)="dismissTabWarning()">
+        <i class="bi bi-arrow-return-left me-1"></i>Return to my exam
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Flag / "Report a problem" modal ────────────────────────────────── -->
+  <div *ngIf="showFlagModal" class="proctor-overlay">
+    <div class="proctor-card text-start" style="max-width:520px">
+      <div *ngIf="!flagSuccess">
+        <h5 class="fw-bold mb-3">
+          <i class="bi bi-flag-fill text-danger me-2"></i>Report a problem
+        </h5>
+
+        <div class="form-check mb-2" *ngIf="questions[currentIndex]">
+          <input class="form-check-input" type="checkbox" id="flagAboutQ"
+                 [(ngModel)]="flagAboutQuestion">
+          <label class="form-check-label" for="flagAboutQ">
+            This is about the current question (Question {{ currentIndex + 1 }})
+          </label>
+        </div>
+
+        <label class="form-label small text-muted mb-1">
+          Describe what's wrong (the examiner is notified immediately):
+        </label>
+        <textarea class="form-control mb-2" rows="4" maxlength="1000"
+                  [(ngModel)]="flagMessage"
+                  placeholder="e.g. Two options look correct, or the question text is cut off..."></textarea>
+
+        <div *ngIf="flagError" class="alert alert-danger py-2 small">{{ flagError }}</div>
+
+        <p class="text-muted small mb-3">
+          <i class="bi bi-info-circle me-1"></i>Your timer keeps running while you report.
+          This does not submit your exam.
+        </p>
+
+        <div class="d-flex justify-content-end gap-2">
+          <button class="btn btn-outline-secondary" (click)="closeFlagModal()"
+                  [disabled]="isSubmittingFlag">Cancel</button>
+          <button class="btn btn-danger" (click)="submitFlag()" [disabled]="isSubmittingFlag">
+            <span *ngIf="isSubmittingFlag" class="spinner-border spinner-border-sm me-1"></span>
+            Send report
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="flagSuccess" class="text-center py-2">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem"></i>
+        <h5 class="fw-bold mt-2 mb-1">Report sent</h5>
+        <p class="text-muted mb-0">Your examiner has been notified. Good luck — keep going!</p>
+      </div>
     </div>
   </div>
 </div>

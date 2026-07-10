@@ -16,3 +16,29 @@
 .q-bank-check { accent-color: var(--primary); width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
 .q-bank-text  { flex: 1; font-size: 0.85rem; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .q-bank-marks { font-size: 0.75rem; font-weight: 700; color: var(--primary); white-space: nowrap; flex-shrink: 0; }
+
+/* ─── Marks summary panel (attach-questions workspace) ───────────── */
+.marks-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.marks-cell {
+  flex: 1 1 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-right: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+.marks-cell:last-child { border-right: none; }
+.marks-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.marks-value { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+
+/* Bank rows that are already attached to the exam read as locked. */
+.q-bank-row.attached { opacity: 0.55; }
+.q-bank-row.attached .q-bank-check { cursor: not-allowed; }

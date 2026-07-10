@@ -78,6 +78,12 @@
                     <button *ngIf="e.examStatus === 'Published'" class="btn btn-sm btn-outline-primary" (click)="handlePublishResultsClick(e.examId)" title="Publish Results">
                       <i class="bi bi-clipboard-check"></i>
                     </button>
+                    <button *ngIf="e.examStatus === 'Published'" class="btn btn-sm btn-outline-warning" (click)="handleUnpublishClick(e.examId)" title="Revert to Draft (only while no attempts exist)">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                    <button *ngIf="e.examStatus !== 'Draft'" class="btn btn-sm btn-outline-secondary" (click)="showAttachQuestions(e)" title="View Questions">
+                      <i class="bi bi-eye"></i>
+                    </button>
                     <button *ngIf="e.examStatus !== 'Draft'" class="btn btn-sm btn-outline-info" (click)="viewAttempts(e.examId)" title="View Attempts">
                       <i class="bi bi-people"></i>
                     </button>
@@ -110,8 +116,12 @@
           <!-- Property binding [ngValue] keeps catId a number, not a string -->
           <select class="form-select" [(ngModel)]="createForm.catId" name="catId" required>
             <option [ngValue]="0" disabled>Select a category...</option>
+            <!-- -1 = Mixed: the backend resolves/creates the "Mixed" category by
+                 name, for exams combining questions from several categories -->
+            <option [ngValue]="-1">🔀 Mixed — questions from multiple categories</option>
             <option *ngFor="let cat of categories" [ngValue]="cat.catId">{{ cat.catName }}</option>
           </select>
+          <small class="text-muted">Pick "Mixed" if you plan to attach questions from more than one category.</small>
         </div>
         <div class="col-12">
           <label class="form-label">Instructions <span class="text-muted fw-normal">(optional)</span></label>
@@ -187,14 +197,78 @@
     </div>
   </div>
 
-  <!-- ══ ATTACH QUESTIONS ══════════════════════════════════════ -->
+  <!-- ══ ATTACH QUESTIONS — Draft workspace ═══════════════════════ -->
   <div *ngIf="view === 'questions'" class="animate-scale-in">
+
+    <!-- Draft summary + readiness -->
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h6 class="mb-0 fw-bold">
+          <i class="bi bi-journal-text me-2 text-primary"></i>{{ selectedExam.title }}
+        </h6>
+        <!-- Readiness indicator: Incomplete / Ready to Publish / Published -->
+        <span class="badge-status"
+              [ngClass]="{
+                'badge-pending':   getReadiness() === 'Incomplete',
+                'badge-passed':    getReadiness() === 'Ready',
+                'badge-published': getReadiness() === 'Published'
+              }">
+          {{ getReadiness() === 'Ready' ? 'Ready to Publish' : getReadiness() }}
+        </span>
+      </div>
+      <div class="card-body pb-2">
+        <div class="row g-2 mb-2" style="font-size:0.875rem">
+          <div class="col-md-3"><span class="text-muted">Duration:</span> <strong>{{ selectedExam.durationMinutes }} min</strong></div>
+          <div class="col-md-3"><span class="text-muted">Passing marks:</span> <strong>{{ selectedExam.passingMarks }}</strong></div>
+          <div class="col-md-3"><span class="text-muted">Starts:</span> <strong>{{ selectedExam.startTime | date:'MMM d, h:mm a' }}</strong></div>
+          <div class="col-md-3"><span class="text-muted">Ends:</span> <strong>{{ selectedExam.endTime | date:'MMM d, h:mm a' }}</strong></div>
+        </div>
+
+        <!-- Marks summary panel — the arithmetic behind attach validation -->
+        <div class="marks-summary">
+          <div class="marks-cell"><span class="marks-label">Configured</span><span class="marks-value">{{ selectedExam.totalMarks }}</span></div>
+          <div class="marks-cell"><span class="marks-label">Attached</span><span class="marks-value">{{ getAttachedMarks() }}</span></div>
+          <div class="marks-cell"><span class="marks-label">Selected</span><span class="marks-value text-primary">+{{ getSelectedMarks() }}</span></div>
+          <div class="marks-cell"><span class="marks-label">Projected</span><span class="marks-value">{{ getProjectedTotal() }}</span></div>
+          <div class="marks-cell"><span class="marks-label">Remaining</span>
+            <span class="marks-value" [ngClass]="getRemainingMarks() === 0 ? 'text-success' : ''">{{ getRemainingMarks() }}</span>
+          </div>
+        </div>
+
+        <!-- Readiness hint -->
+        <p *ngIf="getReadiness() === 'Incomplete'" class="text-muted mt-2 mb-1" style="font-size:0.85rem">
+          <i class="bi bi-info-circle me-1"></i>
+          This exam cannot be published yet. Attach questions worth
+          <strong>{{ selectedExam.totalMarks - getAttachedMarks() }}</strong> more marks
+          (attached total must exactly equal {{ selectedExam.totalMarks }}).
+        </p>
+        <p *ngIf="getReadiness() === 'Ready'" class="text-success mt-2 mb-1" style="font-size:0.85rem">
+          <i class="bi bi-check-circle me-1"></i>Attached marks match the configured total — this exam is ready to publish.
+        </p>
+      </div>
+      <div class="card-footer d-flex gap-2 align-items-center flex-wrap">
+        <button class="btn btn-success btn-sm"
+                *ngIf="selectedExam.examStatus === 'Draft'"
+                [disabled]="getReadiness() !== 'Ready' || isPublishing"
+                (click)="handlePublishClick(editingExamId)">
+          <span *ngIf="isPublishing" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!isPublishing" class="bi bi-broadcast me-1"></i>{{ isPublishing ? 'Publishing...' : 'Publish Exam' }}
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" (click)="view = 'list'; loadMyExams()">
+          <i class="bi bi-arrow-left me-1"></i>Back to Exams
+        </button>
+      </div>
+    </div>
 
     <!-- Currently attached -->
     <div class="card mb-3">
       <div class="card-header d-flex align-items-center justify-content-between">
         <h6 class="mb-0 fw-bold"><i class="bi bi-link-45deg me-2 text-primary"></i>Attached Questions</h6>
-        <span class="badge-status badge-submitted">{{ selectedExam.questions.length }} attached</span>
+        <div class="d-flex align-items-center gap-2">
+          <!-- Category breakdown, e.g. "3 × C#, 2 × DBMS" -->
+          <span *ngIf="selectedExam.questions.length > 0" class="text-muted" style="font-size:0.8rem">{{ getCategoryBreakdown() }}</span>
+          <span class="badge-status badge-submitted">{{ selectedExam.questions.length }} attached</span>
+        </div>
       </div>
       <div *ngIf="selectedExam.questions.length === 0" class="empty-state" style="padding:2rem">
         <span class="empty-icon" style="font-size:2rem">🔗</span>
@@ -203,13 +277,15 @@
       <div *ngIf="selectedExam.questions.length > 0" class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover mb-0" style="font-size:0.875rem">
-            <thead><tr><th>Question</th><th class="text-center">Marks</th><th></th></tr></thead>
+            <thead><tr><th>Question</th><th>Category</th><th class="text-center">Difficulty</th><th class="text-center">Marks</th><th *ngIf="selectedExam.examStatus === 'Draft'"></th></tr></thead>
             <tbody>
               <tr *ngFor="let q of selectedExam.questions">
                 <td>{{ q.questionText }}</td>
+                <td class="text-muted" style="font-size:0.82rem">{{ getCategoryName(q.catId) }}</td>
+                <td class="text-center text-muted" style="font-size:0.82rem">{{ q.difficulty }}</td>
                 <td class="text-center fw-bold">{{ q.marks }}</td>
-                <td class="text-center">
-                  <button class="btn btn-sm btn-outline-danger" (click)="handleDetachClick(editingExamId, q.questionId)">
+                <td *ngIf="selectedExam.examStatus === 'Draft'" class="text-center">
+                  <button class="btn btn-sm btn-outline-danger" (click)="handleDetachClick(editingExamId, q.questionId)" title="Detach">
                     <i class="bi bi-x-lg"></i>
                   </button>
                 </td>
@@ -220,23 +296,59 @@
       </div>
     </div>
 
-    <!-- Question bank -->
-    <div class="card">
-      <div class="card-header d-flex align-items-center justify-content-between">
+    <!-- Question bank (multi-category selection) -->
+    <div class="card" *ngIf="selectedExam.examStatus === 'Draft'">
+      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
         <h6 class="mb-0 fw-bold"><i class="bi bi-database me-2 text-primary"></i>Question Bank</h6>
-        <button class="btn btn-primary btn-sm" (click)="handleAttachClick()" [disabled]="isSaving">
+        <button class="btn btn-primary btn-sm" (click)="handleAttachClick()"
+                [disabled]="isSaving || selectedQuestions.size === 0">
           <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
-          <i *ngIf="!isSaving" class="bi bi-link-45deg me-1"></i>{{ isSaving ? 'Attaching...' : 'Attach Selected' }}
+          <i *ngIf="!isSaving" class="bi bi-link-45deg me-1"></i>
+          {{ isSaving ? 'Attaching...' : 'Attach ' + selectedQuestions.size + ' selected (' + getSelectedMarks() + ' marks)' }}
         </button>
       </div>
       <div class="card-body">
-        <div class="row g-2">
+
+        <!-- Filters: switching category/search NEVER clears selections -->
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <!-- Property binding [ngValue] keeps catId a number -->
+            <select class="form-select form-select-sm" [(ngModel)]="bankCatId" name="bankCat"
+                    (ngModelChange)="handleBankFilterChange()">
+              <option [ngValue]="null">All categories</option>
+              <option *ngFor="let cat of categories" [ngValue]="cat.catId">{{ cat.catName }}</option>
+            </select>
+          </div>
+          <div class="col-md-8">
+            <input class="form-control form-control-sm" placeholder="Search question text..."
+                   [(ngModel)]="bankSearch" name="bankSearch" (ngModelChange)="handleBankSearchInput()" />
+          </div>
+        </div>
+
+        <div *ngIf="isBankLoading" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm text-primary"></div>
+        </div>
+
+        <div *ngIf="!isBankLoading && questionBank.length === 0" class="text-center text-muted py-3">
+          No questions match this filter. Create some in Manage Questions first.
+        </div>
+
+        <div *ngIf="!isBankLoading" class="row g-2">
           <div *ngFor="let q of questionBank" class="col-md-6">
-            <div class="q-bank-row" [class.selected]="selectedQuestionIds.has(q.questionId)">
+            <div class="q-bank-row"
+                 [class.selected]="isSelected(q.questionId)"
+                 [class.attached]="isAttached(q.questionId)">
               <input type="checkbox" class="form-check-input q-bank-check"
-                     [checked]="selectedQuestionIds.has(q.questionId)"
-                     (change)="toggleQuestionSelect(q.questionId)" />
-              <div class="q-bank-text">{{ q.questionText }}</div>
+                     [checked]="isSelected(q.questionId) || isAttached(q.questionId)"
+                     [disabled]="isAttached(q.questionId)"
+                     (change)="toggleQuestionSelect(q)" />
+              <div class="q-bank-text">
+                {{ q.questionText }}
+                <div class="text-muted" style="font-size:0.72rem">
+                  {{ getCategoryName(q.catId) }} · {{ q.difficulty }}
+                </div>
+              </div>
+              <span *ngIf="isAttached(q.questionId)" class="badge-status badge-submitted" style="font-size:0.68rem">Attached</span>
               <span class="q-bank-marks">{{ q.marks }} mk</span>
             </div>
           </div>

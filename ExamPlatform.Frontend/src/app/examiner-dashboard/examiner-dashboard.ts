@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ExamApiService } from '../services/examapi.service';
 import { ExamSummaryModel } from '../models/exam.model';
+import { IssueReportApiService } from '../services/issuereportapi.service';
 
 @Component({
   selector: 'app-examiner-dashboard',
@@ -30,10 +31,21 @@ export class ExaminerDashboard implements OnInit {
   // offers a direct "View Attempts" monitoring link for each.
   liveExams: ExamSummaryModel[] = [];
 
-  constructor(private examService: ExamApiService) {}
+  // Open (unresolved) candidate issue reports across this examiner's exams —
+  // drives the badge on the Issue Reports quick-action card.
+  openIssueCount = signal(0);
+
+  constructor(
+    private examService: ExamApiService,
+    private issueService: IssueReportApiService
+  ) {}
 
   ngOnInit(): void {
     this.loadMyExams();
+    this.issueService.loadOpenCount().subscribe({
+      next: res => this.openIssueCount.set(res.count),
+      error: () => {}
+    });
   }
 
   loadMyExams(): void {

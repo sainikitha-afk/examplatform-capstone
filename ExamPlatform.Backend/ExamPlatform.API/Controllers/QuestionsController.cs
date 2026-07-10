@@ -25,13 +25,18 @@ namespace ExamPlatform.API.Controllers
     public class QuestionsController : ControllerBase
     {
         private readonly IQuestionService _questionService;
+        // Category service: the import template lists the real category names
+        // so examiners never have to know database ids.
+        private readonly IExamCategoryService _categoryService;
         private readonly ILogger<QuestionsController> _logger;
 
         public QuestionsController(
             IQuestionService questionService,
+            IExamCategoryService categoryService,
             ILogger<QuestionsController> logger)
         {
             _questionService = questionService;
+            _categoryService = categoryService;
             _logger = logger;
         }
 
@@ -78,14 +83,16 @@ namespace ExamPlatform.API.Controllers
         // ════════════════════════════════════════════════════════════════
         [HttpGet("import-template")]
         [Authorize(Roles = "Examiner,Admin")]
-        public IActionResult GetImportTemplate()
+        public async Task<IActionResult> GetImportTemplate()
         {
             // Build the template workbook in memory; no server-side storage needed.
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Questions");
 
             // ── Header row ──────────────────────────────────────────────
-            ws.Cell(1, 1).Value = "CategoryId";
+            // Column A takes the category NAME (what examiners see in the app).
+            // A numeric id is still accepted for backwards compatibility.
+            ws.Cell(1, 1).Value = "Category";
             ws.Cell(1, 2).Value = "QuestionText";
             ws.Cell(1, 3).Value = "Marks";
             ws.Cell(1, 4).Value = "Difficulty";   // Easy | Medium | Hard
@@ -98,8 +105,11 @@ namespace ExamPlatform.API.Controllers
             // Bold the header so it's visually distinct.
             ws.Row(1).Style.Font.Bold = true;
 
-            // ── Example row so the examiner sees the expected format ────
-            ws.Cell(2, 1).Value = 1;
+            // ── Example row using a REAL category from this database ────
+            var categories = (await _categoryService.GetAllAsync()).ToList();
+            var sampleCategory = categories.FirstOrDefault()?.CatName ?? "Web Development";
+
+            ws.Cell(2, 1).Value = sampleCategory;
             ws.Cell(2, 2).Value = "What is Dependency Injection primarily used for?";
             ws.Cell(2, 3).Value = 10;
             ws.Cell(2, 4).Value = "Medium";
@@ -111,6 +121,19 @@ namespace ExamPlatform.API.Controllers
 
             // Auto-fit column widths for readability.
             ws.Columns().AdjustToContents();
+
+            // ── Second sheet: every valid category, so examiners can copy
+            //    the exact names without ever knowing database ids ────────
+            var catSheet = workbook.Worksheets.Add("Categories");
+            catSheet.Cell(1, 1).Value = "Category Name (use this in column A)";
+            catSheet.Cell(1, 2).Value = "Description";
+            catSheet.Row(1).Style.Font.Bold = true;
+            for (int i = 0; i < categories.Count; i++)
+            {
+                catSheet.Cell(i + 2, 1).Value = categories[i].CatName;
+                catSheet.Cell(i + 2, 2).Value = categories[i].Description ?? string.Empty;
+            }
+            catSheet.Columns().AdjustToContents();
 
             // Serialise to a byte array and return as a file download.
             using var stream = new MemoryStream();

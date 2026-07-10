@@ -1,0 +1,5 @@
+/* issue-reports.css — inherits global card/page styles; nothing bespoke needed
+   beyond a subtle left accent on each report card for scannability. */
+.card {
+  border-left: 3px solid var(--bs-danger, #dc3545);
+}

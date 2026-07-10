@@ -540,7 +540,9 @@ namespace ExamPlatform.BLL.Services
         /// Imports questions from an Excel (.xlsx) stream.
         ///
         /// Expected column layout (row 1 = header, row 2+ = data):
-        ///   A: CategoryId   (int)
+        ///   A: Category     (category NAME, e.g. "Web Development" — or its id;
+        ///                    names are what examiners actually know, ids are
+        ///                    still accepted for backwards compatibility)
         ///   B: QuestionText (string)
         ///   C: Marks        (decimal)
         ///   D: Difficulty   (Easy | Medium | Hard)
@@ -576,6 +578,15 @@ namespace ExamPlatform.BLL.Services
 
             var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
+            // Load all categories ONCE for the whole import: column A is resolved
+            // against them by name (case-insensitive) or by id, and existence is
+            // validated up front instead of failing later on the FK constraint.
+            var allCategories = (await _categoryRepository.GetAllAsync()).ToList();
+            var categoryByName = allCategories
+                .GroupBy(c => c.CatName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().CatId, StringComparer.OrdinalIgnoreCase);
+            var categoryIds = allCategories.Select(c => c.CatId).ToHashSet();
+
             // Row 1 is the header; data starts at row 2.
             for (int rowNum = 2; rowNum <= lastRow; rowNum++)
             {
@@ -587,10 +598,33 @@ namespace ExamPlatform.BLL.Services
 
                 try
                 {
-                    // ── Column A: CategoryId ─────────────────────────────
-                    if (!int.TryParse(Cell(1), out var catId) || catId <= 0)
+                    // ── Column A: Category (name preferred, id accepted) ──
+                    var rawCategory = Cell(1);
+                    int catId;
+                    if (int.TryParse(rawCategory, out var parsedId))
                     {
-                        AddRowError(result, rowLabel, "CategoryId must be a positive integer.");
+                        // Numeric value — treat as a category id (legacy format).
+                        if (!categoryIds.Contains(parsedId))
+                        {
+                            AddRowError(result, rowLabel,
+                                $"CategoryId {parsedId} does not exist. " +
+                                "Tip: you can use the category NAME instead of its id.");
+                            continue;
+                        }
+                        catId = parsedId;
+                    }
+                    else if (categoryByName.TryGetValue(rawCategory, out var resolvedId))
+                    {
+                        // Human-friendly path: the category name, as shown in the app.
+                        catId = resolvedId;
+                    }
+                    else
+                    {
+                        AddRowError(result, rowLabel,
+                            string.IsNullOrWhiteSpace(rawCategory)
+                                ? "Category is required (use the category name, e.g. \"Web Development\")."
+                                : $"Category '{rawCategory}' does not exist. Use the exact category " +
+                                  "name from the app (see the Categories sheet in the template).");
                         continue;
                     }
 

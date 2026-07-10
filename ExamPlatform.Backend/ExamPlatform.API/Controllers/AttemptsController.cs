@@ -115,6 +115,22 @@ namespace ExamPlatform.API.Controllers
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   POST /api/attempts/{id}/tab-switch  — proctoring signal
+        //   The browser calls this when the candidate leaves the exam tab or
+        //   window during an InProgress attempt. Server records the count and
+        //   alerts the examiner once the threshold is crossed. Returns the new
+        //   total so the UI can show "Warning 2 of 3".
+        // ════════════════════════════════════════════════════════════════
+        [HttpPost("{id:int}/tab-switch")]
+        [Authorize(Roles = "Candidate")]
+        public async Task<IActionResult> RecordTabSwitch(int id)
+        {
+            var userId = ExtractUserId();
+            var count = await _attemptService.RecordTabSwitchAsync(id, userId);
+            return Ok(new { tabSwitchCount = count });
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   GET /api/attempts/{id}/result  — full result with per-question breakdown
         // ════════════════════════════════════════════════════════════════
         [HttpGet("{id:int}/result")]

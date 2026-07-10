@@ -48,7 +48,11 @@
           'bi-wifi-off':        n.notifType === 'AttemptResumed',
           'bi-hourglass-bottom': n.notifType === 'AttemptAutoSubmitted',
           'bi-megaphone-fill':  n.notifType === 'ExamPublished',
-          'bi-bell-fill':       !['CertificateIssued','CertificateRevoked','ResultPublished','ExaminerRequestReceived','ExaminerAccountApproved','AttemptResumed','AttemptAutoSubmitted','ExamPublished'].includes(n.notifType)
+          'bi-flag-fill':       n.notifType === 'IssueReported',
+          'bi-check-circle-fill': n.notifType === 'IssueResolved',
+          'bi-eye-slash-fill':  n.notifType === 'IntegrityFlag',
+          'bi-exclamation-octagon-fill': n.notifType === 'SystemAlert',
+          'bi-bell-fill':       !['CertificateIssued','CertificateRevoked','ResultPublished','ExaminerRequestReceived','ExaminerAccountApproved','AttemptResumed','AttemptAutoSubmitted','ExamPublished','IssueReported','IssueResolved','IntegrityFlag','SystemAlert'].includes(n.notifType)
         }"></i>
       </div>
 

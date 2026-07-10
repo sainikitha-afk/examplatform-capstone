@@ -46,6 +46,30 @@ namespace ExamPlatform.BLL.Services
 
         // ───────────── CREATE ─────────────
 
+        // ───────────── MIXED CATEGORY (get-or-create) ─────────────
+        // "Mixed" labels exams whose attached questions span multiple
+        // categories. Resolved by name (case-insensitive) so no id is ever
+        // hardcoded; created on first use so it exists on any database.
+        public async Task<ExamCategory> GetOrCreateMixedAsync()
+        {
+            var all = await _categoryRepository.GetAllAsync();
+            var existing = all.FirstOrDefault(c =>
+                c.CatName.Equals("Mixed", StringComparison.OrdinalIgnoreCase));
+            if (existing != null) return existing;
+
+            var mixed = new ExamCategory
+            {
+                CatName = "Mixed",
+                Description = "Exams combining questions from multiple categories."
+            };
+            await _categoryRepository.AddAsync(mixed);
+            await _categoryRepository.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Created the special 'Mixed' category (id {CatId}) on first use.", mixed.CatId);
+            return mixed;
+        }
+
         public async Task<ExamCategory> CreateAsync(string catName, string? description)
         {
             // Guard clauses first.

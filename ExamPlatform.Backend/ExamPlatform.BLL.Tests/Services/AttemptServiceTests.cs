@@ -607,5 +607,94 @@ namespace ExamPlatform.BLL.Tests.Services
             var act = async () => await _sut.GetAllByExamForExaminerAsync(1, 99, isAdmin: true);
             await act.Should().NotThrowAsync();
         }
+
+        // ════════════════════════════════════════════════════════════════
+        //   RecordTabSwitchAsync — proctoring / integrity
+        // ════════════════════════════════════════════════════════════════
+
+        // Builds an InProgress attempt with Exam + User wired up so the service
+        // can read the exam owner (for notifications) and the candidate name.
+        private static Attempt BuildAttemptForProctoring(int startCount)
+        {
+            var attempt = TestDataBuilder.BuildInProgressAttempt(attemptId: 1, userId: 1, examId: 1);
+            attempt.TabSwitchCount = startCount;
+            attempt.Exam = TestDataBuilder.BuildPublishedExam(1, examinerId: 10);
+            attempt.User = TestDataBuilder.BuildCandidate(1);
+            return attempt;
+        }
+
+        [Test]
+        public async Task RecordTabSwitchAsync_AttemptNotOwned_ThrowsAttemptNotFoundException()
+        {
+            var attempt = BuildAttemptForProctoring(0);
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+
+            // userId 999 does not own attempt (UserId == 1).
+            var act = async () => await _sut.RecordTabSwitchAsync(1, userId: 999);
+            await act.Should().ThrowAsync<AttemptNotFoundException>();
+        }
+
+        [Test]
+        public async Task RecordTabSwitchAsync_AttemptAlreadySubmitted_ReturnsCountWithoutSaving()
+        {
+            var attempt = TestDataBuilder.BuildSubmittedAttempt(attemptId: 1, userId: 1);
+            attempt.TabSwitchCount = 2;
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+
+            var result = await _sut.RecordTabSwitchAsync(1, userId: 1);
+
+            result.Should().Be(2); // unchanged
+            _attemptRepoMock.Verify(r => r.SaveChangesAsync(), Times.Never);
+        }
+
+        [Test]
+        public async Task RecordTabSwitchAsync_InProgress_IncrementsAndSaves()
+        {
+            var attempt = BuildAttemptForProctoring(0);
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+
+            var result = await _sut.RecordTabSwitchAsync(1, userId: 1);
+
+            result.Should().Be(1);
+            attempt.TabSwitchCount.Should().Be(1);
+            _attemptRepoMock.Verify(r => r.SaveChangesAsync(), Times.Once);
+        }
+
+        [Test]
+        public async Task RecordTabSwitchAsync_BelowThreshold_DoesNotNotifyExaminer()
+        {
+            var attempt = BuildAttemptForProctoring(0); // 0 → 1, threshold is 3
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+
+            await _sut.RecordTabSwitchAsync(1, userId: 1);
+
+            _notifRepoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Never);
+        }
+
+        [Test]
+        public async Task RecordTabSwitchAsync_CrossingThreshold_NotifiesExaminerOnce()
+        {
+            var attempt = BuildAttemptForProctoring(2); // 2 → 3 == threshold
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+
+            var result = await _sut.RecordTabSwitchAsync(1, userId: 1);
+
+            result.Should().Be(3);
+            // Examiner (exam owner, id 10) gets exactly one IntegrityFlag notification.
+            _notifRepoMock.Verify(r => r.AddAsync(It.Is<Notification>(n =>
+                n.UserId == 10 && n.NotifType == NotificationType.IntegrityFlag)), Times.Once);
+        }
+
+        [Test]
+        public async Task RecordTabSwitchAsync_AlreadyPastThreshold_DoesNotNotifyAgain()
+        {
+            var attempt = BuildAttemptForProctoring(5); // 5 → 6, past threshold already
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+
+            await _sut.RecordTabSwitchAsync(1, userId: 1);
+
+            // '==' threshold check means no second notification after the first crossing.
+            _notifRepoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Never);
+        }
     }
 }
