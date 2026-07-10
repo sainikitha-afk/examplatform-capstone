@@ -1,6 +1,49 @@
--- IMPORTANT: The table names are derived from EF Core's default mapping (DbSet property names)
--- and PostgreSQL's case sensitivity. If EF Core created them with quotes (e.g., "Users"),
--- ensure you execute this script in the correct database.
+
+----- Select all tables ------
+
+SELECT schemaname, tablename 
+FROM pg_catalog.pg_tables 
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+
+
+------- Clear all records --------
+
+DO $$ 
+DECLARE 
+    r RECORD;
+BEGIN
+    -- Loop through all tables in the public schema except the EF Migrations table
+    FOR r IN (
+        SELECT tablename 
+        FROM pg_tables 
+        WHERE schemaname = 'public' 
+          AND tablename NOT IN ('__EFMigrationsHistory', '__efmigrationshistory')
+    ) LOOP
+        -- Safe dynamic SQL execution using format()
+        EXECUTE format('TRUNCATE TABLE %I CASCADE;', r.tablename);
+    END LOOP;
+END $$;
+
+
+
+
+Select * from "attempts";
+Select * from "questions";
+Select * from "question_options";
+--/assets/candidates/4/attempt_2_scores.json
+Update "attempts"
+Set "topic_scores_url" = null
+Where "attempt_id" = 1;
+
+SELECT 
+    "q"."question_text", 
+    "qo"."option_text"
+FROM "questions" AS "q"
+JOIN "question_options" AS "qo" 
+    ON "q"."question_id" = "qo"."question_id"
+Where "qo"."is_correct" = true;
+
+
 
 -- 1. Insert Examiner and Candidate Users
 INSERT INTO "users" ("user_id", "username", "email", "password_hash", "full_name", "role", "date_of_joining", "is_active") 
