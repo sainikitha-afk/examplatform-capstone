@@ -5,88 +5,53 @@ This document outlines the detailed architecture and workflow for generating aut
 ## 1. High-Level Workflow (ASCII Architecture)
 
 ```text
- [Examiner] --(Publishes Exam)--> [ .NET API Backend ]
-                                         |
-                                         | 1. Store Questions & return 200 OK immediately
-                                         |    (Examiner DOES NOT wait for AI)
-                                         v
-                            +--------------------------+
-                            |     PostgreSQL DB        |
-                            +--------------------------+
-                                         |
-                                         | 2. Fire-and-Forget Background Job
-                                         |    (e.g., Hangfire or IHostedService)
-                                         v
-                         +-----------------------------------+
-                         | .NET Background Categorizer Job   |
-                         | (Retries every 10 mins on fail)   |
-                         +-----------------------------------+
-                                         | 3. HTTP Request (C# HttpClient)
-                                         v
-                           +---------------------------+
-                           |  Google Gemini 1.5 Flash  |
-                           +---------------------------+
-                                         | 4. Return JSON Categories
-                                         v
-                                [ .NET Background Job ]
-                                         | 5. Update `exam_questions` table
-                                         |    (Set `question_category`)
-                                         v
-                            +--------------------------+
-                            |     PostgreSQL DB        |
-                            +--------------------------+
-
-========================================================================================
-
- [Student] --(Submits Exam)-->  [ .NET AttemptsController ]
-                                         |
-                                         | 1. Score calculated
-                                         v
-                          +-------------------------------------+
-                          |   .NET Analytics Processing Service |
-                          |                                     |
-                          +-------------------------------------+
-                                         | 2. Generate Radar Chart Image
-                                         | 3. Save to Local FS: 
-                                         |    `assets/candidates/{candidate_id}/attempt_{attempt_id}_scores.json`
-                                         v
-                            +-----------------------------------------+
-                            |     PostgreSQL DB                       |
-                            | (Update `attempts` table                |
-                            |  with `ChartStatus and topScoresUrl` )  |
-                            +-----------------------------------------+
-                                         |
-                                         | 4. Send Email Notification (Mentions to view Chart)
-                                         v
-                             [ SMTP / Email Provider ]
-
-========================================================================================
-
- [Student Views Dashboard]
-            |
-            v
- [Check Attempt `chart_status`]
-            |
-    +-------+-------+-------------------+
-    |                                   |
-[ Processing / Pending ]          [ Completed ]
-    |                                   |
-    v                                   v
- [Show Button]                     [Show Button]
- "Processing ⏳"                    "View Chart 📊"
-    |                                   |
-    v                                   v
-(Button Disabled/                 (Clicks Button)
- Shows Come Back                        |
- later)                                 |
-    |                                   v
-    v                              [Modals popup]
-(Waits for 10-min retry                 |
- sweep to finish)                       v
-                                +----------------+
-                                | - Radar Chart  |
-                                | - Perf Table   |
-                                +----------------+
+ [Candidate] --(Submits Exam Attempt)--> [ .NET AttemptsController ]
+                                                  |
+                                                  | 1. Score calculated & returned immediately
+                                                  v
+                                  +------------------------------------+
+                                  |   .NET AnalyticsProcessor.cs       |
+                                  |   (Runs in Background Queue)       |
+                                  +------------------------------------+
+                                                  |
+                                                  | 2. Check if Categories Exist?
+                                                  v
+                                      +-------------------------+
+                                      | Are Categories Null?    |
+                                      +-------------------------+
+                                        /                     \
+                                      YES                      NO
+                                      /                         \
+                3. Trigger Gemini 1.5 API                   (Skip AI entirely)
+                (Lazy Evaluated 1st run)                         |
+                           |                                     |
+             +-------------+-------------+                       |
+             |                           |                       |
+        [SUCCESS]                     [FAIL]                     |
+             |                           |                       |
+      Save categories              Throws Exception!             |
+      to PostgreSQL            (Stops Execution Flow)            |
+   (exam_questions table)                |                       |
+   (analytic_category col)               |                       |
+             |                           |                       |
+             v                           v                       v
+ 4. Run asynchronous        5. TopicScoresUrl stays null.   4. Run asynchronous
+    Python script to           Schedules exactly one           Python script to
+    calculate topic            Task.Delay(10 minutes)          calculate topic
+    score percentages.         to retry AnalyticsProcessor     score percentages.
+             |                           |                       |
+             v                           v                       v
+ 5. Save output artifact:         (Candidate UI          5. Save output artifact:
+    attempt_{id}_scores.json       shows graceful           attempt_{id}_scores.json
+             |                     "Processing...")              |
+             v                                                   v
+ 6. Update PostgreSQL                                    6. Update PostgreSQL
+    (attempts table)                                        (attempts table)
+    (topic_scores_url col)                                  (topic_scores_url col)
+             |                                                   |
+             v                                                   v
+ (Candidate UI dynamically                          (Candidate UI dynamically
+  renders ng2-charts Radar)                          renders ng2-charts Radar)
 ```
 
 ## 2. Database Schema Changes
@@ -96,8 +61,7 @@ This document outlines the detailed architecture and workflow for generating aut
    - This holds the AI-generated category (e.g., "Array Traversal") specific to this exam's context.
 
 2. **`attempts` Table:**
-   - Add column: `chart_url` (String, Nullable).
-   - Add column: `chart_status` (String/Enum). States: `Pending`, `Processing`, `Completed`, `Failed`.
+   - Add column: `topic_scores_url` (String, Nullable).
 
 ## 3. The Backend Components
 
@@ -108,28 +72,30 @@ This document outlines the detailed architecture and workflow for generating aut
 - It forces the LLM to output strict JSON mapping each `QuestionId` to exactly one of 5 generated categories.
 - **Retry Mechanism:** If the Gemini API fails or times out, the job catches the exception and schedules a retry in **10 minutes**.
 
-### B. Chart Processing Service (Separate Endpoint)
-- A dedicated `.cs` service file that is invoked upon attempt completion.
-- It calculates the percentage score for each `question_category`.
-- It generates a graphical image (Radar Chart) using a library like **SkiaSharp** or **OxyPlot**.
-- It saves the image to `ExamPlatform.BLL/assets/candidates/{candidate_id}/{filename}.png`.
-- Updates the `attempts` table with the file path.
+### B. Analytics Score Processor (Background Process)
+- A background analytics processor orchestrates the evaluation of candidate attempts upon submission.
+- It delegates the core score and topic aggregation to an **asynchronous Python-based script** (e.g., using `ProcessStartInfo` in C#).
+- The Python script calculates the percentage score for each `question_category` and outputs the result as a structured JSON artifact.
+- The JSON file is saved locally to `ExamPlatform.BLL/Assets/candidates/{candidate_id}/attempt_{attempt_id}_scores.json`.
+- The processor then updates the `attempts` table with the `topic_scores_url`.
+- *Note: Removed legacy `.NET ChartService.cs` as we no longer generate static images on the backend.*
 
 ## 4. Frontend Integration
 
-1. **Taken Exams Table:**
-   - A new column is added to the candidates' "Taken Exams" view.
-   - If `chart_status == 'Processing'`, the button displays **"Processing ⏳"** and a manual **Refresh** button is shown.
-   - If `chart_status == 'Completed'`, the button displays **"View Chart 📊"**.
+1. **Taken Exams / Exam Attempts Table:**
+   - A new column "Chart" is added to the examiner monitoring views and candidate views.
+   - If `topic_scores_url == null`, the button dynamically displays an animated **"Processing..."** loading indicator using CSS, gracefully indicating that the background python script is still working.
+   - If `topic_scores_url != null`, the button displays **"View"**.
 2. **The Result Modal:**
-   - Clicking "View Chart" opens a modal.
-   - The modal fetches the image using the `chart_url`.
-   - Displays a breakdown table of topics and scores alongside the radar chart.
+   - Clicking "View" opens a `performance-chart-modal`.
+   - The modal fetches the JSON data using the `topic_scores_url`.
+   - Instead of displaying a static backend image, the frontend dynamically plots the data via an interactive **Radar Chart using `ng2-charts` (Chart.js)**.
+   - Enhanced hover interactions smoothly display combined axes data in customized tooltips.
 
 ## 5. Failure Tolerance
 - Because chart generation depends on the AI having categorized the questions *first*, if the AI background job fails or is delayed, the student can still submit the exam.
-- The `attempts` row is saved with `chart_status = 'Pending'`.
-- A separate sweeper job (or a check during the 10-minute retry) will look for completed attempts that don't have charts yet, verify if categories are now available, and trigger the Chart Processing Service retroactively.
+- The `attempts` row is saved with `topic_scores_url = null`.
+- The user interface naturally falls back to the "Processing..." state until the analytics can be successfully aggregated and the JSON URL populated.
 
 ## 6. Raw Planned version:
 
