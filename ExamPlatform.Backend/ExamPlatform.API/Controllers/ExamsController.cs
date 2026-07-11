@@ -145,7 +145,8 @@ namespace ExamPlatform.API.Controllers
                 IsPassed = a.IsPassed,
                 TimeTakenSeconds = a.TimeTakenSeconds,
                 AnsweredCount = a.AttemptAnswers?.Count(aa => aa.SelectedOptionId != null) ?? 0,
-                TabSwitchCount = a.TabSwitchCount
+                TabSwitchCount = a.TabSwitchCount,
+                TopicScoresUrl = a.TopicScoresUrl
             }));
         }
 

@@ -97,6 +97,7 @@
                 <th class="text-center">Time Taken</th>
                 <th class="text-center">Score</th>
                 <th class="text-center">Result</th>
+                <th class="text-center" style="width: 110px;">Chart</th>
               </tr>
             </thead>
             <tbody>
@@ -129,9 +130,23 @@
                   {{ a.score != null ? a.score : '—' }}
                 </td>
                 <td class="text-center">
-                  <span *ngIf="a.isPassed === true"  class="badge-status badge-published">Passed</span>
+                  <span *ngIf="a.isPassed === true" class="badge-status badge-published">Passed</span>
                   <span *ngIf="a.isPassed === false" class="badge-status badge-failed">Failed</span>
-                  <span *ngIf="a.isPassed == null"   class="text-muted">—</span>
+                  <span *ngIf="a.isPassed == null" class="text-muted">—</span>
+                </td>
+                <td class="text-center">
+                  <ng-container *ngIf="a.attemptStatus !== 'InProgress' && !a.topicScoresUrl">
+                    <button class="btn btn-sm btn-outline-secondary" disabled
+                      style="min-width: 90px; text-align: left; padding-left: 10px;">
+                      Processing<span class="loading-dots"></span>
+                    </button>
+                  </ng-container>
+                  <ng-container *ngIf="a.attemptStatus !== 'InProgress' && a.topicScoresUrl">
+                    <button class="btn btn-sm btn-outline-primary" (click)="openChartModal(a.topicScoresUrl)">
+                      <i class="bi bi-bar-chart"></i> View
+                    </button>
+                  </ng-container>
+                  <span *ngIf="a.attemptStatus === 'InProgress'" class="text-muted">—</span>
                 </td>
               </tr>
             </tbody>
@@ -141,5 +156,9 @@
     </div>
 
   </div>
+
+  <app-performance-chart-modal *ngIf="showChartModal" [topicScoresUrl]="selectedTopicScoresUrl"
+    (close)="closeChartModal()">
+  </app-performance-chart-modal>
 
 </div>

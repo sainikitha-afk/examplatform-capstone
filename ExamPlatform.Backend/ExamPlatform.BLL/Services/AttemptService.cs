@@ -15,6 +15,7 @@ using ExamPlatform.BLL.Models;
 using ExamPlatform.DAL.Interfaces;
 using ExamPlatform.Domain.Entities;
 using ExamPlatform.Domain.Enums;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPlatform.BLL.Services
 {
@@ -34,19 +35,22 @@ namespace ExamPlatform.BLL.Services
         // are important operational signals — log them so ops can reconstruct
         // what a candidate experienced if they report an issue.
         private readonly ILogger<AttemptService> _logger;
+        private readonly IBackgroundTaskQueue _taskQueue;
 
         public AttemptService(
             IAttemptRepository attemptRepository,
             IAttemptAnswerRepository answerRepository,
             IExamRepository examRepository,
             INotificationRepository notificationRepository,
-            ILogger<AttemptService> logger)
+            ILogger<AttemptService> logger,
+            IBackgroundTaskQueue taskQueue)
         {
             _attemptRepository = attemptRepository;
             _answerRepository = answerRepository;
             _examRepository = examRepository;
             _notificationRepository = notificationRepository;
             _logger = logger;
+            _taskQueue = taskQueue;
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -390,6 +394,36 @@ namespace ExamPlatform.BLL.Services
             _logger.LogInformation(
                 "Attempt {AttemptId} manually submitted by user {UserId}; score={Score}.",
                 attemptId, userId, attempt.Score);
+
+            // Add the attempt to the background queue for AI categorization & chart generation
+            // This is fire-and-forget, so the user doesn't wait!
+            if (_taskQueue != null)
+            {
+                _taskQueue.QueueBackgroundWorkItem(async (sp, ct) =>
+                {
+                    try
+                    {
+                        var processor = sp.GetRequiredService<IAnalyticsProcessor>();
+                        await processor.ProcessAttemptAsync(attemptId, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        var logger = sp.GetRequiredService<ILogger<AttemptService>>();
+                        logger.LogError(ex, "Background analytics failed for attempt {AttemptId}. Retrying in 10 minutes...", attemptId);
+                        
+                        // Retry logic
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(TimeSpan.FromMinutes(10), ct);
+                            _taskQueue.QueueBackgroundWorkItem(async (innerSp, innerCt) => 
+                            {
+                                var retryProcessor = innerSp.GetRequiredService<IAnalyticsProcessor>();
+                                await retryProcessor.ProcessAttemptAsync(attemptId, innerCt);
+                            });
+                        }, ct);
+                    }
+                });
+            }
 
             return attempt;
         }

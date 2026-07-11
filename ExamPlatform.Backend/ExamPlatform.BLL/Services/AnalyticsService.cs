@@ -97,7 +97,8 @@ namespace ExamPlatform.BLL.Services
                         ExamId: g.Key,
                         ExamTitle: best.Exam?.Title ?? string.Empty,
                         BestScore: best.Score ?? 0m,
-                        IsPassed: best.IsPassed == true);
+                        IsPassed: best.IsPassed == true,
+                        TopicScoresUrl: best.TopicScoresUrl);
                 })
                 .OrderBy(b => b.ExamTitle)
                 .ToList();

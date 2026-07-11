@@ -6,6 +6,7 @@ using ExamPlatform.BLL.Tests.Helpers;
 using ExamPlatform.DAL.Interfaces;
 using ExamPlatform.Domain.Entities;
 using ExamPlatform.Domain.Enums;
+using ExamPlatform.BLL.Interfaces;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -21,6 +22,7 @@ namespace ExamPlatform.BLL.Tests.Services
         private Mock<IExamRepository>           _examRepoMock    = null!;
         private Mock<INotificationRepository>   _notifRepoMock   = null!;
         private Mock<ILogger<AttemptService>>   _loggerMock      = null!;
+        private Mock<IBackgroundTaskQueue>      _taskQueueMock   = null!;
         private AttemptService _sut = null!;
 
         [SetUp]
@@ -31,13 +33,15 @@ namespace ExamPlatform.BLL.Tests.Services
             _examRepoMock    = new Mock<IExamRepository>();
             _notifRepoMock   = new Mock<INotificationRepository>();
             _loggerMock      = new Mock<ILogger<AttemptService>>();
+            _taskQueueMock   = new Mock<IBackgroundTaskQueue>();
 
             _sut = new AttemptService(
                 _attemptRepoMock.Object,
                 _answerRepoMock.Object,
                 _examRepoMock.Object,
                 _notifRepoMock.Object,
-                _loggerMock.Object);
+                _loggerMock.Object,
+                _taskQueueMock.Object);
         }
 
         // ════════════════════════════════════════════════════════════════

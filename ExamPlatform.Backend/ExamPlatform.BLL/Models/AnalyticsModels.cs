@@ -9,7 +9,8 @@ namespace ExamPlatform.BLL.Models
         int ExamId,
         string ExamTitle,
         decimal BestScore,
-        bool IsPassed);
+        bool IsPassed,
+        string? TopicScoresUrl);
 
     // Candidate dashboard aggregate statistics.
     public record CandidateDashboard(

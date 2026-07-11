@@ -7,5 +7,6 @@ namespace ExamPlatform.API.DTOs.Analytics
         public string ExamTitle { get; set; } = null!;
         public decimal BestScore { get; set; }
         public bool IsPassed { get; set; }
+        public string? TopicScoresUrl { get; set; }
     }
 }

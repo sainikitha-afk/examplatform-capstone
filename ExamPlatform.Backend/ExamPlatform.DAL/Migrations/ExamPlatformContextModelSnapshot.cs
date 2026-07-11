@@ -68,6 +68,10 @@ namespace ExamPlatform.DAL.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("time_taken_seconds");
 
+                    b.Property<string>("TopicScoresUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("topic_scores_url");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer")
                         .HasColumnName("user_id");
@@ -313,6 +317,10 @@ namespace ExamPlatform.DAL.Migrations
                         .HasColumnName("exam_question_id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ExamQuestionId"));
+
+                    b.Property<string>("AnalyticCategory")
+                        .HasColumnType("text")
+                        .HasColumnName("analytic_category");
 
                     b.Property<int>("ExamId")
                         .HasColumnType("integer")

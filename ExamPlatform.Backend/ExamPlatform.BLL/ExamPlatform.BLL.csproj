@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\ExamPlatform.DAL\ExamPlatform.DAL.csproj" />
@@ -9,6 +9,8 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="MailKit" Version="4.17.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
     <PackageReference Include="MimeKit" Version="4.17.0" />
   </ItemGroup>
 

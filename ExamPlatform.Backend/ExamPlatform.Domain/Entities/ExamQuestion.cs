@@ -18,6 +18,10 @@ namespace ExamPlatform.Domain.Entities
         // examiner control display order independent of insertion order.
         public int QuestionOrder { get; set; }
 
+        // AI-generated analytical category for radar charts (e.g., "Data Structures").
+        // Generated lazily on the first attempt submission.
+        public string? AnalyticCategory { get; set; }
+
         // ───────────── NAVIGATION ─────────────
         // A bridge entity has exactly TWO navigation references — one to each
         // side of the N-N relationship. No collections (a bridge row links one

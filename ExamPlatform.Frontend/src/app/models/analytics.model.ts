@@ -8,7 +8,8 @@ export class ExamBestScoreModel {
     public examId: number = 0,
     public examTitle: string = "",
     public bestScore: number = 0,
-    public isPassed: boolean = false
+    public isPassed: boolean = false,
+    public topicScoresUrl: string | null = null
   ) {}
 }
 

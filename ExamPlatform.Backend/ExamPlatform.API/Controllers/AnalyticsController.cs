@@ -79,7 +79,8 @@ namespace ExamPlatform.API.Controllers
                 ExamId = b.ExamId,
                 ExamTitle = b.ExamTitle,
                 BestScore = b.BestScore,
-                IsPassed = b.IsPassed
+                IsPassed = b.IsPassed,
+                TopicScoresUrl = b.TopicScoresUrl
             }).ToList()
         };
 

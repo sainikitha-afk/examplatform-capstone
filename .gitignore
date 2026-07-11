@@ -9,6 +9,7 @@
 **/.angular/
 **/coverage/
 *.log
+
 npm-debug.log*
 .npm/
 
@@ -35,6 +36,12 @@ npm-debug.log*
 **/.env
 **/.env.local
 *.pfx
+
+# ─────────── Generated analytics output ───────────
+# AnalyticsProcessor writes per-candidate topic-score JSON and chart PNG files
+# here at runtime (directory is created on demand). These are generated output,
+# not source. gemini-prompt.txt lives directly under Assets/ and is NOT ignored.
+ExamPlatform.Backend/ExamPlatform.BLL/Assets/candidates/
 
 # ─────────── Local test artifacts ───────────
 *.zip

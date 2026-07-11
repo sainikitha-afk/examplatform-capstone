@@ -1,0 +1,57 @@
+<div class="modal-backdrop" (click)="onClose()"></div>
+
+<div class="modal-content" (click)="$event.stopPropagation()">
+  <div class="modal-header border-0 pb-0 px-4 pt-4">
+    <h5 class="modal-title fw-bold text-dark">
+      <i class="bi bi-radar me-2 text-primary"></i>Performance Analytics
+    </h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>
+  </div>
+  <div class="modal-body p-4 scrollable-body">
+    
+    <div *ngIf="isLoading" class="d-flex justify-content-center align-items-center h-100 py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div *ngIf="errorMessage" class="alert alert-danger mx-3 mt-3">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="!isLoading && radarChartData" class="d-flex flex-column align-items-center">
+      <div class="chart-container w-100 mb-4" style="max-width: 500px;">
+        <canvas baseChart 
+          [data]="radarChartData" 
+          [options]="radarChartOptions" 
+          [type]="'radar'">
+        </canvas>
+      </div>
+
+      <div class="w-100">
+        <h6 class="fw-bold mb-3 text-start">Topic Breakdown</h6>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover mb-0" style="font-size: 0.9rem;">
+            <thead class="table-light">
+              <tr>
+                <th class="border-start border-end border-bottom">Subject</th>
+                <th class="text-center border-start border-end border-bottom" style="width: 100px;">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let topic of topicScores">
+                <td class="text-start align-middle fw-medium border-start border-end">{{ topic.topic }}</td>
+                <td class="text-center align-middle border-start border-end">
+                  <span class="badge" [ngClass]="topic.score >= 50 ? 'bg-success text-white' : 'bg-danger text-white'">
+                    {{ topic.score | number:'1.0-2' }}%
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

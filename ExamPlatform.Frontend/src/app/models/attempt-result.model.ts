@@ -25,6 +25,8 @@ export class AttemptResultModel {
     public passingMarks: number = 0,
     public isPassed: boolean | null = null,
     public timeTakenSeconds: number | null = null,
+    public chartUrl: string | null = null,
+    public topicScoresUrl: string | null = null,
     public questions: PerQuestionResultModel[] = []
   ) {}
 }

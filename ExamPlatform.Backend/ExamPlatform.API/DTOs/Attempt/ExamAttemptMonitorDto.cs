@@ -28,5 +28,9 @@ namespace ExamPlatform.API.DTOs.Attempt
         // Proctoring: how many times the candidate left the exam tab/window.
         // A high count is a possible-malpractice signal for the examiner to weigh.
         public int TabSwitchCount { get; set; }
+
+        // AI topic analytics: local path to the generated topic-scores JSON for
+        // this attempt (null until the background analytics job has produced it).
+        public string? TopicScoresUrl { get; set; }
     }
 }

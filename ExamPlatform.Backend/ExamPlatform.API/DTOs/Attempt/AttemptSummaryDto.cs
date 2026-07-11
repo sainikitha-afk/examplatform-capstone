@@ -12,5 +12,6 @@ namespace ExamPlatform.API.DTOs.Attempt
         public string AttemptStatus { get; set; } = null!;
         public decimal? Score { get; set; }        // null until evaluated
         public bool? IsPassed { get; set; }        // null until evaluated
+        public string? TopicScoresUrl { get; set; }
     }
 }

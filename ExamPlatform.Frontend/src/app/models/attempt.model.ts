@@ -29,7 +29,9 @@ export class AttemptSummaryModel {
     public submittedAt: string | null = null,
     public attemptStatus: string = "",
     public score: number | null = null,
-    public isPassed: boolean | null = null
+    public isPassed: boolean | null = null,
+    public chartUrl: string | null = null,
+    public topicScoresUrl: string | null = null
   ) {}
 }
 
@@ -51,7 +53,9 @@ export class ExamAttemptMonitorModel {
     public timeTakenSeconds: number | null = null,
     public answeredCount: number = 0,
     // Proctoring: times the candidate left the exam tab/window.
-    public tabSwitchCount: number = 0
+    public tabSwitchCount: number = 0,
+    // AI topic analytics: local path to the generated topic-scores JSON.
+    public topicScoresUrl: string | null = null
   ) {}
 }
 

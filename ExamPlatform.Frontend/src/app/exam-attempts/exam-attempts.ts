@@ -7,12 +7,15 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { ExamApiService } from '../services/examapi.service';
+import { AttemptApiService } from '../services/attemptapi.service';
 import { ExamAttemptMonitorModel } from '../models/attempt.model';
 import { ExamDetailModel } from '../models/exam.model';
+import { PerformanceChartModal } from '../performance-chart-modal/performance-chart-modal';
 
 @Component({
   selector: 'app-exam-attempts',
-  imports: [CommonModule, RouterModule],
+  standalone: true,
+  imports: [CommonModule, RouterModule, PerformanceChartModal],
   templateUrl: './exam-attempts.html',
   styleUrl: './exam-attempts.css',
 })
@@ -32,10 +35,25 @@ export class ExamAttempts implements OnInit {
   autoSubmittedCount: number = 0;
   passedCount: number = 0;
 
+  showChartModal: boolean = false;
+  selectedTopicScoresUrl: string | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private examService: ExamApiService
   ) {}
+
+  openChartModal(url: string | null): void {
+    if (url) {
+      this.selectedTopicScoresUrl = url;
+      this.showChartModal = true;
+    }
+  }
+
+  closeChartModal(): void {
+    this.showChartModal = false;
+    this.selectedTopicScoresUrl = null;
+  }
 
   ngOnInit(): void {
     this.examId = Number(this.route.snapshot.params['examId']);
