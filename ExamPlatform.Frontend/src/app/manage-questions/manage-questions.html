@@ -46,16 +46,26 @@
     <!-- Filters -->
     <div class="row g-2 mb-3">
       <div class="col-md-4">
-        <select class="form-select" [(ngModel)]="filterCatId" (change)="loadQuestions()">
-          <option [value]="null">All Categories</option>
-          <option *ngFor="let c of categories" [value]="c.catId">{{ c.catName }}</option>
+        <!-- [ngValue] (not [value]) so "All Categories" binds the real null and
+             each category binds its numeric id — a native <select> with [value]
+             would stringify these, sending the literal "null" and breaking the API. -->
+        <select class="form-select" [(ngModel)]="filterCatId" (change)="onFilterChange()">
+          <option [ngValue]="null">All Categories</option>
+          <option *ngFor="let c of categories" [ngValue]="c.catId">{{ c.catName }}</option>
         </select>
       </div>
       <div class="col-md-3">
-        <select class="form-select" [(ngModel)]="filterDifficulty" (change)="loadQuestions()">
+        <select class="form-select" [(ngModel)]="filterDifficulty" (change)="onFilterChange()">
           <option value="">All Difficulties</option>
           <option>Easy</option><option>Medium</option><option>Hard</option>
         </select>
+      </div>
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" placeholder="Search question text..."
+                 [(ngModel)]="searchTerm" (input)="onSearchChange()" />
+        </div>
       </div>
     </div>
 
@@ -63,11 +73,17 @@
       <div class="spinner-border text-primary"></div>
     </div>
 
-    <!-- Empty state -->
+    <!-- Empty state — message depends on whether filters/search are active -->
     <div *ngIf="!isLoading && questions.length === 0" class="empty-state">
       <span class="empty-icon">❓</span>
-      <h5>No questions yet</h5>
-      <p>Create your first question or import from Excel to get started.</p>
+      <ng-container *ngIf="filterCatId || filterDifficulty || searchTerm.trim(); else noneAtAll">
+        <h5>No matching questions</h5>
+        <p>No questions match the current filters. Try clearing the category, difficulty, or search.</p>
+      </ng-container>
+      <ng-template #noneAtAll>
+        <h5>No questions yet</h5>
+        <p>Create your first question or import from Excel to get started.</p>
+      </ng-template>
     </div>
 
     <!-- Questions table -->
@@ -87,7 +103,7 @@
             <tbody>
               <!-- *ngFor: one row per question -->
               <tr *ngFor="let q of questions; let i = index">
-                <td class="text-muted" style="font-size:0.82rem">{{ i + 1 }}</td>
+                <td class="text-muted" style="font-size:0.82rem">{{ showingFrom + i }}</td>
                 <td class="fw-medium" style="max-width:400px">
                   <span class="q-text-truncate">{{ q.questionText }}</span>
                 </td>
@@ -117,6 +133,25 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- Pagination footer — only when there is at least one question -->
+    <div *ngIf="!isLoading && totalCount > 0"
+         class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3">
+      <span class="text-muted small">
+        Showing {{ showingFrom }}–{{ showingTo }} of {{ totalCount }} questions
+      </span>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary"
+                [disabled]="!hasPreviousPage || isLoading" (click)="prevPage()">
+          <i class="bi bi-chevron-left me-1"></i>Previous
+        </button>
+        <span class="small fw-medium">Page {{ page }} of {{ totalPages }}</span>
+        <button class="btn btn-sm btn-outline-secondary"
+                [disabled]="!hasNextPage || isLoading" (click)="nextPage()">
+          Next<i class="bi bi-chevron-right ms-1"></i>
+        </button>
       </div>
     </div>
   </div>

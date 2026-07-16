@@ -29,3 +29,20 @@
 }
 .admin-tile-title { font-weight: 700; font-size: 0.95rem; }
 .admin-tile-sub   { font-size: 0.78rem; color: var(--text-muted); }
+
+/* Pending Requests stat card doubles as a link into the review screen. */
+.stat-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.stat-card-link:hover {
+  border-color: var(--primary);
+  color: inherit;
+}
+
+/* Gently flags the card while applications are actually waiting. */
+.stat-card-attention {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}

@@ -33,6 +33,13 @@ export class Login {
     this.isLoading = true;
     this.errorMessage = '';
 
+    // Credentials pasted from an email (e.g. the examiner temp-password mail) often
+    // carry a trailing space or newline, which then fails password verification for
+    // an otherwise-correct password. The backend trims too — this just makes the
+    // common copy-paste case work on the first try.
+    this.loginData.emailOrUsername = this.loginData.emailOrUsername?.trim() ?? '';
+    this.loginData.password = this.loginData.password?.trim() ?? '';
+
     // Observable + subscribe pattern (concept #10).
     this.authService.login(this.loginData).subscribe({
       next: (response) => {

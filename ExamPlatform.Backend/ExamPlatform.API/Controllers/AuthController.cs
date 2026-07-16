@@ -1,5 +1,7 @@
 // CA1848: standard ILogger extension methods used deliberately — see CertificateService.cs
 #pragma warning disable CA1848
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using ExamPlatform.API.DTOs.Auth;
@@ -94,6 +96,42 @@ namespace ExamPlatform.API.Controllers
                 user.UserId, user.Role);
 
             return Ok(response);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   POST /api/auth/change-password  — authenticated, any role
+        //   Completes the examiner onboarding flow (the approval email says
+        //   "change your temporary password after first login") and gives
+        //   every user self-service password rotation.
+        // ════════════════════════════════════════════════════════════════
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            // Identity comes from the validated JWT — the body carries no user id,
+            // so this endpoint can only ever change the CALLER's password.
+            var userId = ExtractUserId();
+
+            await _authService.ChangePasswordAsync(userId, dto.CurrentPassword, dto.NewPassword);
+
+            _logger.LogInformation(
+                "POST /api/auth/change-password completed: userId={UserId}.", userId);
+
+            // The existing JWT stays valid until it expires (we don't maintain a
+            // token denylist); the response tells the user the change took effect.
+            return Ok(new { message = "Password changed successfully." });
+        }
+
+        // Same claim-extraction helper as every other controller in this API.
+        private int ExtractUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                        ?? User.FindFirst("sub")?.Value
+                        ?? User.FindFirst("nameid")?.Value;
+
+            if (!int.TryParse(claim, out var id))
+                throw new UnauthorizedAccessException("Invalid token: missing user id claim.");
+            return id;
         }
 
         // ───────────── PRIVATE MAPPER ─────────────

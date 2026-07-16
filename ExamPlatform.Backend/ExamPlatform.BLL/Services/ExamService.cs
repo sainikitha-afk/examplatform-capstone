@@ -101,6 +101,36 @@ namespace ExamPlatform.BLL.Services
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   GET AVAILABLE FOR CANDIDATE (paged)
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// Candidate browse: published exams the candidate can still sit. Exams they
+        /// have already completed are filtered out in SQL (one attempt per candidate —
+        /// a completed exam could only ever 409 on Start, so it must not be offered).
+        /// </summary>
+        public async Task<PagedResult<Exam>> GetAvailableForCandidatePagedAsync(
+            int userId, int? categoryId, int page, int pageSize)
+        {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            _logger.LogInformation(
+                "GetAvailableForCandidatePagedAsync: user {UserId}, page {Page}, pageSize {PageSize}, categoryId {CatId}.",
+                userId, page, pageSize, categoryId);
+
+            var (items, totalCount) =
+                await _examRepository.GetAvailableForCandidatePagedAsync(userId, categoryId, page, pageSize);
+
+            return new PagedResult<Exam>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            };
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   GET MINE (Examiner)
         // ════════════════════════════════════════════════════════════════
         public async Task<IEnumerable<Exam>> GetMineAsync(int examinerId)

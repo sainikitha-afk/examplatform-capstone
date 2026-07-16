@@ -58,7 +58,19 @@ namespace ExamPlatform.API.Middleware
 
                 // ─── 403 Forbidden ──────────────────────────────────────
                 case UserDeactivatedException:
+                case CoachAccessDeniedException:    // AI Coach: personalized coaching is Candidate-only
                     statusCode = HttpStatusCode.Forbidden;
+                    message = exception.Message;
+                    break;
+
+                // ─── 503 Service Unavailable ────────────────────────────
+                // The AI Learning Coach could not reach / parse Gemini. This is deliberately
+                // NOT a 500: nothing is broken in ExamHub. The candidate's exam data and their
+                // existing analytics are untouched, and the message says exactly that so a
+                // failed AI call never reads as lost results. The provider's status code, body
+                // and our API key stay server-side — the client sees one fixed message.
+                case AiCoachUnavailableException:
+                    statusCode = HttpStatusCode.ServiceUnavailable;
                     message = exception.Message;
                     break;
 

@@ -12,5 +12,10 @@ namespace ExamPlatform.BLL.Interfaces
         Task<User> CreateExaminerAsync(string fullName, string username, string email, string password);
 
         Task<User> LoginAsync(string emailOrUsername, string password);
+
+        // Authenticated self-service password change (any role). userId comes
+        // from the caller's JWT; the current password is re-verified before
+        // the new one is accepted. Completes the examiner temp-password flow.
+        Task ChangePasswordAsync(int userId, string currentPassword, string newPassword);
     }
 }

@@ -93,6 +93,24 @@ export const routes: Routes = [
     component: Notifications,
     canActivate: [authGuard]
   },
+  {
+    // Self-service password change — any signed-in role. New examiners land here to
+    // replace the temporary password from their approval email.
+    path: 'change-password',
+    loadComponent: () => import('./change-password/change-password').then(m => m.ChangePassword),
+    canActivate: [authGuard]
+  },
+  {
+    // AI Learning Coach — authGuard ONLY, deliberately no roleGuard.
+    // The screen is role-aware: Candidates get personalized coaching from their own results;
+    // Examiners and Admins get general platform guidance and are told plainly that
+    // personalized coaching is candidate-only. The backend enforces the same split
+    // (POST /api/coach/ask is Candidate-only; POST /api/coach/help is any authenticated role),
+    // so this route being open to all roles never widens what data anyone can reach.
+    path: 'ai-coach',
+    loadComponent: () => import('./ai-coach/ai-coach').then(m => m.AiCoach),
+    canActivate: [authGuard]
+  },
 
   // ── Examiner routes ──────────────────────────────────────────────────
   {

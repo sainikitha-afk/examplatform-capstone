@@ -14,6 +14,13 @@ namespace ExamPlatform.BLL.Interfaces
         // Paginated browse of published exams.
         Task<PagedResult<Exam>> GetPublishedPagedAsync(int? categoryId, int page, int pageSize);
 
+        // Candidate browse: published exams excluding those this candidate has already
+        // completed (one attempt per candidate — a completed exam is no longer available
+        // to them, so listing it could only ever produce a 409 on Start). Exams with an
+        // in-progress attempt stay listed so the candidate can resume.
+        Task<PagedResult<Exam>> GetAvailableForCandidatePagedAsync(
+            int userId, int? categoryId, int page, int pageSize);
+
         // Examiner's "My Exams" — all statuses, scoped to their userId.
         Task<IEnumerable<Exam>> GetMineAsync(int examinerId);
 

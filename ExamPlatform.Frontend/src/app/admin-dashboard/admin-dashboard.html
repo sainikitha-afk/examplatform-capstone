@@ -23,13 +23,17 @@
     <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
   </div>
 
-  <!-- Stats Grid -->
+  <!-- Stats Grid.
+       Note: the API's totalUsers is an alias of totalCandidates (same number), so showing
+       both was the same figure twice under two labels. One "Candidates" card now carries
+       that number, and the freed slot shows pending examiner requests — the one stat an
+       Admin can act on immediately. -->
   <div *ngIf="!isLoading() && !errorMessage" class="row g-3 mb-4 stagger-children">
     <div class="col-sm-6 col-xl-3">
       <div class="stat-card">
-        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
-        <div class="stat-value">{{ stats.totalUsers }}</div>
-        <div class="stat-label">Total Users</div>
+        <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-person-fill"></i></div>
+        <div class="stat-value">{{ stats.totalCandidates }}</div>
+        <div class="stat-label">Candidates</div>
       </div>
     </div>
     <div class="col-sm-6 col-xl-3">
@@ -40,11 +44,12 @@
       </div>
     </div>
     <div class="col-sm-6 col-xl-3">
-      <div class="stat-card">
-        <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-person-fill"></i></div>
-        <div class="stat-value">{{ stats.totalCandidates }}</div>
-        <div class="stat-label">Candidates</div>
-      </div>
+      <a routerLink="/admin/examiner-requests" class="stat-card stat-card-link"
+         [class.stat-card-attention]="pendingRequests() > 0">
+        <div class="stat-icon" style="background:#fef2f2;color:#dc2626"><i class="bi bi-person-lines-fill"></i></div>
+        <div class="stat-value">{{ pendingRequests() }}</div>
+        <div class="stat-label">Pending Requests</div>
+      </a>
     </div>
     <div class="col-sm-6 col-xl-3">
       <div class="stat-card">
@@ -112,7 +117,10 @@
       <a routerLink="/admin/examiner-requests" class="admin-tile">
         <div class="admin-tile-icon" style="background:#fef3c7;color:#92400e"><i class="bi bi-person-lines-fill"></i></div>
         <div>
-          <div class="admin-tile-title">Examiner Requests</div>
+          <div class="admin-tile-title">
+            Examiner Requests
+            <span *ngIf="pendingRequests() > 0" class="badge bg-danger ms-1">{{ pendingRequests() }}</span>
+          </div>
           <div class="admin-tile-sub">Review pending applications</div>
         </div>
         <i class="bi bi-arrow-right ms-auto"></i>

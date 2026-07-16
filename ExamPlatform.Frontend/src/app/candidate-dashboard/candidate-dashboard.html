@@ -1,4 +1,6 @@
-<!-- Candidate Dashboard — personal performance overview -->
+<!-- Candidate Dashboard — action-oriented home screen.
+     Detailed statistics, the best-scores table and the radar chart live in /my-analytics;
+     this page answers "what should I do right now?". -->
 
 <div class="container py-4 animate-fade-in">
 
@@ -6,127 +8,171 @@
   <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div>
       <h3 class="mb-0">
-        <i class="bi bi-hand-wave me-2 text-primary"></i>Welcome back, {{ fullName }}!
+        <i class="bi bi-stars me-2 text-primary"></i>Welcome back, {{ fullName }}!
       </h3>
-      <p class="page-header-sub mt-1">Your exam performance at a glance.</p>
+      <p class="page-header-sub mt-1">Pick up where you left off, or start something new.</p>
     </div>
     <div class="d-flex gap-2">
       <a routerLink="/browse-exams" class="btn btn-primary btn-sm">
         <i class="bi bi-search me-1"></i>Browse Exams
       </a>
-      <a routerLink="/my-certificates" class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-award me-1"></i>Certificates
+      <a routerLink="/my-analytics" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-bar-chart-line me-1"></i>My Analytics
       </a>
     </div>
   </div>
 
-  <!-- Loading -->
-  <div *ngIf="isLoading()" class="text-center py-5">
-    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
-    <p class="text-muted mt-3">Loading your dashboard...</p>
-  </div>
-
-  <!-- Error -->
-  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2">
-    <i class="bi bi-exclamation-circle-fill"></i>{{ errorMessage }}
-  </div>
-
-  <!-- Stats Cards -->
-  <div *ngIf="!isLoading() && !errorMessage" class="row g-3 mb-4 stagger-children">
-    <div class="col-sm-6 col-xl-3">
-      <div class="stat-card">
-        <div class="stat-icon"><i class="bi bi-journal-check"></i></div>
-        <div class="stat-value">{{ stats.totalAttempts }}</div>
-        <div class="stat-label">Total Attempts</div>
+  <!-- Resume banner — the single most urgent action, shown only when one exists.
+       The server timer keeps counting while the candidate is away, so this is prominent. -->
+  <div *ngIf="inProgressAttempt" class="resume-banner" role="alert">
+    <div class="resume-icon"><i class="bi bi-hourglass-split"></i></div>
+    <div class="flex-grow-1">
+      <div class="fw-bold">You have an exam in progress</div>
+      <div class="small">
+        {{ inProgressAttempt.examTitle }} — the timer keeps running on the server, so return as soon as you can.
       </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
-      <div class="stat-card stat-card-success">
-        <div class="stat-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-percent"></i></div>
-        <div class="stat-value">{{ stats.passRate | number:'1.0-1' }}%</div>
-        <div class="stat-label">Pass Rate</div>
-        <div class="stat-bar">
-          <div class="stat-bar-fill" [style.width.%]="stats.passRate"></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-      <div class="stat-card stat-card-info">
-        <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-bar-chart-line"></i></div>
-        <div class="stat-value">{{ stats.averageScore | number:'1.0-1' }}</div>
-        <div class="stat-label">Average Score</div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-      <div class="stat-card stat-card-warn">
-        <div class="stat-icon" style="background:#fef3c7;color:#92400e"><i class="bi bi-award"></i></div>
-        <div class="stat-value">{{ stats.certificatesEarned }}</div>
-        <div class="stat-label">Certificates Earned</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Best Scores Table -->
-  <div *ngIf="!isLoading() && stats.bestScores.length > 0" class="card">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <h6 class="mb-0 fw-bold"><i class="bi bi-trophy me-2 text-primary"></i>Best Scores Per Exam</h6>
-      <a routerLink="/my-analytics" class="btn btn-outline-primary btn-sm">View Full Analytics</a>
-    </div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover mb-0">
-          <thead>
-            <tr>
-              <th style="width: 30%;">Exam</th>
-              <th class="text-center" style="width: 30%;">Best Score</th>
-              <th class="text-center" style="width: 20%;">Status</th>
-              <th class="text-center" style="width: 20%;">Chart</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- *ngFor: one row per best-score entry -->
-            <tr *ngFor="let s of stats.bestScores">
-              <td class="fw-medium">{{ s.examTitle }}</td>
-              <td class="text-center fw-bold text-primary">{{ s.bestScore }}</td>
-              <!-- [ngClass]: pass/fail badge styling -->
-              <td class="text-center">
-                <span class="badge-status" [ngClass]="s.isPassed ? 'badge-passed' : 'badge-failed'">
-                  <i class="bi me-1" [ngClass]="s.isPassed ? 'bi-check-circle' : 'bi-x-circle'"></i>
-                  {{ s.isPassed ? 'Passed' : 'Failed' }}
-                </span>
-              </td>
-              <td class="text-center">
-                <ng-container *ngIf="!s.topicScoresUrl">
-                  <button class="btn btn-sm btn-outline-secondary" disabled
-                    style="min-width: 90px; text-align: left; padding-left: 10px;">
-                    Processing<span class="loading-dots"></span>
-                  </button>
-                </ng-container>
-                <ng-container *ngIf="s.topicScoresUrl">
-                  <button class="btn btn-sm btn-outline-primary" (click)="openChartModal(s.topicScoresUrl)">
-                    <i class="bi bi-bar-chart"></i> View
-                  </button>
-                </ng-container>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Empty state -->
-  <div *ngIf="!isLoading() && !errorMessage && stats.totalAttempts === 0" class="empty-state">
-    <span class="empty-icon">🎯</span>
-    <h5>No exams taken yet</h5>
-    <p>Browse published exams and start your first attempt!</p>
-    <a routerLink="/browse-exams" class="btn btn-primary mt-2">
-      <i class="bi bi-search me-2"></i>Browse Exams
+    <a [routerLink]="['/attempt', inProgressAttempt.examId]" class="btn btn-warning btn-sm fw-semibold">
+      <i class="bi bi-play-fill me-1"></i>Continue Exam
     </a>
   </div>
 
-  <app-performance-chart-modal *ngIf="showChartModal" [topicScoresUrl]="selectedTopicScoresUrl"
-    (close)="closeChartModal()">
-  </app-performance-chart-modal>
+  <div class="row g-4 mt-0">
+
+    <!-- ── AI Coach insight — turns results into next steps ─────────────── -->
+    <div class="col-lg-7">
+      <div class="card insight-card h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-robot me-2 text-primary"></i>Your AI Coach insight</h6>
+          <a routerLink="/ai-coach" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-chat-dots me-1"></i>Open AI Coach
+          </a>
+        </div>
+        <div class="card-body">
+
+          <div *ngIf="isLoadingInsight()" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <p class="text-muted small mt-2 mb-0">Reading your published results…</p>
+          </div>
+
+          <ng-container *ngIf="!isLoadingInsight()">
+
+            <!-- With published results: strengths + focus areas at a glance -->
+            <ng-container *ngIf="insight?.hasData; else noInsight">
+              <p class="text-muted small mb-3">
+                From your {{ insight!.totalAttempts }} published
+                {{ insight!.totalAttempts === 1 ? 'attempt' : 'attempts' }}
+                ({{ insight!.passRate | number:'1.0-0' }}% pass rate,
+                {{ insight!.certificatesEarned }}
+                {{ insight!.certificatesEarned === 1 ? 'certificate' : 'certificates' }}):
+              </p>
+
+              <div *ngIf="insight!.strongTopics.length > 0" class="mb-3">
+                <div class="insight-section-title"><i class="bi bi-star-fill me-1 text-warning"></i>Strengths</div>
+                <span class="insight-chip chip-strong" *ngFor="let t of insight!.strongTopics">
+                  {{ t.topic }} <b>{{ t.score | number:'1.0-0' }}%</b>
+                </span>
+              </div>
+
+              <div *ngIf="insight!.focusAreas.length > 0" class="mb-3">
+                <div class="insight-section-title"><i class="bi bi-bullseye me-1 text-danger"></i>Focus next on</div>
+                <span class="insight-chip chip-focus" *ngFor="let f of insight!.focusAreas">
+                  {{ f.topic }} <b>{{ f.score | number:'1.0-0' }}%</b>
+                </span>
+              </div>
+
+              <!-- All strong, nothing to fix — say so instead of inventing work -->
+              <p *ngIf="insight!.focusAreas.length === 0 && insight!.strongTopics.length > 0"
+                 class="text-muted small mb-3">
+                No weak topics right now — every analysed topic clears the strength bar. Time for a harder exam?
+              </p>
+
+              <a routerLink="/ai-coach" class="btn btn-primary btn-sm">
+                <i class="bi bi-magic me-1"></i>Get a study plan
+              </a>
+            </ng-container>
+
+            <!-- No published results yet -->
+            <ng-template #noInsight>
+              <div class="text-center py-3">
+                <span class="insight-empty-icon">🧭</span>
+                <p class="text-muted small mb-2 mt-2">
+                  Once you complete an exam and its results are published, your coach will
+                  spot your strong and weak topics here and build you a study plan.
+                </p>
+                <a routerLink="/browse-exams" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-search me-1"></i>Find an exam to take
+                </a>
+              </div>
+            </ng-template>
+
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Recent activity — honest per-attempt states ──────────────────── -->
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Recent activity</h6>
+          <a routerLink="/my-certificates" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-award me-1"></i>Certificates
+          </a>
+        </div>
+        <div class="card-body p-0">
+
+          <div *ngIf="isLoadingActivity()" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+          </div>
+
+          <div *ngIf="activityError" class="alert alert-danger m-3 d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-circle-fill"></i>{{ activityError }}
+          </div>
+
+          <!-- Empty state -->
+          <div *ngIf="!isLoadingActivity() && !activityError && recentAttempts.length === 0"
+               class="empty-state py-4">
+            <span class="empty-icon">🎯</span>
+            <h6 class="mb-1">No exams taken yet</h6>
+            <p class="small mb-2">Browse published exams and start your first attempt!</p>
+            <a routerLink="/browse-exams" class="btn btn-primary btn-sm">
+              <i class="bi bi-search me-1"></i>Browse Exams
+            </a>
+          </div>
+
+          <ul *ngIf="!isLoadingActivity() && recentAttempts.length > 0" class="activity-list">
+            <li *ngFor="let a of recentAttempts" class="activity-row">
+              <div class="activity-main">
+                <div class="fw-medium activity-title">{{ a.examTitle }}</div>
+                <div class="text-muted activity-date">
+                  {{ (a.submittedAt ?? a.startedAt) | date:'mediumDate' }}
+                </div>
+              </div>
+
+              <!-- One pill per state; "Results pending" replaces the old always-visible score -->
+              <span class="activity-pill" [ngClass]="'pill-' + statusOf(a)">
+                <i class="bi me-1"
+                   [ngClass]="{
+                     'bi-hourglass-split': statusOf(a) === 'in-progress',
+                     'bi-envelope':        statusOf(a) === 'pending',
+                     'bi-check-circle':    statusOf(a) === 'passed',
+                     'bi-x-circle':        statusOf(a) === 'failed'
+                   }"></i>{{ statusLabel(a) }}
+              </span>
+
+              <a *ngIf="statusOf(a) === 'in-progress'"
+                 [routerLink]="['/attempt', a.examId]"
+                 class="btn btn-warning btn-sm ms-2">Continue</a>
+              <a *ngIf="statusOf(a) === 'passed' || statusOf(a) === 'failed'"
+                 [routerLink]="['/result', a.attemptId]"
+                 class="btn btn-outline-primary btn-sm ms-2">Result</a>
+            </li>
+          </ul>
+
+        </div>
+      </div>
+    </div>
+  </div>
 
 </div>

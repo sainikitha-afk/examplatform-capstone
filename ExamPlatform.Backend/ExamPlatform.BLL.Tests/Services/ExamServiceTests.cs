@@ -341,6 +341,36 @@ namespace ExamPlatform.BLL.Tests.Services
         }
 
         [Test]
+        public async Task GetAvailableForCandidatePagedAsync_QueriesWithTheCandidatesUserId()
+        {
+            // The candidate browse list is per-user: exams already completed by THIS
+            // candidate are excluded in the repository query, so the userId must flow
+            // through — a hardcoded or missing id would show completed exams again
+            // (or hide someone else's).
+            _examRepoMock.Setup(r => r.GetAvailableForCandidatePagedAsync(6, 3, 1, 20))
+                         .ReturnsAsync((new List<Exam> { TestDataBuilder.BuildPublishedExam(1) }, 1));
+
+            var result = await _sut.GetAvailableForCandidatePagedAsync(
+                userId: 6, categoryId: 3, page: 1, pageSize: 20);
+
+            result.TotalCount.Should().Be(1);
+            _examRepoMock.Verify(r => r.GetAvailableForCandidatePagedAsync(6, 3, 1, 20), Times.Once);
+        }
+
+        [Test]
+        public async Task GetAvailableForCandidatePagedAsync_ClampsPageAndPageSize()
+        {
+            _examRepoMock.Setup(r => r.GetAvailableForCandidatePagedAsync(6, null, 1, 100))
+                         .ReturnsAsync((new List<Exam>(), 0));
+
+            var result = await _sut.GetAvailableForCandidatePagedAsync(
+                userId: 6, categoryId: null, page: -3, pageSize: 999);
+
+            result.Page.Should().Be(1);
+            result.PageSize.Should().Be(100);
+        }
+
+        [Test]
         public async Task GetMineAsync_DelegatesToRepository()
         {
             _examRepoMock.Setup(r => r.GetByExaminerAsync(10))

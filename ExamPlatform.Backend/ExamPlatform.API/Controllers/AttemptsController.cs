@@ -220,50 +220,70 @@ namespace ExamPlatform.API.Controllers
         }
 
         /// <summary>Maps to the lightweight summary DTO for the history list.</summary>
-        private static AttemptSummaryDto ToSummaryDto(Attempt a) => new()
+        private static AttemptSummaryDto ToSummaryDto(Attempt a)
         {
-            AttemptId = a.AttemptId,
-            ExamId = a.ExamId,
-            ExamTitle = a.Exam?.Title,   // populated if GetByUserAsync includes Exam
-            StartedAt = a.StartedAt,
-            SubmittedAt = a.SubmittedAt,
-            AttemptStatus = a.AttemptStatus.ToString(),
-            Score = a.Score,
-            IsPassed = a.IsPassed,
-            TopicScoresUrl = a.TopicScoresUrl
-        };
+            // Business rule (revised): the score and pass/fail are visible as soon as the
+            // attempt is submitted — MCQ scoring is automatic, so there is nothing to wait
+            // for. Only the topic chart stays gated on the examiner publishing results,
+            // because it belongs to the analytics suite, which reports official published
+            // results only (as do the dashboard and the AI coach).
+            var resultsOut = a.Exam?.ExamStatus == Domain.Enums.ExamStatus.ResultsPublished;
 
-        /// <summary>Maps to the full result DTO with per-question breakdown.</summary>
+            return new()
+            {
+                AttemptId = a.AttemptId,
+                ExamId = a.ExamId,
+                ExamTitle = a.Exam?.Title,   // populated if GetByUserAsync includes Exam
+                StartedAt = a.StartedAt,
+                SubmittedAt = a.SubmittedAt,
+                AttemptStatus = a.AttemptStatus.ToString(),
+                Score = a.Score,
+                IsPassed = a.IsPassed,
+                TopicScoresUrl = resultsOut ? a.TopicScoresUrl : null
+            };
+        }
+
+        /// <summary>Maps to the result DTO. The per-question breakdown (which contains
+        /// correct answers) and the topic chart are included only after the examiner has
+        /// published results; the score itself is always present once submitted.</summary>
         private static AttemptResultDto ToResultDto(Attempt a)
         {
             var exam = a.Exam!;
-            var answers = a.AttemptAnswers.ToList();
+            var resultsOut = exam.ExamStatus == Domain.Enums.ExamStatus.ResultsPublished;
 
-            // Build the per-question breakdown by iterating over exam questions
-            // and finding the candidate's answer row (if any).
-            var questionResults = exam.ExamQuestions
-                .OrderBy(eq => eq.QuestionOrder)
-                .Select(eq =>
-                {
-                    var question = eq.Question;
-                    var answer = answers.FirstOrDefault(aa => aa.QuestionId == question.QuestionId);
+            // Correct answers must not leave the server before results are published —
+            // an early finisher could otherwise hand the answer key to candidates whose
+            // exam window is still open. So the breakdown is not merely hidden by the
+            // UI; it is never serialized.
+            var questionResults = new List<PerQuestionResultDto>();
+            if (resultsOut)
+            {
+                var answers = a.AttemptAnswers.ToList();
 
-                    // The correct option text — find the option with IsCorrect = true.
-                    var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
-
-                    return new PerQuestionResultDto
+                questionResults = exam.ExamQuestions
+                    .OrderBy(eq => eq.QuestionOrder)
+                    .Select(eq =>
                     {
-                        QuestionId = question.QuestionId,
-                        QuestionText = question.QuestionText,
-                        // SelectedOptionText is the text the candidate actually chose.
-                        // answer?.SelectedOption comes from the Include chain in the repo.
-                        SelectedOptionText = answer?.SelectedOption?.OptionText,
-                        CorrectOptionText = correctOption?.OptionText,
-                        MarksAwarded = answer?.MarksAwarded,
-                        IsCorrect = answer?.IsCorrect,
-                        AnalyticCategory = eq.AnalyticCategory
-                    };
-                }).ToList();
+                        var question = eq.Question;
+                        var answer = answers.FirstOrDefault(aa => aa.QuestionId == question.QuestionId);
+
+                        // The correct option text — find the option with IsCorrect = true.
+                        var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
+
+                        return new PerQuestionResultDto
+                        {
+                            QuestionId = question.QuestionId,
+                            QuestionText = question.QuestionText,
+                            // SelectedOptionText is the text the candidate actually chose.
+                            // answer?.SelectedOption comes from the Include chain in the repo.
+                            SelectedOptionText = answer?.SelectedOption?.OptionText,
+                            CorrectOptionText = correctOption?.OptionText,
+                            MarksAwarded = answer?.MarksAwarded,
+                            IsCorrect = answer?.IsCorrect,
+                            AnalyticCategory = eq.AnalyticCategory
+                        };
+                    }).ToList();
+            }
 
             var resultDto = new AttemptResultDto
             {
@@ -274,7 +294,8 @@ namespace ExamPlatform.API.Controllers
                 PassingMarks = exam.PassingMarks,
                 IsPassed = a.IsPassed,
                 TimeTakenSeconds = a.TimeTakenSeconds,
-                TopicScoresUrl = a.TopicScoresUrl,
+                ResultsPublished = resultsOut,
+                TopicScoresUrl = resultsOut ? a.TopicScoresUrl : null,
                 Questions = questionResults
             };
             return resultDto;

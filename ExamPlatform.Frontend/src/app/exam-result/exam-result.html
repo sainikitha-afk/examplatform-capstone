@@ -45,6 +45,19 @@
       </div>
     </div>
 
+    <!-- Review-pending notice: the score above is final, but the per-question review
+         (which exposes correct answers) and the topic chart unlock only when the
+         examiner publishes results. Certificates are issued at that moment too. -->
+    <div *ngIf="!result.resultsPublished" class="alert alert-info d-flex align-items-start gap-2 mb-4" role="status">
+      <i class="bi bi-envelope-paper mt-1"></i>
+      <div>
+        <strong>Your score is final — the detailed review is on its way.</strong>
+        The question-by-question breakdown, your performance chart, and any certificate
+        will unlock once your examiner officially publishes the results. You'll get a
+        notification when that happens.
+      </div>
+    </div>
+
     <!-- Analytics Chart -->
     <div class="card mb-4" *ngIf="radarChartData">
       <div class="card-header bg-transparent border-0 pt-4 pb-0">
@@ -61,8 +74,9 @@
       </div>
     </div>
 
-    <!-- Question Breakdown Table -->
-    <div class="card">
+    <!-- Question Breakdown Table — only exists once results are published
+         (the backend sends an empty questions[] before then). -->
+    <div class="card" *ngIf="result.resultsPublished && result.questions.length > 0">
       <div class="card-header d-flex align-items-center justify-content-between">
         <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Question Breakdown</h6>
         <div class="d-flex gap-2 small">

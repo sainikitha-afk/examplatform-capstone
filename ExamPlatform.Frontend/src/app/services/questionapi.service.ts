@@ -27,9 +27,13 @@ export class QuestionApiService {
   // bank (backend clamps to 100); list screens keep the default of 10.
   loadQuestions(catId: number | null = null, difficulty: string = '', search: string = '', page: number = 1, pageSize: number = 10): Observable<PagedResultModel<QuestionModel>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (catId)      params = params.set('categoryId', catId);
-    if (difficulty) params = params.set('difficulty', difficulty);
-    if (search)     params = params.set('search', search);
+    // Only send optional filters when they carry a real value. We defensively
+    // reject null/undefined/NaN and the string "null"/"undefined" (which a native
+    // <select> can hand us) so we never emit e.g. ?categoryId=null → HTTP 400.
+    const catNum = catId === null || catId === undefined ? NaN : Number(catId);
+    if (!Number.isNaN(catNum) && catNum > 0) params = params.set('categoryId', catNum);
+    if (difficulty && difficulty !== 'null' && difficulty !== 'undefined') params = params.set('difficulty', difficulty);
+    if (search && search.trim()) params = params.set('search', search.trim());
     return this.http.get<PagedResultModel<QuestionModel>>(this.baseUrl, { params });
   }
 

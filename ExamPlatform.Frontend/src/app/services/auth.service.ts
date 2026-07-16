@@ -83,6 +83,31 @@ export class AuthService {
     }
   }
 
+  // Calls POST /api/auth/change-password (authenticated — the interceptor attaches the
+  // JWT, and the backend changes only the token owner's password; no user id is sent).
+  // Completes the examiner temp-password flow, and gives every role self-service rotation.
+  changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
+    return this.http
+      .post<{ message: string }>(`${this.baseUrl}/change-password`, {
+        currentPassword: currentPassword.trim(),
+        newPassword: newPassword.trim(),
+      })
+      .pipe(
+        catchError((err) => {
+          let message: string;
+          if (err.status === 0) {
+            message = 'Cannot reach the server. Make sure the backend is running.';
+          } else if (err.status === 400) {
+            // Backend validation text is user-facing ("Current password is incorrect.").
+            message = err.error?.error ?? 'Please check your input and try again.';
+          } else {
+            message = err.error?.error ?? 'Could not change your password. Please try again.';
+          }
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
   // Clears session, resets BehaviorSubject to null, navigates back to login.
   logout(): void {
     sessionStorage.clear();

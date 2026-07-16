@@ -238,5 +238,104 @@ namespace ExamPlatform.BLL.Tests.Services
             var act = async () => await _sut.LoginAsync(identifier, password);
             await act.Should().ThrowAsync<InvalidCredentialsException>();
         }
+
+        [Test]
+        public async Task LoginAsync_PasswordPastedWithWhitespace_StillLogsIn()
+        {
+            // The examiner-approval email renders "Password : Xy3kQ…\n" — pasting it
+            // grabs a trailing newline/space, and BCrypt then rejected a perfectly
+            // correct password. Login now trims both inputs (matching Register).
+            var user = TestDataBuilder.BuildCandidate();
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword("TempPass99");
+            _userRepoMock.Setup(r => r.GetByEmailAsync(user.Email)).ReturnsAsync(user);
+
+            var result = await _sut.LoginAsync($"  {user.Email}  ", "  TempPass99\n");
+
+            result.UserId.Should().Be(user.UserId);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   ChangePasswordAsync
+        // ════════════════════════════════════════════════════════════════
+
+        private User GivenUserWithPassword(string password, int userId = 1)
+        {
+            var user = TestDataBuilder.BuildCandidate(userId);
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            _userRepoMock.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+            return user;
+        }
+
+        [Test]
+        public async Task ChangePasswordAsync_WithCorrectCurrentPassword_ReplacesTheHash()
+        {
+            var user = GivenUserWithPassword("TempPass99");
+
+            await _sut.ChangePasswordAsync(1, "TempPass99", "MyNewSecret1");
+
+            BCrypt.Net.BCrypt.Verify("MyNewSecret1", user.PasswordHash).Should().BeTrue();
+            BCrypt.Net.BCrypt.Verify("TempPass99", user.PasswordHash).Should().BeFalse();
+            _userRepoMock.Verify(r => r.SaveChangesAsync(), Times.Once);
+        }
+
+        [Test]
+        public async Task ChangePasswordAsync_TempPasswordPastedWithWhitespace_StillWorks()
+        {
+            // Same copy-paste reality as login: the mailed temp password arrives with
+            // a trailing newline. The change-password flow must accept it too.
+            var user = GivenUserWithPassword("TempPass99");
+
+            await _sut.ChangePasswordAsync(1, " TempPass99\n", "  MyNewSecret1  ");
+
+            BCrypt.Net.BCrypt.Verify("MyNewSecret1", user.PasswordHash).Should().BeTrue(
+                "the new password is stored trimmed, matching how login trims");
+        }
+
+        [Test]
+        public async Task ChangePasswordAsync_WrongCurrentPassword_ThrowsValidation_NotInvalidCredentials()
+        {
+            // ValidationException → 400. InvalidCredentialsException would map to 401,
+            // and the frontend interceptor treats any 401 as an expired session and
+            // logs the user out mid-form — hostile for a simple typo.
+            GivenUserWithPassword("TempPass99");
+
+            var act = async () => await _sut.ChangePasswordAsync(1, "wrong-guess", "MyNewSecret1");
+
+            await act.Should().ThrowAsync<ValidationException>()
+                .WithMessage("*Current password is incorrect*");
+            _userRepoMock.Verify(r => r.SaveChangesAsync(), Times.Never);
+        }
+
+        [TestCase("", TestName = "EmptyNewPassword")]
+        [TestCase("ab1", TestName = "TooShortNewPassword")]
+        public async Task ChangePasswordAsync_WeakNewPassword_ThrowsValidation(string newPassword)
+        {
+            GivenUserWithPassword("TempPass99");
+
+            var act = async () => await _sut.ChangePasswordAsync(1, "TempPass99", newPassword);
+
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task ChangePasswordAsync_NewSameAsCurrent_ThrowsValidation()
+        {
+            GivenUserWithPassword("TempPass99");
+
+            var act = async () => await _sut.ChangePasswordAsync(1, "TempPass99", "TempPass99");
+
+            await act.Should().ThrowAsync<ValidationException>()
+                .WithMessage("*different*");
+        }
+
+        [Test]
+        public async Task ChangePasswordAsync_UnknownUser_ThrowsUserNotFound()
+        {
+            _userRepoMock.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((User?)null);
+
+            var act = async () => await _sut.ChangePasswordAsync(999, "TempPass99", "MyNewSecret1");
+
+            await act.Should().ThrowAsync<UserNotFoundException>();
+        }
     }
 }

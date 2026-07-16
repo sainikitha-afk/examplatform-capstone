@@ -1,0 +1,308 @@
+/* AI Learning Coach — styled entirely from the global design tokens in styles.css, so the
+   screen follows the light/dark theme automatically (no hardcoded backgrounds or text
+   colours anywhere in this file). */
+
+/* ── Layout ─────────────────────────────────────────────────────────── */
+
+.coach-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 60vh;
+}
+
+.coach-side-card {
+  position: sticky;
+  top: calc(var(--nav-height) + 1rem);
+}
+
+.coach-transcript {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+/* ── Welcome ────────────────────────────────────────────────────────── */
+
+.coach-welcome {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.coach-avatar {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--text-inverse);
+  background: var(--primary);
+  box-shadow: var(--shadow-primary);
+}
+
+/* ── Message bubbles ────────────────────────────────────────────────── */
+
+.coach-message {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.coach-message.user {
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-width: 88%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  line-height: 1.55;
+}
+
+.bubble-user {
+  background: var(--primary);
+  color: var(--text-inverse);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.bubble-coach {
+  background: var(--bg-secondary);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: var(--radius-sm);
+  width: 100%;
+}
+
+/* ── Answer sections ────────────────────────────────────────────────── */
+
+.coach-summary {
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary);
+  background: var(--primary-50);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.coach-block {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.coach-block-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+/* ── Strengths ──────────────────────────────────────────────────────── */
+
+.strong-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-full);
+  background: var(--primary-100);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.strong-chip-score {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* ── Focus areas ────────────────────────────────────────────────────── */
+
+.focus-card {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  margin-bottom: 0.6rem;
+}
+
+.focus-bar {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.focus-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  transition: width 0.4s ease;
+}
+
+.priority-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+/* Priority colours are semantic, so they are stated in terms of the theme's status tokens
+   and carry a text label too — colour is never the only signal. */
+.priority-high {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
+}
+
+.priority-medium {
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: var(--warning);
+}
+
+.priority-low {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+}
+
+/* ── Study plan timeline ────────────────────────────────────────────── */
+
+.plan-day {
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  position: relative;
+}
+
+/* Connector line between days */
+.plan-day:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 30px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.plan-day-marker {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.plan-day-body {
+  flex: 1 1 auto;
+}
+
+.plan-tasks {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.plan-tasks li {
+  margin-bottom: 0.2rem;
+}
+
+/* ── Prompt chips ───────────────────────────────────────────────────── */
+
+.prompt-chip {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.prompt-chip:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-50);
+}
+
+.prompt-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Side panel ─────────────────────────────────────────────────────── */
+
+.coach-stat {
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.coach-stat:last-of-type {
+  border-bottom: none;
+}
+
+.topic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  margin: 0 0.3rem 0.35rem 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.topic-chip-score {
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Composer ───────────────────────────────────────────────────────── */
+
+.coach-composer {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+
+.coach-input {
+  resize: none;
+  max-height: 120px;
+}
+
+.coach-send {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 991.98px) {
+  .coach-side-card {
+    position: static;
+  }
+
+  .coach-transcript {
+    max-height: none;
+  }
+
+  .bubble {
+    max-width: 100%;
+  }
+}

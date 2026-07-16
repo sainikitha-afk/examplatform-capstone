@@ -6,6 +6,29 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Gemini prompt template is a runtime input read by AgentService. Copy it
+         to the build output so it resolves via AppContext.BaseDirectory
+         regardless of the working directory (dotnet run) or the test runner's
+         directory. Flows transitively to the API and test project outputs. -->
+    <Content Include="Assets/gemini-prompt.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Assets/gemini-prompt.txt</Link>
+    </Content>
+
+    <!-- AI Learning Coach prompt assets, resolved the same way (LearningCoachService
+         .ResolveAssetPath). The system prompt carries the coach's guardrails; the
+         knowledge file is the curated, trusted source for general platform questions. -->
+    <Content Include="Assets/coach-system-prompt.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Assets/coach-system-prompt.txt</Link>
+    </Content>
+    <Content Include="Assets/coach-knowledge.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Assets/coach-knowledge.md</Link>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="MailKit" Version="4.17.0" />

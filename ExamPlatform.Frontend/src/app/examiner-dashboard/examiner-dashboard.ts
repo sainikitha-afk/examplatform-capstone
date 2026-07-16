@@ -50,7 +50,9 @@ export class ExaminerDashboard implements OnInit {
 
   loadMyExams(): void {
     this.isLoading.set(true);
-    this.examService.loadMyExams(1).subscribe({
+    // pageSize 100 (the backend cap): the status counts and the Candidate Activity table
+    // must reflect all of this examiner's exams, not just the first ten.
+    this.examService.loadMyExams(1, 100).subscribe({
       next: (result) => {
         this.exams = result.items;
         this.draftCount           = this.exams.filter(e => e.examStatus === 'Draft').length;

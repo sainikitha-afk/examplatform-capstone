@@ -77,12 +77,35 @@ export class PerformanceChartModal implements OnChanges, OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Chart.js defaults its tick, point-label and grid colours to a fixed dark grey, which is
+   * invisible against the dark-mode card. Read the active theme (data-theme on <html>, set by
+   * the navigation toggle) and colour the chart to match. Purely presentational — the data,
+   * the scores and the request are untouched.
+   */
+  private applyThemeColors(): void {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    const labelColor = isDark ? '#f1f5f9' : '#0f172a';   // --text
+    const lineColor = isDark ? 'rgba(241, 245, 249, 0.18)' : 'rgba(15, 23, 42, 0.12)';
+
+    const scale = this.radarChartOptions?.scales?.['r'] as any;
+    if (!scale) return;
+
+    scale.pointLabels = { ...scale.pointLabels, color: labelColor };
+    scale.ticks = { ...scale.ticks, color: labelColor };
+    scale.grid = { ...scale.grid, color: lineColor };
+    scale.angleLines = { ...scale.angleLines, color: lineColor };
+  }
+
   private loadTopicScores(url: string): void {
     this.isLoading = true;
     this.errorMessage = '';
-    
+
+    this.applyThemeColors();
+
     const fullUrl = url.startsWith('/') ? `http://localhost:5014${url}` : url;
-    
+
     this.http.get<Record<string, number>>(fullUrl).subscribe({
       next: (scores) => {
         this.topicScores = Object.entries(scores).map(([topic, score]) => ({ topic, score }));

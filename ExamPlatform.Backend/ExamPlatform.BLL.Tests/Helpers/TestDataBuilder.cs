@@ -178,6 +178,19 @@ namespace ExamPlatform.BLL.Tests.Helpers
             ExamQuestions = new List<ExamQuestion>()   // populated per-test as needed
         };
 
+        // A published exam whose results have also been released. Analytics only
+        // surfaces attempts on exams in this state (see AnalyticsService).
+        public static Exam BuildResultsPublishedExam(
+            int examId = 1,
+            int examinerId = 10,
+            decimal totalMarks = 50m,
+            decimal passingMarks = 30m)
+        {
+            var exam = BuildPublishedExam(examId, examinerId, totalMarks, passingMarks);
+            exam.ExamStatus = ExamStatus.ResultsPublished;
+            return exam;
+        }
+
         // ─────────────── ATTEMPT ──────────────────────────────────────
 
         public static Attempt BuildInProgressAttempt(

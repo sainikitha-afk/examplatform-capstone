@@ -496,8 +496,15 @@ namespace ExamPlatform.BLL.Services
         //   GET RESULT
         // ════════════════════════════════════════════════════════════════
         /// <summary>
-        /// Returns the attempt with full per-question breakdown.
-        /// Only available once the exam is in ResultsPublished status.
+        /// Returns the candidate's own attempt for the result view.
+        /// <para>
+        /// BUSINESS RULE (revised): the score and pass/fail state are visible IMMEDIATELY
+        /// after submission — MCQ scoring is fully automatic, so there is nothing to wait
+        /// for. What remains gated on the examiner publishing results is decided at the
+        /// API layer: the per-question review (which exposes correct answers — an exam-
+        /// integrity risk while other candidates may still be sitting the exam), the topic
+        /// chart, analytics, AI coaching, and certificates.
+        /// </para>
         /// </summary>
         public async Task<Attempt> GetResultAsync(int attemptId, int userId)
         {
@@ -511,13 +518,14 @@ namespace ExamPlatform.BLL.Services
                 throw new AttemptNotFoundException(attemptId);
             }
 
-            // Business rule: results are only visible after the examiner publishes them.
-            if (attempt.Exam?.ExamStatus != ExamStatus.ResultsPublished)
+            // An InProgress attempt has no score yet — there is no result to show, and
+            // exposing the questions through this endpoint would bypass the attempt flow.
+            if (attempt.AttemptStatus == AttemptStatus.InProgress)
             {
                 _logger.LogWarning(
-                    "GetResult: user {UserId} requested result for attempt {AttemptId} but results are not yet published (exam status={Status}).",
-                    userId, attemptId, attempt.Exam?.ExamStatus);
-                throw new ResultsNotPublishedException();
+                    "GetResult: user {UserId} requested result for attempt {AttemptId} which is still in progress.",
+                    userId, attemptId);
+                throw new ResultsNotPublishedException("This attempt has not been submitted yet.");
             }
 
             return attempt;

@@ -52,7 +52,14 @@ namespace ExamPlatform.API.Controllers
             [FromQuery] int pageSize = 20,
             [FromQuery] int? categoryId = null)
         {
-            var paged = await _examService.GetPublishedPagedAsync(categoryId, page, pageSize);
+            // Candidates only see exams they can still sit: one attempt per candidate,
+            // so an exam they have completed is filtered out server-side (listing it
+            // could only ever produce a 409 on Start). Examiners/Admins browsing this
+            // endpoint keep the unfiltered published list — they don't take exams.
+            var paged = User.IsInRole("Candidate")
+                ? await _examService.GetAvailableForCandidatePagedAsync(
+                    ExtractUserId(), categoryId, page, pageSize)
+                : await _examService.GetPublishedPagedAsync(categoryId, page, pageSize);
 
             return Ok(new PagedResultDto<ExamSummaryDto>
             {

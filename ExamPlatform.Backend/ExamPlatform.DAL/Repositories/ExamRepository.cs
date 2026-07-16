@@ -105,6 +105,38 @@ namespace ExamPlatform.DAL.Repositories
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   GetAvailableForCandidatePagedAsync
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// Candidate browse: Published exams MINUS the ones this candidate has already
+        /// completed. One attempt per candidate — once Submitted/AutoSubmitted, the exam
+        /// is gone from their browse list (it could only ever 409 on Start). An exam with
+        /// only an InProgress attempt stays listed so the candidate can find their way
+        /// back and resume. The subquery translates to a SQL NOT EXISTS, so pagination
+        /// counts remain correct.
+        /// </summary>
+        public async Task<(IEnumerable<Exam> Items, int TotalCount)> GetAvailableForCandidatePagedAsync(
+            int userId, int? categoryId, int page, int pageSize)
+        {
+            var query = _dbSet
+                .Where(e => e.ExamStatus == ExamStatus.Published)
+                .Where(e => !e.Attempts.Any(a =>
+                    a.UserId == userId &&
+                    (a.AttemptStatus == AttemptStatus.Submitted ||
+                     a.AttemptStatus == AttemptStatus.AutoSubmitted)));
+
+            if (categoryId.HasValue)
+                query = query.Where(e => e.CatId == categoryId.Value);
+
+            // Same deterministic ordering as GetPublishedPagedAsync.
+            query = query.OrderBy(e => e.StartTime);
+
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (items, totalCount);
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   GetByExaminerPagedAsync
         // ════════════════════════════════════════════════════════════════
         /// <summary>

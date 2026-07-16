@@ -44,6 +44,11 @@ namespace ExamPlatform.BLL.Services
             // The "fail fast" pattern: validate inputs at the top.
             // Reject bad data BEFORE expensive operations (DB calls, hashing).
 
+            // Trim before validating/hashing so the stored password never carries
+            // accidental edge whitespace — LoginAsync trims its input the same way,
+            // and the pair must agree or a space-padded signup could never log in.
+            password = password?.Trim() ?? string.Empty;
+
             if (string.IsNullOrWhiteSpace(fullName))
                 throw new ValidationException("Full name is required.");
 
@@ -131,6 +136,9 @@ namespace ExamPlatform.BLL.Services
         public async Task<User> CreateExaminerAsync(
             string fullName, string username, string email, string password)
         {
+            // Same trim-then-validate as Register — see the note there.
+            password = password?.Trim() ?? string.Empty;
+
             // Same guard clauses as Register.
             if (string.IsNullOrWhiteSpace(fullName))
                 throw new ValidationException("Full name is required.");
@@ -190,6 +198,16 @@ namespace ExamPlatform.BLL.Services
         // ════════════════════════════════════════════════════════════════
         public async Task<User> LoginAsync(string emailOrUsername, string password)
         {
+            // ─── STEP 0: NORMALISE COPY-PASTE WHITESPACE ─────────────────
+            // Credentials pasted from an email (the examiner temp-password mail
+            // reads "Password : Xy3kQ…\n") routinely arrive with a trailing
+            // space or newline attached, and BCrypt.Verify then fails on an
+            // otherwise-correct password. Registration and change-password trim
+            // the same way, so a stored password never has edge whitespace and
+            // trimming here can never lock a legitimate user out.
+            emailOrUsername = emailOrUsername?.Trim() ?? string.Empty;
+            password = password?.Trim() ?? string.Empty;
+
             // ─── STEP 1: BASIC INPUT GUARDS ──────────────────────────────
             // We throw InvalidCredentialsException (not ValidationException)
             // even for empty inputs at login. Reason: never give an attacker
@@ -247,6 +265,55 @@ namespace ExamPlatform.BLL.Services
                 "User {UserId} (role={Role}) logged in successfully.", user.UserId, user.Role);
 
             return user;
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //                     CHANGE PASSWORD
+        // ════════════════════════════════════════════════════════════════
+        // The missing half of the examiner-onboarding flow: approval mails a
+        // temporary password and tells the new examiner to "change it after
+        // first login" — this is the endpoint that finally makes that possible.
+        // Works for every role (candidates change theirs the same way).
+        public async Task ChangePasswordAsync(int userId, string currentPassword, string newPassword)
+        {
+            // Trim exactly as Register/Login do, so a temp password pasted from
+            // the approval email (with its trailing newline) still verifies.
+            currentPassword = currentPassword?.Trim() ?? string.Empty;
+            newPassword = newPassword?.Trim() ?? string.Empty;
+
+            // A wrong CURRENT password is deliberately a ValidationException (400),
+            // not InvalidCredentialsException (401): the user *is* authenticated —
+            // their JWT proved that — they just mistyped a form field. A 401 here
+            // would make the frontend interceptor clear the session and bounce them
+            // to the login screen mid-form, which is hostile for a typo.
+            if (string.IsNullOrWhiteSpace(currentPassword))
+                throw new ValidationException("Current password is required.");
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+                throw new ValidationException("New password must be at least 6 characters.");
+
+            if (newPassword == currentPassword)
+                throw new ValidationException("New password must be different from the current password.");
+
+            // userId comes from the JWT (controller), never from the request body —
+            // a user can only ever change their OWN password through this path.
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new UserNotFoundException(userId);
+
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            {
+                // Failed current-password check on a logged-in account is worth a
+                // warning — repeated hits could be someone at an unlocked session.
+                _logger.LogWarning(
+                    "Change-password failed: wrong current password for user {UserId}.", user.UserId);
+                throw new ValidationException("Current password is incorrect.");
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
+
+            _logger.LogInformation("User {UserId} changed their password.", user.UserId);
         }
     }
 }

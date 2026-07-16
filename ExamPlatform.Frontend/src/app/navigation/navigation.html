@@ -86,6 +86,15 @@
           </a>
         </li>
 
+        <!-- AI Learning Coach — shown to every signed-in role. Candidates get personalized
+             coaching from their own results; Examiners/Admins get general platform guidance
+             (the screen and the backend both enforce that split). -->
+        <li>
+          <a routerLink="/ai-coach" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-robot"></i>AI Coach
+          </a>
+        </li>
+
       </ul>
 
       <!-- Right side actions -->
@@ -126,6 +135,9 @@
             <a routerLink="/notifications" class="dropdown-item-custom" (click)="closeProfle()">
               <i class="bi bi-bell me-2"></i>Notifications
               <span *ngIf="unreadCount() > 0" class="notif-badge-sm">{{ unreadCount() }}</span>
+            </a>
+            <a routerLink="/change-password" class="dropdown-item-custom" (click)="closeProfle()">
+              <i class="bi bi-shield-lock me-2"></i>Change Password
             </a>
             <div class="dropdown-divider"></div>
             <button class="dropdown-item-custom dropdown-logout" (click)="handleLogoutClick()">
@@ -181,8 +193,12 @@
         <a routerLink="/admin/examiner-requests"  class="mobile-link" (click)="closeMobile()"><i class="bi bi-person-lines-fill"></i>Requests</a>
       </ng-container>
 
+      <!-- AI Learning Coach — available to every signed-in role (see desktop links above). -->
+      <a routerLink="/ai-coach" class="mobile-link" (click)="closeMobile()"><i class="bi bi-robot"></i>AI Coach</a>
+
       <div class="mobile-divider"></div>
       <a routerLink="/notifications" class="mobile-link" (click)="closeMobile()"><i class="bi bi-bell"></i>Notifications</a>
+      <a routerLink="/change-password" class="mobile-link" (click)="closeMobile()"><i class="bi bi-shield-lock"></i>Change Password</a>
       <button class="mobile-link mobile-logout" (click)="handleLogoutClick()">
         <i class="bi bi-box-arrow-right"></i>Sign Out
       </button>

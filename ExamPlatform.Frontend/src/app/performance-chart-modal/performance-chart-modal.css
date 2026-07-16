@@ -29,12 +29,42 @@
   max-width: 600px;
   max-height: 85vh;
   background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(240,253,244,1) 100%); /* very light subtle teal gradient */
+  color: var(--text);
   z-index: 1;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* DARK MODE.
+   The gradient above is hardcoded white, so in dark mode the modal stayed a white card with
+   near-black text while the rest of the app went dark. The theme is set as data-theme on
+   <html>; :host-context reaches it even though ngOnInit re-parents this component to
+   <body> to escape z-index stacking contexts. Colours come from the global tokens so the
+   modal now tracks the theme like every other surface. */
+:host-context([data-theme="dark"]) .modal-content {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Bootstrap's .table-light header stays light regardless of data-bs-theme. */
+:host-context([data-theme="dark"]) .table > thead.table-light > tr > th {
+  background-color: var(--bg-secondary);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+:host-context([data-theme="dark"]) .table {
+  --bs-table-color: var(--text);
+  --bs-table-border-color: var(--border);
+  --bs-table-bg: transparent;
+}
+
+/* The default close button is a dark glyph — invert it on dark backgrounds. */
+:host-context([data-theme="dark"]) .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 /* Gradient accent border at the top */

@@ -188,10 +188,30 @@ namespace ExamPlatform.BLL.Tests.Services
         // ════════════════════════════════════════════════════════════════
 
         [Test]
-        public async Task GetResultAsync_ResultsNotYetPublished_ThrowsResultsNotPublishedException()
+        public async Task GetResultAsync_SubmittedButNotYetPublished_ReturnsAttempt()
         {
+            // Business rule REVISED (product decision, 2026-07): the score is visible
+            // immediately after submission — MCQ scoring is automatic, so there is nothing
+            // to wait for. The API layer withholds the per-question breakdown (correct
+            // answers) and the topic chart until results are published; the service no
+            // longer blocks the whole result.
             var attempt = TestDataBuilder.BuildSubmittedAttempt(1, 1);
             attempt.Exam = TestDataBuilder.BuildPublishedExam(); // still Published, not ResultsPublished
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+
+            var result = await _sut.GetResultAsync(1, 1);
+
+            result.AttemptId.Should().Be(1);
+            result.Score.Should().NotBeNull("the submitted score is available right away");
+        }
+
+        [Test]
+        public async Task GetResultAsync_AttemptStillInProgress_Throws()
+        {
+            // No score exists yet, and serving questions through the result endpoint
+            // would bypass the attempt flow.
+            var attempt = TestDataBuilder.BuildInProgressAttempt(1, 1);
+            attempt.Exam = TestDataBuilder.BuildPublishedExam();
             _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
 
             var act = async () => await _sut.GetResultAsync(1, 1);

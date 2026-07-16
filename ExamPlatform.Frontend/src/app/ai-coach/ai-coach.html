@@ -1,0 +1,275 @@
+<!-- AI Learning Coach — turns published results into a study plan.
+     Every value shown here (topic, %, priority) was computed by the backend; the AI supplies
+     only the prose. Rendered with interpolation, never innerHTML, so model output can never
+     inject markup. -->
+
+<div class="container py-4 animate-fade-in">
+
+  <div class="page-header">
+    <h3><i class="bi bi-robot me-2 text-primary"></i>AI Learning Coach</h3>
+    <p class="page-header-sub" *ngIf="isCandidate">
+      Ask me about your performance, weak topics, or what to study next.
+    </p>
+    <p class="page-header-sub" *ngIf="!isCandidate">
+      Ask me how ExamHub works.
+    </p>
+  </div>
+
+  <!-- Role notice: Examiners/Admins are told plainly why coaching is candidate-only,
+       rather than being shown a locked door or silently treated as a candidate. -->
+  <div *ngIf="!isCandidate" class="alert alert-info d-flex align-items-start gap-2" role="status">
+    <i class="bi bi-info-circle-fill mt-1"></i>
+    <div>
+      <strong>Personalized learning coaching is for candidates.</strong>
+      It is built on candidate performance data, which your account doesn't have.
+      I can still help with how ExamHub works — exams, publishing, results and certificates.
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ── Left: what the coach already knows (deterministic, no AI call) ── -->
+    <div class="col-lg-4" *ngIf="isCandidate">
+      <div class="card coach-side-card">
+        <div class="card-header">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-clipboard-data me-2 text-primary"></i>Your performance</h6>
+        </div>
+
+        <div *ngIf="isLoadingSnapshot" class="text-center py-4">
+          <div class="spinner-border spinner-border-sm text-primary"></div>
+          <p class="text-muted small mt-2 mb-0">Loading your results…</p>
+        </div>
+
+        <div class="card-body" *ngIf="!isLoadingSnapshot && snapshot">
+
+          <!-- No-data state -->
+          <div *ngIf="!snapshot.hasData" class="empty-state py-3">
+            <span class="empty-icon">📘</span>
+            <p class="small text-muted mb-0">
+              Complete an exam and wait for your results to be published — then I can coach you
+              on your topics.
+            </p>
+          </div>
+
+          <ng-container *ngIf="snapshot.hasData">
+            <div class="d-flex justify-content-between coach-stat">
+              <span class="text-muted small">Attempts</span>
+              <span class="fw-bold">{{ snapshot.totalAttempts }}</span>
+            </div>
+            <div class="d-flex justify-content-between coach-stat">
+              <span class="text-muted small">Average score</span>
+              <span class="fw-bold">{{ snapshot.averageScore | number: '1.0-1' }}</span>
+            </div>
+            <div class="d-flex justify-content-between coach-stat">
+              <span class="text-muted small">Pass rate</span>
+              <span class="fw-bold">{{ snapshot.passRate | number: '1.0-1' }}%</span>
+            </div>
+            <div class="d-flex justify-content-between coach-stat">
+              <span class="text-muted small">Certificates</span>
+              <span class="fw-bold">{{ snapshot.certificatesEarned }}</span>
+            </div>
+
+            <div *ngIf="snapshot.topics.length > 0" class="mt-3">
+              <div class="fw-semibold small mb-2">Topics analysed</div>
+              <div class="topic-chip" *ngFor="let t of snapshot.topics">
+                {{ t.topic }} <span class="topic-chip-score">{{ t.score | number: '1.0-0' }}%</span>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right: the conversation ────────────────────────────────────── -->
+    <div [ngClass]="isCandidate ? 'col-lg-8' : 'col-12'">
+      <div class="card coach-card">
+
+        <div class="card-body coach-transcript">
+
+          <!-- 1. Welcome state -->
+          <div *ngIf="messages.length === 0" class="coach-welcome">
+            <div class="coach-avatar mb-3"><i class="bi bi-robot"></i></div>
+            <h5 class="fw-bold mb-2">
+              {{ isCandidate && snapshot?.firstName ? 'Hi ' + snapshot?.firstName + '!' : 'Hi there!' }}
+            </h5>
+            <p class="text-muted mb-0" *ngIf="isCandidate">
+              I read your published results and turn them into a plan you can actually follow.
+              Ask me anything, or start with one of these:
+            </p>
+            <p class="text-muted mb-0" *ngIf="!isCandidate">
+              Ask me anything about using ExamHub, or start with one of these:
+            </p>
+          </div>
+
+          <!-- Transcript -->
+          <div *ngFor="let message of messages" class="coach-message" [ngClass]="message.role">
+
+            <!-- Candidate's question -->
+            <div *ngIf="message.role === 'user'" class="bubble bubble-user">
+              {{ message.text }}
+            </div>
+
+            <!-- Coach's answer -->
+            <div *ngIf="message.role === 'coach'" class="bubble bubble-coach">
+
+              <p *ngFor="let paragraph of paragraphs(message.text)" class="mb-2">{{ paragraph }}</p>
+
+              <ng-container *ngIf="message.result as result">
+
+                <!-- One-line "do this next" -->
+                <div *ngIf="result.summary" class="coach-summary">
+                  <i class="bi bi-lightbulb-fill me-2"></i>{{ result.summary }}
+                </div>
+
+                <!-- Strengths — backend-computed -->
+                <div *ngIf="result.strongTopics.length > 0" class="coach-block">
+                  <div class="coach-block-title">
+                    <i class="bi bi-star-fill me-2 text-warning"></i>Your strengths
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span class="strong-chip" *ngFor="let topic of result.strongTopics">
+                      {{ topic.topic }}
+                      <span class="strong-chip-score">{{ topic.score | number: '1.0-0' }}%</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Focus areas — topic/score/priority from the backend, reason from the AI -->
+                <div *ngIf="result.focusAreas.length > 0" class="coach-block">
+                  <div class="coach-block-title">
+                    <i class="bi bi-bullseye me-2 text-danger"></i>Focus areas
+                  </div>
+                  <div class="focus-card" *ngFor="let focus of result.focusAreas">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                      <span class="fw-semibold">{{ focus.topic }}</span>
+                      <span class="priority-badge" [ngClass]="priorityClass(focus.priority)">
+                        {{ focus.priority }}
+                      </span>
+                    </div>
+                    <div class="focus-bar">
+                      <div class="focus-bar-fill" [style.width.%]="focus.score"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                      <small class="text-muted">{{ focus.reason }}</small>
+                      <small class="fw-bold ms-2">{{ focus.score | number: '1.0-0' }}%</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Study plan -->
+                <div *ngIf="result.studyPlan.length > 0" class="coach-block">
+                  <div class="coach-block-title">
+                    <i class="bi bi-calendar-check me-2 text-primary"></i>Your study plan
+                  </div>
+                  <div class="plan-timeline">
+                    <div class="plan-day" *ngFor="let day of result.studyPlan">
+                      <div class="plan-day-marker">{{ day.day }}</div>
+                      <div class="plan-day-body">
+                        <div class="fw-semibold">{{ day.focus }}</div>
+                        <ul class="plan-tasks">
+                          <li *ngFor="let task of day.tasks">{{ task }}</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Follow-ups -->
+                <div *ngIf="result.suggestedQuestions.length > 0" class="coach-block">
+                  <div class="coach-block-title">
+                    <i class="bi bi-chat-dots me-2 text-muted"></i>Ask next
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="prompt-chip"
+                      *ngFor="let suggestion of result.suggestedQuestions"
+                      [disabled]="isSending"
+                      (click)="usePrompt(suggestion)">
+                      {{ suggestion }}
+                    </button>
+                  </div>
+                </div>
+
+              </ng-container>
+            </div>
+          </div>
+
+          <!-- 2. Loading state -->
+          <div *ngIf="isSending" class="coach-message coach">
+            <div class="bubble bubble-coach d-flex align-items-center gap-2">
+              <div class="spinner-border spinner-border-sm text-primary"></div>
+              <span class="text-muted">
+                {{ isCandidate ? 'Analysing your completed assessments…' : 'Looking that up…' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 5. AI-unavailable / error state (429, 503, 403, network) -->
+          <div *ngIf="errorMessage" class="alert alert-warning d-flex align-items-start gap-2 mt-2" role="alert">
+            <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+            <div class="flex-grow-1">
+              <div>{{ errorMessage }}</div>
+              <button type="button" class="btn btn-sm btn-outline-primary mt-2" (click)="retry()" [disabled]="isSending">
+                <i class="bi bi-arrow-clockwise me-1"></i>Try again
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suggested prompt cards (welcome state only) -->
+        <div *ngIf="messages.length === 0" class="px-3 pb-2">
+          <div class="d-flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="prompt-chip"
+              *ngFor="let prompt of suggestedPrompts"
+              [disabled]="isSending"
+              (click)="usePrompt(prompt)">
+              <i class="bi bi-stars me-1"></i>{{ prompt }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Composer -->
+        <div class="card-footer coach-composer">
+          <label for="coach-input" class="visually-hidden">Ask the AI Learning Coach a question</label>
+          <div class="d-flex gap-2 align-items-end">
+            <textarea
+              id="coach-input"
+              class="form-control coach-input"
+              rows="1"
+              [(ngModel)]="draft"
+              (keydown)="onKeydown($event)"
+              [disabled]="isSending"
+              [attr.aria-invalid]="isTooLong"
+              aria-describedby="coach-input-help"
+              placeholder="{{ isCandidate ? 'e.g. What are my weakest topics?' : 'e.g. How do I publish results?' }}">
+            </textarea>
+
+            <button
+              type="button"
+              class="btn btn-primary coach-send"
+              (click)="send()"
+              [disabled]="!canSend"
+              aria-label="Send question">
+              <span *ngIf="!isSending"><i class="bi bi-send-fill"></i></span>
+              <span *ngIf="isSending" class="spinner-border spinner-border-sm"></span>
+            </button>
+          </div>
+
+          <div id="coach-input-help" class="d-flex justify-content-between mt-1">
+            <small class="text-danger" *ngIf="isTooLong">
+              That's too long — please keep it under {{ maxMessageLength }} characters.
+            </small>
+            <small class="text-muted" *ngIf="!isTooLong">Press Enter to send, Shift + Enter for a new line.</small>
+            <small class="text-muted" [class.text-danger]="isTooLong">
+              {{ trimmedDraft.length }}/{{ maxMessageLength }}
+            </small>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

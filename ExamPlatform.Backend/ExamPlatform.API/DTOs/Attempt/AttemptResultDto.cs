@@ -1,7 +1,11 @@
 namespace ExamPlatform.API.DTOs.Attempt
 {
-    // Full result view returned by GET /api/attempts/{id}/result.
-    // Only available when exam.ExamStatus == ResultsPublished.
+    // Result view returned by GET /api/attempts/{id}/result.
+    //
+    // Score/pass-fail are available immediately after submission (scoring is automatic).
+    // The per-question breakdown — which exposes correct answers — plus the topic chart
+    // stay empty until the examiner publishes results; ResultsPublished tells the UI
+    // which of the two states it is rendering.
     public class AttemptResultDto
     {
         public int AttemptId { get; set; }
@@ -12,9 +16,15 @@ namespace ExamPlatform.API.DTOs.Attempt
         public bool? IsPassed { get; set; }
         public int? TimeTakenSeconds { get; set; }
 
+        // False = answer review and topic chart are still locked; the UI shows the
+        // score with a "review available once results are published" notice.
+        public bool ResultsPublished { get; set; }
+
         public string? TopicScoresUrl { get; set; }
 
-        // Breakdown of each question in the exam and how the candidate answered
+        // Per-question breakdown with correct answers. EMPTY until ResultsPublished —
+        // an early finisher must not be able to leak the answer key while other
+        // candidates are still taking the exam.
         public List<PerQuestionResultDto> Questions { get; set; } = new();
     }
 }

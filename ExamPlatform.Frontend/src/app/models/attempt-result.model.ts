@@ -1,5 +1,7 @@
-// AttemptResultModel — returned by GET /api/attempts/{id}/result after results are published.
-// Why it exists: the exam-result screen needs typed per-question breakdown data.
+// AttemptResultModel — returned by GET /api/attempts/{id}/result.
+// The score/pass-fail are available immediately after submission; the per-question
+// breakdown (with correct answers) and the topic chart arrive only after the examiner
+// publishes results — resultsPublished tells the screen which state to render.
 // How Angular uses it: exam-result component gets the attemptId from the route param and
 // fetches this model; *ngFor renders the per-question table.
 
@@ -27,6 +29,9 @@ export class AttemptResultModel {
     public timeTakenSeconds: number | null = null,
     public chartUrl: string | null = null,
     public topicScoresUrl: string | null = null,
+    // False until the examiner publishes: questions[] is empty and the topic chart
+    // is unavailable — the screen shows a "review pending" notice instead.
+    public resultsPublished: boolean = false,
     public questions: PerQuestionResultModel[] = []
   ) {}
 }

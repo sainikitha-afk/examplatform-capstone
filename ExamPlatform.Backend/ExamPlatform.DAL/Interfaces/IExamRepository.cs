@@ -28,6 +28,15 @@ namespace ExamPlatform.DAL.Interfaces
         Task<(IEnumerable<Exam> Items, int TotalCount)> GetPublishedPagedAsync(
             int? categoryId, int page, int pageSize);
 
+        // Candidate browse: Published exams the candidate can still sit — i.e. excluding
+        // exams they have already COMPLETED (Submitted/AutoSubmitted). One attempt per
+        // candidate is the platform rule, so a completed exam is no longer available and
+        // must not be listed (clicking it could only ever produce a 409). Exams with an
+        // in-progress attempt remain listed so the candidate can resume. Filtering happens
+        // in SQL so page counts stay correct.
+        Task<(IEnumerable<Exam> Items, int TotalCount)> GetAvailableForCandidatePagedAsync(
+            int userId, int? categoryId, int page, int pageSize);
+
         // Paginated variant of GetByExaminerAsync — scoped to one examiner, with paging.
         Task<(IEnumerable<Exam> Items, int TotalCount)> GetByExaminerPagedAsync(
             int examinerId, int page, int pageSize);

@@ -2,7 +2,9 @@
 
 <div class="modal-content" (click)="$event.stopPropagation()">
   <div class="modal-header border-0 pb-0 px-4 pt-4">
-    <h5 class="modal-title fw-bold text-dark">
+    <!-- No .text-dark here: that is a fixed near-black and stayed unreadable in dark mode.
+         The title now inherits .modal-content's colour, which follows the theme token. -->
+    <h5 class="modal-title fw-bold">
       <i class="bi bi-radar me-2 text-primary"></i>Performance Analytics
     </h5>
     <button type="button" class="btn-close" aria-label="Close" (click)="onClose()"></button>

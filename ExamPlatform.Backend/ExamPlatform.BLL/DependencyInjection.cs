@@ -31,8 +31,23 @@ namespace ExamPlatform.BLL
             services.AddHostedService<CommonBackgroundService>();
             services.AddScoped<IAnalyticsProcessor, AnalyticsProcessor>();
 
+            // ───────────── AI LEARNING COACH ─────────────
+            // Reads the topic-score JSON the analytics pipeline already produces. Registered
+            // separately from the coach service so tests can stub the file system.
+            services.AddScoped<ITopicScoreReader, TopicScoreReader>();
+            services.AddScoped<ILearningCoachService, LearningCoachService>();
+
             // ───────────── HTTP SERVICES ─────────────
             services.AddHttpClient<IAgentService, AgentService>();
+
+            // The coach's own Gemini channel, kept separate from AgentService so the working
+            // question-categorization pipeline is not disturbed. The timeout is what turns a
+            // hanging provider into a prompt "temporarily unavailable" instead of a request
+            // that holds a connection open until the client gives up.
+            services.AddHttpClient<ICoachGeminiClient, CoachGeminiClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(20);
+            });
 
             // ───────────── EMAIL SETTINGS (Options Pattern) ─────────────
             // Manually maps "Smtp:*" keys from IConfiguration to EmailSettings.

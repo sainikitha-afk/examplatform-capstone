@@ -95,7 +95,8 @@ namespace ExamPlatform.BLL.Tests.Services
         {
             // ─── ARRANGE ──────────────────────────────────────────────
             // 2 passed (score ≥ passing), 1 failed. Expected pass rate = 66.67%.
-            var exam = TestDataBuilder.BuildPublishedExam(examId: 1);
+            // Exams must be ResultsPublished for analytics to include the attempts.
+            var exam = TestDataBuilder.BuildResultsPublishedExam(examId: 1);
 
             var a1 = TestDataBuilder.BuildSubmittedAttempt(1, 1, 1, score: 40m, isPassed: true);
             var a2 = TestDataBuilder.BuildSubmittedAttempt(2, 1, 2, score: 35m, isPassed: true);
@@ -103,8 +104,8 @@ namespace ExamPlatform.BLL.Tests.Services
 
             // Attach Exam navigation so ExamTitle is available.
             a1.Exam = exam;
-            a2.Exam = TestDataBuilder.BuildPublishedExam(examId: 2);
-            a3.Exam = TestDataBuilder.BuildPublishedExam(examId: 3);
+            a2.Exam = TestDataBuilder.BuildResultsPublishedExam(examId: 2);
+            a3.Exam = TestDataBuilder.BuildResultsPublishedExam(examId: 3);
 
             _attemptRepoMock.Setup(r => r.GetByUserAsync(1))
                              .ReturnsAsync(new List<Attempt> { a1, a2, a3 });
@@ -127,7 +128,7 @@ namespace ExamPlatform.BLL.Tests.Services
         {
             // ─── ARRANGE ──────────────────────────────────────────────
             // Two attempts on the same exam — BestScores should pick the higher one.
-            var exam = TestDataBuilder.BuildPublishedExam(examId: 1);
+            var exam = TestDataBuilder.BuildResultsPublishedExam(examId: 1);
 
             var a1 = TestDataBuilder.BuildSubmittedAttempt(1, 1, examId: 1, score: 30m, isPassed: false);
             var a2 = TestDataBuilder.BuildSubmittedAttempt(2, 1, examId: 1, score: 45m, isPassed: true);
@@ -146,6 +147,114 @@ namespace ExamPlatform.BLL.Tests.Services
             result.BestScores.Should().HaveCount(1); // one entry per exam
             result.BestScores.First().BestScore.Should().Be(45m); // the higher score
             result.BestScores.First().IsPassed.Should().BeTrue();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetCandidateDashboardAsync — PUBLICATION RULE (no result leak)
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetCandidateDashboardAsync_SubmittedOnUnpublishedExam_IsExcluded()
+        {
+            // A submitted attempt whose exam is only Published (results NOT released)
+            // must not appear in analytics — no score, pass/fail, or best-score leak.
+            var a1 = TestDataBuilder.BuildSubmittedAttempt(1, 1, examId: 1, score: 45m, isPassed: true);
+            a1.Exam = TestDataBuilder.BuildPublishedExam(examId: 1); // ExamStatus.Published
+
+            _attemptRepoMock.Setup(r => r.GetByUserAsync(1))
+                             .ReturnsAsync(new List<Attempt> { a1 });
+            _certRepoMock.Setup(r => r.GetByUserAsync(1))
+                         .ReturnsAsync(new List<Certificate>());
+
+            var result = await _sut.GetCandidateDashboardAsync(userId: 1);
+
+            result.TotalAttempts.Should().Be(0);        // excluded
+            result.AverageScore.Should().Be(0.0);       // no score leaked
+            result.PassRate.Should().Be(0.0);           // no pass/fail leaked
+            result.BestScores.Should().BeEmpty();       // no best-score entry leaked
+        }
+
+        [Test]
+        public async Task GetCandidateDashboardAsync_AutoSubmittedOnUnpublishedExam_IsExcluded()
+        {
+            var a1 = TestDataBuilder.BuildSubmittedAttempt(1, 1, examId: 1, score: 50m, isPassed: true);
+            a1.AttemptStatus = AttemptStatus.AutoSubmitted;
+            a1.Exam = TestDataBuilder.BuildPublishedExam(examId: 1); // not ResultsPublished
+
+            _attemptRepoMock.Setup(r => r.GetByUserAsync(1))
+                             .ReturnsAsync(new List<Attempt> { a1 });
+            _certRepoMock.Setup(r => r.GetByUserAsync(1))
+                         .ReturnsAsync(new List<Certificate>());
+
+            var result = await _sut.GetCandidateDashboardAsync(userId: 1);
+
+            result.TotalAttempts.Should().Be(0);
+            result.BestScores.Should().BeEmpty();
+        }
+
+        [Test]
+        public async Task GetCandidateDashboardAsync_AutoSubmittedOnResultsPublishedExam_IsIncluded()
+        {
+            // AutoSubmitted on a ResultsPublished exam IS a legitimate, published result.
+            var a1 = TestDataBuilder.BuildSubmittedAttempt(1, 1, examId: 1, score: 40m, isPassed: true);
+            a1.AttemptStatus = AttemptStatus.AutoSubmitted;
+            a1.Exam = TestDataBuilder.BuildResultsPublishedExam(examId: 1);
+
+            _attemptRepoMock.Setup(r => r.GetByUserAsync(1))
+                             .ReturnsAsync(new List<Attempt> { a1 });
+            _certRepoMock.Setup(r => r.GetByUserAsync(1))
+                         .ReturnsAsync(new List<Certificate>());
+
+            var result = await _sut.GetCandidateDashboardAsync(userId: 1);
+
+            result.TotalAttempts.Should().Be(1);
+            result.PassRate.Should().Be(100.0);
+            result.BestScores.Should().HaveCount(1);
+            result.BestScores.First().BestScore.Should().Be(40m);
+        }
+
+        [Test]
+        public async Task GetCandidateDashboardAsync_MixedPublishedAndUnpublished_CountsOnlyPublished()
+        {
+            var published = TestDataBuilder.BuildSubmittedAttempt(1, 1, examId: 1, score: 40m, isPassed: true);
+            published.Exam = TestDataBuilder.BuildResultsPublishedExam(examId: 1);
+
+            var unpublished = TestDataBuilder.BuildSubmittedAttempt(2, 1, examId: 2, score: 10m, isPassed: false);
+            unpublished.Exam = TestDataBuilder.BuildPublishedExam(examId: 2);
+
+            _attemptRepoMock.Setup(r => r.GetByUserAsync(1))
+                             .ReturnsAsync(new List<Attempt> { published, unpublished });
+            _certRepoMock.Setup(r => r.GetByUserAsync(1))
+                         .ReturnsAsync(new List<Certificate>());
+
+            var result = await _sut.GetCandidateDashboardAsync(userId: 1);
+
+            result.TotalAttempts.Should().Be(1);          // only the published one
+            result.AverageScore.Should().Be(40.0);        // unpublished 10 excluded
+            result.PassRate.Should().Be(100.0);           // unpublished fail excluded
+            result.BestScores.Should().HaveCount(1);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetCandidateDashboardAsync — CERTIFICATE COUNT (exclude revoked)
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetCandidateDashboardAsync_RevokedCertificate_IsExcludedFromCount()
+        {
+            _attemptRepoMock.Setup(r => r.GetByUserAsync(1))
+                             .ReturnsAsync(new List<Attempt>());
+            _certRepoMock.Setup(r => r.GetByUserAsync(1))
+                         .ReturnsAsync(new List<Certificate>
+                         {
+                             TestDataBuilder.BuildCertificate(1, status: CertificateStatus.Issued),
+                             TestDataBuilder.BuildCertificate(2, status: CertificateStatus.Revoked),
+                             TestDataBuilder.BuildCertificate(3, status: CertificateStatus.Issued),
+                         });
+
+            var result = await _sut.GetCandidateDashboardAsync(userId: 1);
+
+            result.CertificatesEarned.Should().Be(2); // 2 issued, revoked one excluded
         }
 
         // ════════════════════════════════════════════════════════════════

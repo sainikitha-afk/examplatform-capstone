@@ -23,9 +23,12 @@ export class ExamApiService {
     return this.http.get<PagedResultModel<ExamSummaryModel>>(this.baseUrl, { params });
   }
 
-  // GET /api/exams/mine — examiner's own exams (paginated)
-  loadMyExams(page: number = 1): Observable<PagedResultModel<ExamSummaryModel>> {
-    const params = new HttpParams().set('page', page).set('pageSize', 10);
+  // GET /api/exams/mine — examiner's own exams (paginated).
+  // pageSize defaults to 10 for the manage-exams list; the examiner dashboard passes a
+  // larger size so its Draft/Published/Results counts cover ALL the examiner's exams,
+  // not just the first page. (The backend clamps pageSize to [1, 100].)
+  loadMyExams(page: number = 1, pageSize: number = 10): Observable<PagedResultModel<ExamSummaryModel>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
     return this.http.get<PagedResultModel<ExamSummaryModel>>(`${this.baseUrl}/mine`, { params });
   }
 

@@ -56,11 +56,17 @@ namespace ExamPlatform.BLL.Services
             // GetByUserAsync includes the Exam navigation (for title and passing marks).
             var allAttempts = (await _attemptRepository.GetByUserAsync(userId)).ToList();
 
-            // Filter to only evaluated (submitted) attempts — InProgress attempts
-            // don't have scores yet.
+            // Filter to only evaluated (submitted) attempts whose results the examiner
+            // has actually PUBLISHED. InProgress attempts have no score yet, and an
+            // attempt on an exam that is not yet ResultsPublished must not leak its
+            // score/pass-fail through analytics — this mirrors the exact gate the
+            // result endpoint enforces (AttemptService.GetResultAsync:
+            // ExamStatus == ResultsPublished), so /analytics/me and /result agree.
             var submittedAttempts = allAttempts
-                .Where(a => a.AttemptStatus == AttemptStatus.Submitted ||
-                            a.AttemptStatus == AttemptStatus.AutoSubmitted)
+                .Where(a => (a.AttemptStatus == AttemptStatus.Submitted ||
+                             a.AttemptStatus == AttemptStatus.AutoSubmitted) &&
+                            a.Exam != null &&
+                            a.Exam.ExamStatus == ExamStatus.ResultsPublished)
                 .ToList();
 
             // GetByUserAsync on certificate repository includes Exam navigation.
@@ -83,7 +89,10 @@ namespace ExamPlatform.BLL.Services
                 ? (double)passedCount / totalAttempts * 100.0
                 : 0.0;
 
-            int certificatesEarned = certs.Count;
+            // Only Issued (not Revoked) certificates count toward the candidate's
+            // total. Revocation is modeled as a status change (the row is retained
+            // for audit), so a revoked certificate must not inflate this figure.
+            int certificatesEarned = certs.Count(c => c.CertStatus == CertificateStatus.Issued);
 
             // Best score per exam: group by ExamId, take the highest score.
             // GroupBy in LINQ-to-Objects: materialised after the ToList() above.

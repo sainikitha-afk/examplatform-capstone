@@ -32,6 +32,45 @@ describe('QuestionApiService', () => {
     req.flush({ items: [], totalCount: 0 });
   });
 
+  it('omits categoryId entirely when no category is selected (null)', () => {
+    // Regression: "All Categories" must NOT send ?categoryId=null (→ HTTP 400).
+    service.loadQuestions(null, '', '', 1, 10).subscribe();
+    const req = httpMock.expectOne(r => r.url === baseUrl);
+    expect(req.request.params.has('categoryId')).toBe(false);
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('pageSize')).toBe('10');
+    req.flush({ items: [], totalCount: 0 });
+  });
+
+  it('omits categoryId when handed the string "null" (defensive)', () => {
+    // A native <select> bound with [value] can yield the string "null".
+    service.loadQuestions('null' as any, '', '', 1, 10).subscribe();
+    const req = httpMock.expectOne(r => r.url === baseUrl);
+    expect(req.request.params.has('categoryId')).toBe(false);
+    req.flush({ items: [], totalCount: 0 });
+  });
+
+  it('sends a numeric categoryId when a category is selected', () => {
+    service.loadQuestions(7, '', '', 1, 10).subscribe();
+    const req = httpMock.expectOne(r => r.url === baseUrl);
+    expect(req.request.params.get('categoryId')).toBe('7');
+    req.flush({ items: [], totalCount: 0 });
+  });
+
+  it('omits difficulty and search when cleared, but sends them when set', () => {
+    service.loadQuestions(null, '', '', 1, 10).subscribe();
+    const req1 = httpMock.expectOne(r => r.url === baseUrl);
+    expect(req1.request.params.has('difficulty')).toBe(false);
+    expect(req1.request.params.has('search')).toBe(false);
+    req1.flush({ items: [], totalCount: 0 });
+
+    service.loadQuestions(null, 'Hard', 'sql', 1, 10).subscribe();
+    const req2 = httpMock.expectOne(r => r.url === baseUrl);
+    expect(req2.request.params.get('difficulty')).toBe('Hard');
+    expect(req2.request.params.get('search')).toBe('sql');
+    req2.flush({ items: [], totalCount: 0 });
+  });
+
   it('createQuestion POSTs the MCQ payload', () => {
     const q = new CreateQuestionModel(1, 'What is DI?', 10, 'Medium');
     service.createQuestion(q).subscribe();
