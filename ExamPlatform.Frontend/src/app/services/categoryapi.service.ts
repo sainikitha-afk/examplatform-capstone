@@ -5,6 +5,7 @@
 //   so the rest of the app always works with typed objects, never raw plain objects.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -16,7 +17,7 @@ interface UpdateCategoryBody { catName: string; description: string; }
 
 @Injectable({ providedIn: 'root' })
 export class CategoryApiService {
-  private baseUrl = 'http://localhost:5014/api/categories';
+  private baseUrl = environment.apiBaseUrl + '/api/categories';
 
   constructor(private http: HttpClient) {}
 

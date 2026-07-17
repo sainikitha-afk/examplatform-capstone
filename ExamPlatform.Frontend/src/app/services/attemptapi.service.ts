@@ -4,6 +4,7 @@
 //   in response to dispatched actions.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AttemptResumeModel, AttemptSummaryModel, SaveAnswerModel } from '../models/attempt.model';
@@ -12,7 +13,7 @@ import { PagedResultModel } from '../models/paged-result.model';
 
 @Injectable({ providedIn: 'root' })
 export class AttemptApiService {
-  private baseUrl = 'http://localhost:5014/api/attempts';
+  private baseUrl = environment.apiBaseUrl + '/api/attempts';
 
   constructor(private http: HttpClient) {}
 

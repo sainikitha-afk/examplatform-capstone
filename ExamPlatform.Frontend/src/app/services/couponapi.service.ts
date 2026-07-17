@@ -2,13 +2,14 @@
 // + admin coupon management).
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CouponValidationResultModel } from '../models/subscription.model';
 
 @Injectable({ providedIn: 'root' })
 export class CouponApiService {
-  private baseUrl = 'http://localhost:5014/api/coupons';
+  private baseUrl = environment.apiBaseUrl + '/api/coupons';
 
   constructor(private http: HttpClient) {}
 

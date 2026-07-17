@@ -2,6 +2,7 @@
 // subscription dashboard, upgrade checkout, pricing page).
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
@@ -11,7 +12,7 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionApiService {
-  private baseUrl = 'http://localhost:5014/api/subscriptions';
+  private baseUrl = environment.apiBaseUrl + '/api/subscriptions';
 
   constructor(private http: HttpClient) {}
 

@@ -8,6 +8,7 @@
 //   so no raw backend error or provider payload is ever rendered.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -16,7 +17,7 @@ import { CoachAnswerModel, CoachSnapshotModel, CoachTurn } from '../models/coach
 @Injectable({ providedIn: 'root' })
 export class CoachApiService {
   // Same convention as every other service in this app (no environments/ folder exists).
-  private baseUrl = 'http://localhost:5014/api/coach';
+  private baseUrl = environment.apiBaseUrl + '/api/coach';
 
   constructor(private http: HttpClient) {}
 

@@ -1,5 +1,7 @@
 using ExamPlatform.DAL;
+using ExamPlatform.DAL.Contexts;
 using ExamPlatform.BLL;
+using Microsoft.EntityFrameworkCore;
 using ExamPlatform.API.Helpers;
 using ExamPlatform.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -33,11 +35,21 @@ namespace ExamPlatform.API
             #endregion
 
             #region CORS
+            // Allowed origins come from configuration so the deployed frontend's
+            // origin can be added in Azure (App Setting "Cors:AllowedOrigins:0" = the
+            // Static Web App URL) without a code change. Falls back to the local
+            // Angular dev origin when nothing is configured.
+            var corsOrigins = builder.Configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>();
+            if (corsOrigins is null || corsOrigins.Length == 0)
+                corsOrigins = new[] { "http://localhost:4200" };
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AngularDev", policy =>
                 {
-                    policy.WithOrigins("http://localhost:4200")
+                    policy.WithOrigins(corsOrigins)
                         .AllowAnyHeader()
                         .AllowAnyMethod();
                 });
@@ -142,6 +154,33 @@ namespace ExamPlatform.API
             #endregion
 
             var app = builder.Build();
+
+            #region Database Migration
+            // Apply any pending EF Core migrations at startup. On Azure the Postgres
+            // database starts empty, so without this the app would crash on the first
+            // query (no tables). Migrate() is idempotent — it only applies migrations
+            // that haven't run yet, so it is a safe no-op once the schema is current.
+            // Gated behind a config flag (default on) so it can be disabled if a
+            // separate migration step is ever preferred.
+            if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
+            {
+                using var scope = app.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<ExamPlatformContext>();
+                var startupLogger = scope.ServiceProvider
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("Startup.Migration");
+                try
+                {
+                    db.Database.Migrate();
+                    startupLogger.LogInformation("Database migrations applied (or already up to date).");
+                }
+                catch (Exception ex)
+                {
+                    startupLogger.LogError(ex, "Database migration failed at startup.");
+                    throw; // fail fast — a mis-migrated DB should stop the app, not serve broken data
+                }
+            }
+            #endregion
 
             #region Development-only Middleware
             if (app.Environment.IsDevelopment())

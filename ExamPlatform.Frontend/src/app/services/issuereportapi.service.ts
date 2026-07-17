@@ -4,6 +4,7 @@
 // constructor-injected HttpClient, one method per endpoint.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { IssueReportModel, CreateIssueReportModel } from '../models/issue-report.model';
@@ -11,7 +12,7 @@ import { PagedResultModel } from '../models/paged-result.model';
 
 @Injectable({ providedIn: 'root' })
 export class IssueReportApiService {
-  private baseUrl = 'http://localhost:5014/api/issue-reports';
+  private baseUrl = environment.apiBaseUrl + '/api/issue-reports';
 
   constructor(private http: HttpClient) {}
 

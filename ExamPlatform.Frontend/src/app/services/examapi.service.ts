@@ -4,6 +4,7 @@
 // How Angular uses it: @Injectable root singleton, constructor-injected into components.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ExamSummaryModel, ExamDetailModel, CreateExamModel, UpdateExamModel } from '../models/exam.model';
@@ -12,7 +13,7 @@ import { PagedResultModel } from '../models/paged-result.model';
 
 @Injectable({ providedIn: 'root' })
 export class ExamApiService {
-  private baseUrl = 'http://localhost:5014/api/exams';
+  private baseUrl = environment.apiBaseUrl + '/api/exams';
 
   constructor(private http: HttpClient) {}
 

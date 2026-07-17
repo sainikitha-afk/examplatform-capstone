@@ -2,13 +2,14 @@
 // POST submit is anonymous (no auth token). Admin read/approve/reject require Admin JWT.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ExaminerRequestModel, SubmitExaminerRequestModel } from '../models/examiner-request.model';
 
 @Injectable({ providedIn: 'root' })
 export class ExaminerRequestApiService {
-  private baseUrl = 'http://localhost:5014/api/examiner-requests';
+  private baseUrl = environment.apiBaseUrl + '/api/examiner-requests';
 
   constructor(private http: HttpClient) {}
 

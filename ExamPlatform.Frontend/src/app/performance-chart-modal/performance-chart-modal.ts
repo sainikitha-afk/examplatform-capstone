@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ElementRef, OnInit, OnDestroy } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
@@ -104,7 +105,7 @@ export class PerformanceChartModal implements OnChanges, OnInit, OnDestroy {
 
     this.applyThemeColors();
 
-    const fullUrl = url.startsWith('/') ? `http://localhost:5014${url}` : url;
+    const fullUrl = url.startsWith('/') ? `${environment.apiBaseUrl}${url}` : url;
 
     this.http.get<Record<string, number>>(fullUrl).subscribe({
       next: (scores) => {

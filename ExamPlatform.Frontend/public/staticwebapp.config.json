@@ -1,0 +1,14 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/*.{css,js,png,gif,ico,jpg,jpeg,svg,woff,woff2,ttf,eot,json,txt,map,webp}"
+    ]
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    }
+  }
+}

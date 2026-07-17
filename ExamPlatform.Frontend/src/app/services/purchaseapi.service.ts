@@ -2,13 +2,14 @@
 // + candidate purchase/billing history).
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ChargeRequestModel, CandidatePurchaseModel, PaymentModel } from '../models/subscription.model';
 
 @Injectable({ providedIn: 'root' })
 export class PurchaseApiService {
-  private baseUrl = 'http://localhost:5014/api/purchases';
+  private baseUrl = environment.apiBaseUrl + '/api/purchases';
 
   constructor(private http: HttpClient) {}
 

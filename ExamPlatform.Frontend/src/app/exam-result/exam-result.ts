@@ -2,6 +2,7 @@
 // CONCEPTS DEMO: route parameter (:attemptId), *ngFor table, [ngClass] for pass/fail colouring.
 
 import { Component, OnInit } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { AttemptApiService } from '../services/attemptapi.service';
@@ -63,7 +64,7 @@ export class ExamResult implements OnInit {
 
   private loadTopicScores(url: string): void {
     // If it's a relative URL from backend, append the backend URL
-    const fullUrl = url.startsWith('/') ? `http://localhost:5014${url}` : url;
+    const fullUrl = url.startsWith('/') ? `${environment.apiBaseUrl}${url}` : url;
     this.http.get<Record<string, number>>(fullUrl).subscribe({
       next: (scores) => {
         const labels = Object.keys(scores).map(k => {

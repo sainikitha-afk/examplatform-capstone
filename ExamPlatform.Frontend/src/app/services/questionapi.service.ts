@@ -3,6 +3,7 @@
 // How Angular uses it: constructor-injected; methods return Observables.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { QuestionModel, CreateQuestionModel } from '../models/question.model';
@@ -18,7 +19,7 @@ interface ImportResult {
 
 @Injectable({ providedIn: 'root' })
 export class QuestionApiService {
-  private baseUrl = 'http://localhost:5014/api/questions';
+  private baseUrl = environment.apiBaseUrl + '/api/questions';
 
   constructor(private http: HttpClient) {}
 

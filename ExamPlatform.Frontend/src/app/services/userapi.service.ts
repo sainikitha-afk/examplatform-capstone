@@ -3,6 +3,7 @@
 // How Angular uses it: injected via constructor; returns Observables the component subscribes to.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { UserModel, CreateExaminerModel } from '../models/user.model';
@@ -10,7 +11,7 @@ import { PagedResultModel } from '../models/paged-result.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserApiService {
-  private baseUrl = 'http://localhost:5014/api/users';
+  private baseUrl = environment.apiBaseUrl + '/api/users';
 
   constructor(private http: HttpClient) {}
 

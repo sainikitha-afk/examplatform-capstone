@@ -4,6 +4,7 @@
 // CONCEPT DEMO: tap operator — logs analytics responses for debugging without altering the data.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -11,7 +12,7 @@ import { CandidateDashboardModel, PlatformStatsModel } from '../models/analytics
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
-  private baseUrl = 'http://localhost:5014/api/analytics';
+  private baseUrl = environment.apiBaseUrl + '/api/analytics';
 
   constructor(private http: HttpClient) {}
 

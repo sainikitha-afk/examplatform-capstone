@@ -6,6 +6,7 @@
 // CONCEPT DEMO: catchError operator (transforms HTTP errors into user-friendly messages).
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, throwError } from 'rxjs';
@@ -17,7 +18,7 @@ import { currentUser$ } from '../rxjs/auth.subject';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private baseUrl = 'http://localhost:5014/api/auth';
+  private baseUrl = environment.apiBaseUrl + '/api/auth';
 
   // Constructor injection: Angular DI provides HttpClient and Router.
   // RULE: never use inject() — always constructor injection.

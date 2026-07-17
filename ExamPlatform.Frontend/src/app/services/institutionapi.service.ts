@@ -2,13 +2,14 @@
 // Verification badge: examiner submit, admin approve/reject).
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { InstitutionModel } from '../models/subscription.model';
 
 @Injectable({ providedIn: 'root' })
 export class InstitutionApiService {
-  private baseUrl = 'http://localhost:5014/api/institutions';
+  private baseUrl = environment.apiBaseUrl + '/api/institutions';
 
   constructor(private http: HttpClient) {}
 

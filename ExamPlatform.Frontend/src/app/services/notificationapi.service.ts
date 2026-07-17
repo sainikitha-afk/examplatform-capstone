@@ -5,6 +5,7 @@
 //   can see real API data flowing through the Observable chain without modifying the data.
 
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -13,7 +14,7 @@ import { PagedResultModel } from '../models/paged-result.model';
 
 @Injectable({ providedIn: 'root' })
 export class NotificationApiService {
-  private baseUrl = 'http://localhost:5014/api/notifications';
+  private baseUrl = environment.apiBaseUrl + '/api/notifications';
 
   constructor(private http: HttpClient) {}
 
