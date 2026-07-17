@@ -16,6 +16,17 @@ namespace ExamPlatform.API.DTOs.Exam
         public DateTime EndTime { get; set; }
         public string ExamStatus { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public bool IsPremium { get; set; }
+        public decimal? Price { get; set; }
+        public bool IsFeatured { get; set; }
+
+        // Institute branding (Part 3/7) — populated live only when the owning
+        // examiner has an Admin-Verified institution. Null/false otherwise. The
+        // frontend shows the "Institute Verified" badge (name + logo) from these.
+        public bool IsInstituteVerified { get; set; }
+        public string? InstituteName { get; set; }
+        public string? InstituteLogoUrl { get; set; }
+
         // Questions ordered by QuestionOrder, with full option detail including IsCorrect.
         public List<ExamQuestionDto> Questions { get; set; } = new();
     }

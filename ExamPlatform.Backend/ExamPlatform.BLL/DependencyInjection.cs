@@ -26,6 +26,16 @@ namespace ExamPlatform.BLL
             services.AddScoped<IExaminerRequestService, ExaminerRequestService>();
             services.AddScoped<IIssueReportService, IssueReportService>();
 
+            // ───────────── SUBSCRIPTION & PAYMENT SYSTEM ─────────────
+            services.AddScoped<IPaymentGatewayService, PaymentGatewayService>();
+            services.AddScoped<IInvoiceService, InvoiceService>();
+            services.AddScoped<ICouponService, CouponService>();
+            services.AddScoped<IExaminerSubscriptionService, ExaminerSubscriptionService>();
+            services.AddScoped<ICandidatePurchaseService, CandidatePurchaseService>();
+            services.AddScoped<IRevenueAnalyticsService, RevenueAnalyticsService>();
+            services.AddScoped<IInstitutionVerificationService, InstitutionVerificationService>();
+            services.AddHostedService<SubscriptionExpirySweepHostedService>();
+
             // ───────────── BACKGROUND TASK QUEUE & WORKERS ─────────────
             services.AddSingleton<IBackgroundTaskQueue>(ctx => new BackgroundTaskQueue(100));
             services.AddHostedService<CommonBackgroundService>();

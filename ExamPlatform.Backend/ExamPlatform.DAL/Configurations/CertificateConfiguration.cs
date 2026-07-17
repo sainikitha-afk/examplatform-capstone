@@ -28,6 +28,11 @@ namespace ExamPlatform.DAL.Configurations
                    .HasConversion<string>()
                    .HasMaxLength(20);
 
+            // ───────────── PREMIUM BRANDING (additive, snapshotted) ─────────────
+            builder.Property(c => c.IsPremium).IsRequired().HasDefaultValue(false);
+            builder.Property(c => c.InstituteName).HasMaxLength(150);
+            builder.Property(c => c.InstituteLogoUrl).HasMaxLength(500);
+
             builder.HasOne(c => c.User)
                    .WithMany(u => u.Certificates)
                    .HasForeignKey(c => c.UserId)

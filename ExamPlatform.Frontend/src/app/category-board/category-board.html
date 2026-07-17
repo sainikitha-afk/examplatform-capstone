@@ -1,0 +1,53 @@
+<!-- category-board.html — grid of category "boards". Each board carries the
+     category's name, description and published-exam count so a candidate or
+     examiner can tell at a glance what's inside before filtering the list
+     below it. -->
+
+<div class="board-grid stagger-children">
+
+  <!-- "All Categories" board — always first, pinned -->
+  <button
+    type="button"
+    class="board-card board-card-all"
+    [class.board-card-active]="selectedCategoryId === null"
+    [attr.aria-pressed]="selectedCategoryId === null"
+    [attr.aria-label]="allLabel + ', ' + totalCount() + ' ' + countLabel"
+    (click)="select(null)"
+  >
+    <div class="board-icon board-accent-primary"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+    <div class="board-body">
+      <h6 class="board-title">{{ allLabel }}</h6>
+      <p class="board-desc">Browse everything in one place.</p>
+    </div>
+    <span class="board-count">{{ totalCount() }} {{ countLabel }}</span>
+  </button>
+
+  <!-- One board per category -->
+  <button
+    type="button"
+    class="board-card"
+    *ngFor="let cat of categories"
+    [class.board-card-active]="selectedCategoryId === cat.catId"
+    [attr.aria-pressed]="selectedCategoryId === cat.catId"
+    [attr.aria-label]="cat.catName + ', ' + cat.publishedExamCount + ' ' + countLabel + (cat.description ? ', ' + cat.description : '')"
+    (click)="select(cat.catId)"
+  >
+    <div class="board-icon" [ngClass]="styleFor(cat.catId).accent">
+      <i class="bi" [ngClass]="styleFor(cat.catId).icon"></i>
+    </div>
+    <div class="board-body">
+      <h6 class="board-title">{{ cat.catName }}</h6>
+      <p class="board-desc" [title]="cat.description">
+        {{ cat.description || 'No description yet.' }}
+      </p>
+    </div>
+    <span class="board-count">{{ cat.publishedExamCount }} {{ countLabel }}</span>
+  </button>
+
+  <!-- Empty state: no categories exist at all yet -->
+  <div *ngIf="categories.length === 0" class="board-empty">
+    <i class="bi bi-inboxes"></i>
+    <p>No categories yet. Check back once the admin adds some.</p>
+  </div>
+
+</div>

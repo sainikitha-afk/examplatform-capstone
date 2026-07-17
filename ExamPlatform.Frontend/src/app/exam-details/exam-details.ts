@@ -49,4 +49,10 @@ export class ExamDetails implements OnInit {
   handleStartExamClick(): void {
     this.router.navigate(['/attempt', this.examId]);
   }
+
+  // Premium exams route to checkout instead of starting an attempt directly —
+  // the backend re-enforces this regardless (AttemptService's premium gate).
+  handlePurchaseClick(): void {
+    this.router.navigate(['/checkout/exam', this.examId]);
+  }
 }

@@ -10,17 +10,31 @@ namespace ExamPlatform.BLL.Services
 {
     public class AgentService : IAgentService
     {
+        // Question categorization can cover many questions in one call — give
+        // it more headroom than the coach's single-answer budget so a large
+        // exam's {questionId: category} map is never truncated.
+        private const int MaxOutputTokens = 4096;
+
         private readonly HttpClient _httpClient;
         private readonly ILogger<AgentService> _logger;
         private readonly IConfiguration _config;
         private readonly string? _apiKey;
+        private readonly string? _baseUrl;
+        private readonly string _model;
 
         public AgentService(HttpClient httpClient, IConfiguration config, ILogger<AgentService> logger)
         {
             _httpClient = httpClient;
             _logger = logger;
             _config = config;
-            _apiKey = config["Gemini:ApiKey"];
+            // Migrated from calling Gemini directly to calling it through the
+            // Presidio LLM Gateway (Anthropic-compatible pass-through) — see
+            // LlmGatewayProtocol.cs for how the wire format was confirmed.
+            _apiKey = config["LLM:ApiKey"];
+            _baseUrl = config["LLM:BaseUrl"];
+            _model = string.IsNullOrWhiteSpace(config["LLM:Model"])
+                ? LlmGatewayProtocol.DefaultModel
+                : config["LLM:Model"]!;
         }
 
         /// <summary>
@@ -102,10 +116,10 @@ namespace ExamPlatform.BLL.Services
 
         public async Task<Dictionary<int, string>> CategorizeQuestionsAsync(IEnumerable<ExamPlatform.Domain.Entities.ExamQuestion> examQuestions)
         {
-            if (string.IsNullOrWhiteSpace(_apiKey))
+            if (string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_baseUrl))
             {
-                _logger.LogError("Gemini API Key is missing.");
-                throw new Exception("Gemini API Key is missing. Failing instead of falling back.");
+                _logger.LogError("LLM Gateway is not configured (missing key or base URL).");
+                throw new Exception("LLM Gateway is not configured. Failing instead of falling back.");
             }
 
             var questionDetails = examQuestions.Select(eq => new
@@ -118,71 +132,50 @@ namespace ExamPlatform.BLL.Services
             var promptTemplate = await File.ReadAllTextAsync(promptTemplatePath);
             var prompt = string.Format(promptTemplate, JsonSerializer.Serialize(questionDetails));
 
-            var requestBody = new
-            {
-                contents = new[]
-                {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new { text = prompt }
-                        }
-                    }
-                },
-                generationConfig = new
-                {
-                    response_mime_type = "application/json",
-                    // gemini-flash-latest is a "thinking" model. Left on, it spends most of
-                    // its output budget on hidden reasoning and intermittently returns the
-                    // answer JSON with the closing brace missing (finishReason=STOP). A zero
-                    // thinking budget makes structured JSON output fast and far more reliable.
-                    thinkingConfig = new { thinkingBudget = 0 }
-                }
-            };
+            // Migrated from calling Gemini's generateContent directly to calling
+            // the Presidio LLM Gateway's Anthropic-compatible pass-through — see
+            // LlmGatewayProtocol.cs. The prompt itself (built above from the
+            // unchanged template file) is sent as-is as the user message; no
+            // system instruction is needed for this call.
+            var requestBody = LlmGatewayProtocol.BuildRequestBody(
+                systemInstruction: null, userContent: prompt, model: _model, maxTokens: MaxOutputTokens);
 
             try
             {
-                var apiUrl = _config["Gemini:ApiUrl"];
-                if (string.IsNullOrEmpty(apiUrl))
-                {
-                    // gemini-flash-latest is an always-current alias that supports
-                    // generateContent; the retired gemini-2.5-flash returns 404 for
-                    // new API keys ("no longer available to new users").
-                    apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
-                }
-                // NOTE: the API key is appended only to requestUrl, which is NEVER logged.
-                // Diagnostics below log apiUrl (no key) and the safe response body only.
-                var requestUrl = $"{apiUrl}?key={_apiKey}";
+                var requestUrl = _baseUrl.TrimEnd('/') + LlmGatewayProtocol.MessagesPath;
 
-                var response = await _httpClient.PostAsJsonAsync(requestUrl, requestBody);
+                // NOTE: the API key is sent only in the x-api-key header, which is
+                // NEVER logged. Diagnostics below log requestUrl (no key) and the
+                // safe response body only.
+                var request = new HttpRequestMessage(HttpMethod.Post, requestUrl)
+                {
+                    Content = JsonContent.Create(requestBody)
+                };
+                request.Headers.Add("x-api-key", _apiKey);
+                request.Headers.Add("anthropic-version", LlmGatewayProtocol.AnthropicVersion);
+
+                var response = await _httpClient.SendAsync(request);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     // Read the provider's error payload so failures are diagnosable.
-                    // Google's error body does not contain the API key.
+                    // The gateway's error body does not contain the API key.
                     var errorBody = await response.Content.ReadAsStringAsync();
                     _logger.LogError(
-                        "Gemini request failed: HTTP {StatusCode} from endpoint {Endpoint}. Response: {Body}",
-                        (int)response.StatusCode, apiUrl, Truncate(errorBody, 500));
+                        "LLM Gateway request failed: HTTP {StatusCode} from endpoint {Endpoint}. Response: {Body}",
+                        (int)response.StatusCode, requestUrl, Truncate(errorBody, 500));
                     throw new HttpRequestException(
-                        $"Gemini API returned HTTP {(int)response.StatusCode} for endpoint '{apiUrl}'. Response: {Truncate(errorBody, 500)}");
+                        $"LLM Gateway returned HTTP {(int)response.StatusCode} for endpoint '{requestUrl}'. Response: {Truncate(errorBody, 500)}");
                 }
 
                 var jsonResponse = await response.Content.ReadAsStringAsync();
-                
-                // Parse the Gemini response structure
-                using var document = JsonDocument.Parse(jsonResponse);
-                var textResult = document.RootElement
-                    .GetProperty("candidates")[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
-                    .GetString();
+
+                // Parse the Anthropic Messages API response structure.
+                var textResult = LlmGatewayProtocol.ExtractFirstText(jsonResponse);
 
                 if (string.IsNullOrWhiteSpace(textResult))
                 {
-                    throw new Exception("Empty response from Gemini.");
+                    throw new Exception("Empty response from LLM Gateway.");
                 }
 
                 // Parse tolerantly: the model can wrap the JSON in markdown fences,
@@ -190,8 +183,8 @@ namespace ExamPlatform.BLL.Services
                 // ExtractJsonObject — it recovers a well-formed object from all three.
                 var categories = JsonSerializer.Deserialize<Dictionary<string, string>>(
                     ExtractJsonObject(textResult));
-                
-                if (categories == null) throw new Exception("Gemini returned null categories.");
+
+                if (categories == null) throw new Exception("LLM Gateway returned null categories.");
 
                 var result = new Dictionary<int, string>();
                 foreach (var kvp in categories)
@@ -206,20 +199,20 @@ namespace ExamPlatform.BLL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to call Gemini API. Failing instead of falling back.");
+                _logger.LogError(ex, "Failed to call LLM Gateway. Failing instead of falling back.");
 
                 // Best-effort append to BLL/service.log. This path is CWD-relative and
                 // may not exist under every host (e.g. the test runner), so a secondary
-                // IO failure here must never mask the real Gemini error we're rethrowing.
+                // IO failure here must never mask the real error we're rethrowing.
                 try
                 {
                     var contentRoot = Directory.GetCurrentDirectory();
                     var logPath = Path.GetFullPath(Path.Combine(contentRoot, "..", "ExamPlatform.BLL", "service.log"));
-                    await File.AppendAllTextAsync(logPath, $"[{DateTime.UtcNow:O}] GEMINI API ERROR: {ex.Message}\n{ex.StackTrace}\n\n");
+                    await File.AppendAllTextAsync(logPath, $"[{DateTime.UtcNow:O}] LLM GATEWAY API ERROR: {ex.Message}\n{ex.StackTrace}\n\n");
                 }
                 catch (Exception logEx)
                 {
-                    _logger.LogWarning(logEx, "Could not write Gemini error to service.log (non-fatal).");
+                    _logger.LogWarning(logEx, "Could not write LLM Gateway error to service.log (non-fatal).");
                 }
 
                 throw;

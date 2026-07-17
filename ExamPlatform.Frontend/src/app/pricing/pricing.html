@@ -1,0 +1,76 @@
+<!-- Public pricing page — Part 1/6 of the Subscription & Payment System -->
+
+<div class="container py-5 animate-fade-in">
+
+  <div class="text-center mb-5">
+    <h2 class="fw-bold">Plans built for how you actually use ExamHub</h2>
+    <p class="text-muted">Start free. Upgrade when you're ready for unlimited exams and premium certification.</p>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && !errorMessage" class="row g-4 justify-content-center">
+
+    <!-- Free Trial -->
+    <div class="col-md-4" *ngIf="planByTier('Trial') as plan">
+      <div class="card plan-card h-100">
+        <div class="card-body p-4 d-flex flex-column">
+          <h5 class="fw-bold">{{ plan.name }}</h5>
+          <div class="plan-price">₹0</div>
+          <p class="text-muted small mb-4">Auto-granted the moment you're approved as an examiner.</p>
+          <ul class="plan-features flex-grow-1">
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>{{ plan.maxExamsLifetime }} exams, lifetime</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Full feature access while it lasts</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>No credit card required</li>
+          </ul>
+          <a routerLink="/apply-as-examiner" class="btn btn-outline-primary w-100">Become an Examiner</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Professional -->
+    <div class="col-md-4" *ngIf="planByTier('Professional') as plan">
+      <div class="card plan-card plan-card-featured h-100">
+        <div class="plan-badge">Most Popular</div>
+        <div class="card-body p-4 d-flex flex-column">
+          <h5 class="fw-bold">{{ plan.name }}</h5>
+          <div class="plan-price">₹{{ plan.priceMonthly | number }}<span>/mo</span></div>
+          <div class="plan-price-yearly">or ₹{{ plan.priceYearly | number }}/yr — 2 months free</div>
+          <ul class="plan-features flex-grow-1 mt-3">
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Unlimited exams</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Priority AI Learning Coach</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Premium analytics & reports</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Institute Verification eligibility</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Premium exam tag & branded certificates</li>
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Custom branding, priority support</li>
+          </ul>
+          <button class="btn btn-primary w-100" (click)="handleProfessionalCtaClick()">
+            {{ isLoggedIn && isExaminer ? 'Go to Subscription' : 'Upgrade to Professional' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Free Forever -->
+    <div class="col-md-4" *ngIf="planByTier('FreeForever') as plan">
+      <div class="card plan-card h-100">
+        <div class="card-body p-4 d-flex flex-column">
+          <h5 class="fw-bold">{{ plan.name }}</h5>
+          <div class="plan-price">₹0</div>
+          <p class="text-muted small mb-4">The fallback plan after your trial — still usable, just paced.</p>
+          <ul class="plan-features flex-grow-1">
+            <li><i class="bi bi-check-circle-fill text-success me-2"></i>1 new exam every {{ plan.examCooldownDays }} days</li>
+            <li><i class="bi bi-x-circle-fill text-muted me-2"></i>No premium exams</li>
+            <li><i class="bi bi-x-circle-fill text-muted me-2"></i>Limited analytics & AI usage</li>
+          </ul>
+          <span class="btn btn-outline-secondary w-100 disabled">Automatic fallback plan</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

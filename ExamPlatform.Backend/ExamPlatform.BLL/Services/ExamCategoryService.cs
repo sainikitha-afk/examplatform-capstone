@@ -12,6 +12,12 @@ namespace ExamPlatform.BLL.Services
     {
         private readonly IExamCategoryRepository _categoryRepository;
 
+        // Needed only for the two guard checks that reference exams/questions:
+        // the exam-count board view and the pre-delete "is this category still
+        // in use" check (see DeleteAsync). No other method touches them.
+        private readonly IExamRepository _examRepository;
+        private readonly IQuestionRepository _questionRepository;
+
         // ILogger<T>: tagged with ExamCategoryService so log entries are filterable.
         // Injected by DI — no manual setup needed; the ASP.NET Core pipeline
         // registers ILogger<T> for all T automatically.
@@ -19,9 +25,13 @@ namespace ExamPlatform.BLL.Services
 
         public ExamCategoryService(
             IExamCategoryRepository categoryRepository,
+            IExamRepository examRepository,
+            IQuestionRepository questionRepository,
             ILogger<ExamCategoryService> logger)
         {
             _categoryRepository = categoryRepository;
+            _examRepository = examRepository;
+            _questionRepository = questionRepository;
             _logger = logger;
         }
 
@@ -30,6 +40,15 @@ namespace ExamPlatform.BLL.Services
         public async Task<IEnumerable<ExamCategory>> GetAllAsync()
         {
             return await _categoryRepository.GetAllAsync();
+        }
+
+        public async Task<IEnumerable<(ExamCategory Category, int PublishedExamCount)>> GetAllWithExamCountsAsync()
+        {
+            var categories = await _categoryRepository.GetAllAsync();
+            var counts = await _examRepository.GetPublishedCountsByCategoryAsync();
+
+            return categories.Select(c =>
+                (c, counts.TryGetValue(c.CatId, out var count) ? count : 0));
         }
 
         public async Task<ExamCategory> GetByIdAsync(int catId)
@@ -229,13 +248,20 @@ namespace ExamPlatform.BLL.Services
         {
             var category = await GetByIdAsync(catId);
 
-            // BUSINESS RULE: We configured OnDelete(DeleteBehavior.Restrict)
-            // for Question.CatId and Exam.CatId. If this category is referenced,
-            // PostgreSQL will REJECT the DELETE with a foreign key violation.
-            //
-            // For now we let that raw exception surface — the middleware will
-            // catch it as a 500. In a more polished version we'd pre-check
-            // for references and throw a friendlier exception. KISS for now.
+            // BUSINESS RULE: Question.CatId and Exam.CatId are both
+            // DeleteBehavior.Restrict — PostgreSQL would reject the DELETE
+            // with a raw FK-violation exception (→ unhandled 500) if this
+            // category is still referenced. Pre-check both and throw a
+            // friendly, typed 409 instead.
+            if (await _examRepository.AnyByCategoryAsync(catId) ||
+                await _questionRepository.AnyByCategoryAsync(catId))
+            {
+                _logger.LogWarning(
+                    "Delete category {CatId} ('{CatName}') blocked: still in use.",
+                    catId, category.CatName);
+                throw new CategoryInUseException(category.CatName);
+            }
+
             _categoryRepository.Delete(category);
             await _categoryRepository.SaveChangesAsync();
 

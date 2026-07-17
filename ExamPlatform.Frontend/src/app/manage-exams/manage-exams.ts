@@ -11,10 +11,11 @@ import { CategoryApiService } from '../services/categoryapi.service';
 import { ExamSummaryModel, ExamDetailModel, CreateExamModel, UpdateExamModel } from '../models/exam.model';
 import { QuestionModel } from '../models/question.model';
 import { CategoryModel } from '../models/category.model';
+import { CategoryBoard } from '../category-board/category-board';
 
 @Component({
   selector: 'app-manage-exams',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CategoryBoard],
   templateUrl: './manage-exams.html',
   styleUrl: './manage-exams.css',
 })
@@ -23,6 +24,20 @@ export class ManageExams implements OnInit {
   selectedExam: ExamDetailModel = new ExamDetailModel();
   questionBank: QuestionModel[] = [];
   categories: CategoryModel[] = [];
+
+  // Client-side category filter for "My Exams" — the exam list is small
+  // enough per examiner that a server round-trip per filter isn't needed.
+  selectedListCategoryId: number | null = null;
+
+  get filteredExams(): ExamSummaryModel[] {
+    return this.selectedListCategoryId === null
+      ? this.exams
+      : this.exams.filter(e => e.categoryId === this.selectedListCategoryId);
+  }
+
+  handleListBoardSelect(catId: number | null): void {
+    this.selectedListCategoryId = catId;
+  }
 
   // Selected-but-not-yet-attached questions. A Map (id → question) instead of
   // a Set so selections survive filter changes AND carry their marks for the

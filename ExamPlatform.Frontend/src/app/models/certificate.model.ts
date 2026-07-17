@@ -13,7 +13,11 @@ export class CandidateCertificateModel {
     public score: number = 0,
     public issuedAt: string = "",
     public certStatus: string = "",     // "Issued" | "Revoked"
-    public revokedAt: string | null = null
+    public revokedAt: string | null = null,
+    // Premium / institute branding, snapshotted at issuance.
+    public isPremium: boolean = false,
+    public instituteName: string | null = null,
+    public instituteLogoUrl: string | null = null
   ) {}
 }
 
@@ -45,6 +49,10 @@ export class CertificateDownloadModel {
     public score: number = 0,
     public issuedAt: string = "",
     public certStatus: string = "",
-    public certificateText: string = ""
+    public certificateText: string = "",
+    // Premium / institute branding for the fancy certificate design.
+    public isPremium: boolean = false,
+    public instituteName: string | null = null,
+    public instituteLogoUrl: string | null = null
   ) {}
 }

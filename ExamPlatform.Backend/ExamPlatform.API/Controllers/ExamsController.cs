@@ -13,7 +13,9 @@ using ExamPlatform.API.DTOs.Attempt;
 using ExamPlatform.API.DTOs.Common;
 using ExamPlatform.API.DTOs.Exam;
 using ExamPlatform.BLL.Interfaces;
+using ExamPlatform.DAL.Interfaces;
 using ExamPlatform.Domain.Entities;
+using ExamPlatform.Domain.Enums;
 
 namespace ExamPlatform.API.Controllers
 {
@@ -27,17 +29,30 @@ namespace ExamPlatform.API.Controllers
         // Category service: resolves the special "Mixed" category by name when
         // an examiner creates a multi-category exam (catId <= 0 in the request).
         private readonly IExamCategoryService _categoryService;
+
+        // Premium-exam access check for the candidate detail view — see
+        // ToDetailForCandidateDto's HasAccess field.
+        private readonly ICandidatePurchaseService _purchaseService;
+
+        // Institute branding: on the single-exam detail view we surface the
+        // owning examiner's Admin-Verified institution (name + logo) so the
+        // "Institute Verified" badge can render. One lookup per detail request.
+        private readonly IInstitutionRepository _institutionRepository;
         private readonly ILogger<ExamsController> _logger;
 
         public ExamsController(
             IExamService examService,
             IAttemptService attemptService,
             IExamCategoryService categoryService,
+            ICandidatePurchaseService purchaseService,
+            IInstitutionRepository institutionRepository,
             ILogger<ExamsController> logger)
         {
             _examService = examService;
             _attemptService = attemptService;
             _categoryService = categoryService;
+            _purchaseService = purchaseService;
+            _institutionRepository = institutionRepository;
             _logger = logger;
         }
 
@@ -63,7 +78,7 @@ namespace ExamPlatform.API.Controllers
 
             return Ok(new PagedResultDto<ExamSummaryDto>
             {
-                Items           = paged.Items.Select(ToSummaryDto),
+                Items           = await MapSummariesWithInstituteAsync(paged.Items),
                 Page            = paged.Page,
                 PageSize        = paged.PageSize,
                 TotalCount      = paged.TotalCount,
@@ -89,7 +104,7 @@ namespace ExamPlatform.API.Controllers
 
             return Ok(new PagedResultDto<ExamSummaryDto>
             {
-                Items           = paged.Items.Select(ToSummaryDto),
+                Items           = await MapSummariesWithInstituteAsync(paged.Items),
                 Page            = paged.Page,
                 PageSize        = paged.PageSize,
                 TotalCount      = paged.TotalCount,
@@ -118,10 +133,30 @@ namespace ExamPlatform.API.Controllers
             var isOwningExaminer = User.IsInRole("Examiner") && exam.ExaminerId == userId;
             var isAdmin = User.IsInRole("Admin");
 
+            // Resolve the owning examiner's Verified institution once (null when
+            // they have none or it isn't approved yet) so the detail view can
+            // show the "Institute Verified" badge with the institute's name/logo.
+            var institute = await GetVerifiedInstituteAsync(exam.ExaminerId);
+
             if (isOwningExaminer || isAdmin)
-                return Ok(ToDetailDto(exam));            // includes IsCorrect
-            else
-                return Ok(ToDetailForCandidateDto(exam)); // omits IsCorrect
+                return Ok(ToDetailDto(exam, institute));            // includes IsCorrect
+
+            var hasAccess = !exam.IsPremium
+                || (User.IsInRole("Candidate") && await _purchaseService.HasActivePurchaseAsync(userId, id));
+            return Ok(ToDetailForCandidateDto(exam, hasAccess, institute)); // omits IsCorrect
+        }
+
+        /// <summary>
+        /// Returns the examiner's institution only if it exists and an Admin has
+        /// Verified it; otherwise null. Live-derived (never snapshotted here) so a
+        /// later revocation immediately stops the badge from showing on exams.
+        /// </summary>
+        private async Task<Institution?> GetVerifiedInstituteAsync(int examinerId)
+        {
+            var institution = await _institutionRepository.GetByOwnerUserIdAsync(examinerId);
+            return institution?.VerificationStatus == InstitutionVerificationStatus.Verified
+                ? institution
+                : null;
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -176,7 +211,8 @@ namespace ExamPlatform.API.Controllers
                 userId, catId, dto.Title, dto.Instructions,
                 dto.DurationMinutes, dto.TotalMarks, dto.PassingMarks,
                 // End time is optional — default to a 30-day window from the start.
-                dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30));
+                dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30),
+                dto.IsPremium, dto.Price);
 
             return CreatedAtAction(nameof(GetById), new { id = exam.ExamId }, ToSummaryDto(exam));
         }
@@ -310,7 +346,7 @@ namespace ExamPlatform.API.Controllers
             return id;
         }
 
-        private static ExamSummaryDto ToSummaryDto(Exam e) => new()
+        private static ExamSummaryDto ToSummaryDto(Exam e, Institution? institute = null) => new()
         {
             ExamId = e.ExamId,
             Title = e.Title,
@@ -321,10 +357,49 @@ namespace ExamPlatform.API.Controllers
             PassingMarks = e.PassingMarks,
             StartTime = e.StartTime,
             EndTime = e.EndTime,
-            ExamStatus = e.ExamStatus.ToString()
+            ExamStatus = e.ExamStatus.ToString(),
+            IsPremium = e.IsPremium,
+            Price = e.Price,
+            IsFeatured = e.IsFeatured,
+            // Institute badge only makes sense for premium exams (the certification
+            // product) — a verified institute passed in here attaches its branding.
+            IsInstituteVerified = e.IsPremium && institute != null,
+            InstituteName = e.IsPremium ? institute?.Name : null,
+            InstituteLogoUrl = e.IsPremium ? institute?.LogoUrl : null
         };
 
-        private static ExamDetailDto ToDetailDto(Exam e) => new()
+        /// <summary>
+        /// Attaches the live "Institute Verified" badge to a page of exam summaries
+        /// with a single batched institution lookup (no N+1). Only premium exams are
+        /// considered — a non-premium exam never carries institute branding.
+        /// </summary>
+        private async Task<List<ExamSummaryDto>> MapSummariesWithInstituteAsync(IEnumerable<Exam> exams)
+        {
+            var list = exams.ToList();
+
+            var premiumExaminerIds = list
+                .Where(e => e.IsPremium)
+                .Select(e => e.ExaminerId)
+                .Distinct()
+                .ToList();
+
+            // One query for all examiners on this page; empty input short-circuits.
+            var verified = premiumExaminerIds.Count == 0
+                ? new List<Institution>()
+                : (await _institutionRepository.GetVerifiedByOwnerIdsAsync(premiumExaminerIds)).ToList();
+
+            var byOwner = verified
+                .GroupBy(i => i.OwnerUserId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            return list
+                .Select(e => ToSummaryDto(
+                    e,
+                    byOwner.TryGetValue(e.ExaminerId, out var inst) ? inst : null))
+                .ToList();
+        }
+
+        private static ExamDetailDto ToDetailDto(Exam e, Institution? institute = null) => new()
         {
             ExamId = e.ExamId,
             Title = e.Title,
@@ -338,6 +413,12 @@ namespace ExamPlatform.API.Controllers
             EndTime = e.EndTime,
             ExamStatus = e.ExamStatus.ToString(),
             CreatedAt = e.CreatedAt,
+            IsPremium = e.IsPremium,
+            Price = e.Price,
+            IsFeatured = e.IsFeatured,
+            IsInstituteVerified = institute != null,
+            InstituteName = institute?.Name,
+            InstituteLogoUrl = institute?.LogoUrl,
             Questions = e.ExamQuestions?
                 .OrderBy(eq => eq.QuestionOrder)
                 .Select(eq => new ExamQuestionDto
@@ -358,7 +439,8 @@ namespace ExamPlatform.API.Controllers
                 }).ToList() ?? new()
         };
 
-        private static ExamDetailForCandidateDto ToDetailForCandidateDto(Exam e) => new()
+        private static ExamDetailForCandidateDto ToDetailForCandidateDto(
+            Exam e, bool hasAccess = true, Institution? institute = null) => new()
         {
             ExamId = e.ExamId,
             Title = e.Title,
@@ -372,6 +454,12 @@ namespace ExamPlatform.API.Controllers
             EndTime = e.EndTime,
             ExamStatus = e.ExamStatus.ToString(),
             CreatedAt = e.CreatedAt,
+            IsPremium = e.IsPremium,
+            Price = e.Price,
+            HasAccess = hasAccess,
+            IsInstituteVerified = institute != null,
+            InstituteName = institute?.Name,
+            InstituteLogoUrl = institute?.LogoUrl,
             Questions = e.ExamQuestions?
                 .OrderBy(eq => eq.QuestionOrder)
                 .Select(eq => new ExamQuestionForCandidateDto

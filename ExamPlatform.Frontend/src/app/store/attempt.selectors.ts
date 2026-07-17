@@ -15,6 +15,11 @@ export const selectAttemptState = createFeatureSelector<AttemptState>('attempt')
 // Individual field selectors — components import only what they need.
 export const selectAttemptId       = createSelector(selectAttemptState, s => s.attemptId);
 export const selectExamTitle       = createSelector(selectAttemptState, s => s.examTitle);
+export const selectInstitute       = createSelector(selectAttemptState, s => ({
+  verified: s.isInstituteVerified,
+  name: s.instituteName,
+  logoUrl: s.instituteLogoUrl,
+}));
 export const selectQuestions       = createSelector(selectAttemptState, s => s.questions);
 export const selectCurrentIndex    = createSelector(selectAttemptState, s => s.currentQuestionIndex);
 export const selectAnswers         = createSelector(selectAttemptState, s => s.answers);

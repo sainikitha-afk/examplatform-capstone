@@ -63,6 +63,32 @@ namespace ExamPlatform.API.Middleware
                     message = exception.Message;
                     break;
 
+                // ─── 402 Payment Required ───────────────────────────────
+                // Subscription & Payment System: the caller is blocked from an
+                // action until they pay (or wait out a cooldown) — never a
+                // generic 500. Both carry extra structured fields the frontend
+                // needs to render the right dialog/CTA (see below).
+                case TrialExhaustedException:
+                case PremiumAccessRequiredException:
+                    statusCode = HttpStatusCode.PaymentRequired;
+                    message = exception.Message;
+                    break;
+
+                // ─── 429 Too Many Requests ──────────────────────────────
+                // Free Forever's rolling cooldown is a deliberate rate limit,
+                // not an error — reuses the same status code the AI Coach's
+                // rate limiter uses for the same reason.
+                case CooldownActiveException:
+                    statusCode = HttpStatusCode.TooManyRequests;
+                    message = exception.Message;
+                    break;
+
+                // ─── 400 Bad Request ────────────────────────────────────
+                case InvalidCouponException:
+                    statusCode = HttpStatusCode.BadRequest;
+                    message = exception.Message;
+                    break;
+
                 // ─── 503 Service Unavailable ────────────────────────────
                 // The AI Learning Coach could not reach / parse Gemini. This is deliberately
                 // NOT a 500: nothing is broken in ExamHub. The candidate's exam data and their
@@ -83,6 +109,7 @@ namespace ExamPlatform.API.Middleware
                 case AttemptNotFoundException:              // Feature C: attempt not found or not owned
                 case ExaminerRequestNotFoundException:      // Examiner request not found
                 case IssueReportNotFoundException:          // Candidate issue report not found or not owned
+                case InstitutionNotFoundException:          // Institute verification request not found
                     statusCode = HttpStatusCode.NotFound;
                     message = exception.Message;
                     break;
@@ -99,6 +126,7 @@ namespace ExamPlatform.API.Middleware
                 case DuplicateEmailException:
                 case DuplicateUsernameException:
                 case DuplicateCategoryException:
+                case CategoryInUseException:             // category still referenced by exams/questions
                 case DuplicateQuestionException:        // Duplicate question text in same category
                 case QuestionInUseException:            // Feature A: question used in Published exam
                 case ExamNotInDraftException:           // Feature B: edit/delete on non-Draft exam
@@ -108,6 +136,7 @@ namespace ExamPlatform.API.Middleware
                 case AttemptAlreadySubmittedException:  // Feature C: double-submit guard
                 case ResultsNotPublishedException:              // Feature C: result requested before publish
                 case ExaminerRequestAlreadyProcessedException:  // approve/reject on already-processed request
+                case DuplicatePurchaseException:                // candidate already purchased this exam
                     statusCode = HttpStatusCode.Conflict;
                     message = exception.Message;
                     break;
@@ -131,11 +160,38 @@ namespace ExamPlatform.API.Middleware
             context.Response.StatusCode = (int)statusCode;
             context.Response.ContentType = "application/json";
 
-            var payload = JsonSerializer.Serialize(new
+            // A handful of Subscription & Payment System exceptions carry extra
+            // structured data the frontend needs to render the right dialog —
+            // which upgrade offer to show, when a cooldown lifts, which exam to
+            // route to checkout. Every other exception keeps the plain
+            // { status, error } shape unchanged.
+            object payloadObject = exception switch
             {
-                status = (int)statusCode,
-                error = message
-            });
+                TrialExhaustedException ex => new
+                {
+                    status = (int)statusCode,
+                    error = message,
+                    upgradeDeclineCount = ex.UpgradeDeclineCount,
+                    trialExamsUsed = ex.TrialExamsUsed,
+                    maxExamsLifetime = ex.MaxExamsLifetime
+                },
+                CooldownActiveException ex => new
+                {
+                    status = (int)statusCode,
+                    error = message,
+                    nextEligibleAt = ex.NextEligibleAt
+                },
+                PremiumAccessRequiredException ex => new
+                {
+                    status = (int)statusCode,
+                    error = message,
+                    examId = ex.ExamId,
+                    price = ex.Price
+                },
+                _ => new { status = (int)statusCode, error = message }
+            };
+
+            var payload = JsonSerializer.Serialize(payloadObject);
 
             await context.Response.WriteAsync(payload);
         }

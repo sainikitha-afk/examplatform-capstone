@@ -15,7 +15,15 @@ export class ExamSummaryModel {
     public passingMarks: number = 0,
     public startTime: string = "",
     public endTime: string = "",
-    public examStatus: string = ""   // "Draft" | "Published" | "ResultsPublished"
+    public examStatus: string = "",  // "Draft" | "Published" | "ResultsPublished"
+    public isPremium: boolean = false,
+    public price: number | null = null,
+    public isFeatured: boolean = false,
+    // Institute badge on browse/manage cards — set only for premium exams whose
+    // examiner has an Admin-verified institution.
+    public isInstituteVerified: boolean = false,
+    public instituteName: string | null = null,
+    public instituteLogoUrl: string | null = null
   ) {}
 }
 
@@ -78,7 +86,19 @@ export class ExamDetailModel {
     public endTime: string = "",
     public examStatus: string = "",
     public createdAt: string = "",
-    public questions: ExamQuestionFullModel[] = []
+    public questions: ExamQuestionFullModel[] = [],
+    public isPremium: boolean = false,
+    public price: number | null = null,
+    public isFeatured: boolean = false,
+    // Candidate-view only field (absent/ignored for the examiner/admin DTO):
+    // true when the candidate holds an Active purchase, or the exam isn't
+    // premium at all.
+    public hasAccess: boolean = true,
+    // Institute branding — set only when the owning examiner has an
+    // Admin-Verified institution. Drives the "Institute Verified" badge.
+    public isInstituteVerified: boolean = false,
+    public instituteName: string | null = null,
+    public instituteLogoUrl: string | null = null
   ) {}
 }
 
@@ -92,7 +112,9 @@ export class CreateExamModel {
     public totalMarks: number = 100,
     public passingMarks: number = 40,
     public startTime: string = "",
-    public endTime: string = ""
+    public endTime: string = "",
+    public isPremium: boolean = false,
+    public price: number | null = null
   ) {}
 }
 

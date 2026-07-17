@@ -15,6 +15,11 @@ export class AttemptResumeModel {
     public startedAt: string = "",
     public remainingSeconds: number = 0,
     public attemptStatus: string = "",   // "InProgress" | "Submitted"
+    // Institute badge shown on the exam-taking screen for premium exams whose
+    // examiner has an Admin-verified institution (live-derived by the backend).
+    public isInstituteVerified: boolean = false,
+    public instituteName: string | null = null,
+    public instituteLogoUrl: string | null = null,
     public questions: QuestionInAttemptModel[] = []
   ) {}
 }

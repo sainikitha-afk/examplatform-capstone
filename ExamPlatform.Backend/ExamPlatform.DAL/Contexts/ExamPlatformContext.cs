@@ -59,6 +59,16 @@ namespace ExamPlatform.DAL.Contexts
         public DbSet<ExaminerRequest> ExaminerRequests => Set<ExaminerRequest>();
         public DbSet<IssueReport> IssueReports => Set<IssueReport>();
 
+        // ───────────── SUBSCRIPTION & PAYMENT SYSTEM ─────────────
+        public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+        public DbSet<ExaminerSubscription> ExaminerSubscriptions => Set<ExaminerSubscription>();
+        public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Invoice> Invoices => Set<Invoice>();
+        public DbSet<CandidatePurchase> CandidatePurchases => Set<CandidatePurchase>();
+        public DbSet<Coupon> Coupons => Set<Coupon>();
+        public DbSet<CouponRedemption> CouponRedemptions => Set<CouponRedemption>();
+        public DbSet<Institution> Institutions => Set<Institution>();
+
         // Note on syntax: "=> Set<T>()" is an expression-bodied property,
         // equivalent to "{ get { return Set<T>(); } }". Some codebases use
         // "DbSet<User> Users { get; set; } = null!;" instead. Both work;

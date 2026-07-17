@@ -213,5 +213,14 @@ namespace ExamPlatform.DAL.Repositories
             var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return (items, totalCount);
         }
+
+        // ════════════════════════════════════════════════════════════════
+        //   AnyByCategoryAsync
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>True if any question (active or soft-deleted) references this category.</summary>
+        public async Task<bool> AnyByCategoryAsync(int catId)
+        {
+            return await _dbSet.AnyAsync(q => q.CatId == catId);
+        }
     }
 }

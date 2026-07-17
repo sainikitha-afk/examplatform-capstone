@@ -12,7 +12,9 @@ using ExamPlatform.API.DTOs.Attempt;
 using ExamPlatform.API.DTOs.Common;
 using ExamPlatform.API.DTOs.Exam;
 using ExamPlatform.BLL.Interfaces;
+using ExamPlatform.DAL.Interfaces;
 using ExamPlatform.Domain.Entities;
+using ExamPlatform.Domain.Enums;
 
 namespace ExamPlatform.API.Controllers
 {
@@ -22,14 +24,32 @@ namespace ExamPlatform.API.Controllers
     public class AttemptsController : ControllerBase
     {
         private readonly IAttemptService _attemptService;
+        private readonly IInstitutionRepository _institutionRepository;
         private readonly ILogger<AttemptsController> _logger;
 
         public AttemptsController(
             IAttemptService attemptService,
+            IInstitutionRepository institutionRepository,
             ILogger<AttemptsController> logger)
         {
             _attemptService = attemptService;
+            _institutionRepository = institutionRepository;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Resolves the exam examiner's Verified institution for the exam-taking
+        /// screen — but only for a premium exam. Live-derived (never snapshotted),
+        /// so a revoked verification immediately stops the in-progress badge.
+        /// Returns null for non-premium exams or an unverified/absent institution.
+        /// </summary>
+        private async Task<Institution?> ResolveVerifiedInstituteAsync(Attempt attempt)
+        {
+            if (attempt.Exam is not { IsPremium: true } exam) return null;
+            var institution = await _institutionRepository.GetByOwnerUserIdAsync(exam.ExaminerId);
+            return institution?.VerificationStatus == InstitutionVerificationStatus.Verified
+                ? institution
+                : null;
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -43,7 +63,7 @@ namespace ExamPlatform.API.Controllers
             _logger.LogInformation(
                 "POST /api/attempts/start: user {UserId} for exam {ExamId}.", userId, dto.ExamId);
             var attempt = await _attemptService.StartOrResumeAsync(userId, dto.ExamId);
-            return Ok(ToResumeDto(attempt));
+            return Ok(ToResumeDto(attempt, await ResolveVerifiedInstituteAsync(attempt)));
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -84,7 +104,7 @@ namespace ExamPlatform.API.Controllers
         {
             var userId = ExtractUserId();
             var attempt = await _attemptService.GetByIdAsync(id, userId);
-            return Ok(ToResumeDto(attempt));
+            return Ok(ToResumeDto(attempt, await ResolveVerifiedInstituteAsync(attempt)));
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -156,7 +176,7 @@ namespace ExamPlatform.API.Controllers
         }
 
         /// <summary>Maps to the resume DTO including server remaining time and questions.</summary>
-        private static AttemptResumeDto ToResumeDto(Attempt a)
+        private static AttemptResumeDto ToResumeDto(Attempt a, Institution? institute = null)
         {
             var exam = a.Exam;
 
@@ -215,6 +235,9 @@ namespace ExamPlatform.API.Controllers
                 StartedAt = a.StartedAt,
                 RemainingSeconds = remainingSeconds,
                 AttemptStatus = a.AttemptStatus.ToString(),
+                IsInstituteVerified = institute != null,
+                InstituteName = institute?.Name,
+                InstituteLogoUrl = institute?.LogoUrl,
                 Questions = questions
             };
         }

@@ -153,5 +153,31 @@ namespace ExamPlatform.DAL.Repositories
             var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return (items, totalCount);
         }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetPublishedCountsByCategoryAsync
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// One GROUP BY query returning { CatId: publishedExamCount }. Categories
+        /// with zero published exams are simply absent from the dictionary —
+        /// callers default to 0 on lookup miss.
+        /// </summary>
+        public async Task<Dictionary<int, int>> GetPublishedCountsByCategoryAsync()
+        {
+            return await _dbSet
+                .Where(e => e.ExamStatus == ExamStatus.Published)
+                .GroupBy(e => e.CatId)
+                .Select(g => new { CatId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.CatId, x => x.Count);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   AnyByCategoryAsync
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>True if any exam (any status) references this category.</summary>
+        public async Task<bool> AnyByCategoryAsync(int catId)
+        {
+            return await _dbSet.AnyAsync(e => e.CatId == catId);
+        }
     }
 }

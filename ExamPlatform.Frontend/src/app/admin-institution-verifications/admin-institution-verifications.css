@@ -1,0 +1,30 @@
+.request-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.request-logo {
+  max-height: 32px;
+  max-width: 120px;
+  object-fit: contain;
+}
+
+/* Logo preview tile — shows the admin what the badge will look like */
+.logo-preview {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+.logo-preview .bi { font-size: 1.8rem; color: var(--text-muted); }
+.logo-link { color: var(--primary); text-decoration: none; }
+.logo-link:hover { text-decoration: underline; }

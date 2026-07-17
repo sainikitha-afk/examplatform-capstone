@@ -14,5 +14,17 @@ namespace ExamPlatform.API.DTOs.Exam
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public string ExamStatus { get; set; } = null!; // enum stored as string for readability
+
+        // Subscription & Payment System (additive) — premium/featured badges.
+        public bool IsPremium { get; set; }
+        public decimal? Price { get; set; }
+        public bool IsFeatured { get; set; }
+
+        // Institute badge (live-derived): populated only for premium exams whose
+        // examiner has an Admin-verified institution, so browse cards can show the
+        // institute name + logo. Null/false for everything else.
+        public bool IsInstituteVerified { get; set; }
+        public string? InstituteName { get; set; }
+        public string? InstituteLogoUrl { get; set; }
     }
 }

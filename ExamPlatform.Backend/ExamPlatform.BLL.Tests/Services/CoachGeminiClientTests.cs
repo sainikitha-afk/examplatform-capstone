@@ -1,12 +1,17 @@
 // CoachGeminiClientTests — the failure surface of the AI Learning Coach.
 //
 // The acceptance bar for this feature is "an AI outage must never break the application",
-// so the bulk of these tests deliberately exercise Gemini behaving badly: 404, 429, 500,
-// timeouts, empty bodies, truncated JSON, no key at all. Every one of them must collapse
-// into a single controlled AiCoachUnavailableException — never a raw provider payload, and
-// never the API key.
+// so the bulk of these tests deliberately exercise the LLM Gateway behaving badly: 404,
+// 429, 500, timeouts, empty bodies, truncated JSON, no key/URL at all. Every one of them
+// must collapse into a single controlled AiCoachUnavailableException — never a raw
+// provider payload, and never the API key.
+//
+// The class still speaks the Anthropic Messages API (confirmed live against the Presidio
+// LLM Gateway — see LlmGatewayProtocol.cs), so these tests build/assert that envelope
+// shape rather than Gemini's.
 
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using ExamPlatform.BLL.Exceptions;
@@ -23,10 +28,10 @@ namespace ExamPlatform.BLL.Tests.Services
     public class CoachGeminiClientTests
     {
         private const string ApiKey = "SUPER-SECRET-COACH-KEY-XYZ";
-        private const string TestEndpoint = "https://example.test/v1beta/models/gemini-flash-latest:generateContent";
+        private const string TestBaseUrl = "https://example.test";
 
-        // Canned-response handler (same shape as the existing AgentServiceTests double) that
-        // also records the request so we can assert on what actually went over the wire.
+        // Canned-response handler that also records the request (URI, headers, body) so
+        // we can assert on what actually went over the wire.
         private sealed class StubHandler : HttpMessageHandler
         {
             private readonly HttpStatusCode _status;
@@ -35,6 +40,7 @@ namespace ExamPlatform.BLL.Tests.Services
 
             public Uri? LastRequestUri { get; private set; }
             public string? LastRequestBody { get; private set; }
+            public HttpRequestHeaders? LastRequestHeaders { get; private set; }
 
             public StubHandler(HttpStatusCode status, string body) { _status = status; _body = body; }
             public StubHandler(Exception toThrow) { _throw = toThrow; _status = HttpStatusCode.OK; _body = ""; }
@@ -43,6 +49,7 @@ namespace ExamPlatform.BLL.Tests.Services
                 HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 LastRequestUri = request.RequestUri;
+                LastRequestHeaders = request.Headers;
                 LastRequestBody = request.Content is null
                     ? null
                     : await request.Content.ReadAsStringAsync(cancellationToken);
@@ -81,10 +88,11 @@ namespace ExamPlatform.BLL.Tests.Services
             }
         }
 
-        private static IConfiguration Config(string apiKey = ApiKey, string? apiUrl = TestEndpoint)
+        private static IConfiguration Config(string? apiKey = ApiKey, string? baseUrl = TestBaseUrl)
         {
-            var dict = new Dictionary<string, string?> { ["Gemini:ApiKey"] = apiKey };
-            if (apiUrl is not null) dict["Gemini:ApiUrl"] = apiUrl;
+            var dict = new Dictionary<string, string?>();
+            if (apiKey is not null) dict["LLM:ApiKey"] = apiKey;
+            if (baseUrl is not null) dict["LLM:BaseUrl"] = baseUrl;
             return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
         }
 
@@ -93,14 +101,11 @@ namespace ExamPlatform.BLL.Tests.Services
                    config ?? Config(),
                    new Mock<ILogger<CoachGeminiClient>>().Object);
 
-        // Wraps model output in Gemini's response envelope.
+        // Wraps model output in the Anthropic Messages API response envelope.
         private static string Envelope(string modelText)
             => JsonSerializer.Serialize(new
             {
-                candidates = new[]
-                {
-                    new { content = new { parts = new[] { new { text = modelText } } } }
-                }
+                content = new[] { new { type = "text", text = modelText } }
             });
 
         private static Task<string> Ask(CoachGeminiClient sut, CancellationToken ct = default)
@@ -118,14 +123,14 @@ namespace ExamPlatform.BLL.Tests.Services
             var json = await Ask(BuildSut(handler));
 
             json.Should().Be("{\"answer\":\"Focus on LINQ.\"}");
-            handler.LastRequestUri!.ToString().Should().Contain("gemini-flash-latest:generateContent");
+            handler.LastRequestUri!.ToString().Should().Be(TestBaseUrl + "/v1/messages");
         }
 
         [Test]
         public async Task GenerateJsonAsync_MarkdownFencedOrTruncatedJson_IsRecovered()
         {
-            // gemini-flash-latest really does both of these (see AgentService's notes); the
-            // coach reuses the same tolerant recovery rather than failing the request.
+            // Models occasionally wrap the answer in markdown fences or omit the closing
+            // brace; the coach reuses the same tolerant recovery rather than failing the request.
             var fencedAndTruncated = "```json\n{\"answer\":\"Focus on LINQ.\"\n```";
             var handler = new StubHandler(HttpStatusCode.OK, Envelope(fencedAndTruncated));
 
@@ -136,16 +141,31 @@ namespace ExamPlatform.BLL.Tests.Services
         }
 
         [Test]
-        public async Task GenerateJsonAsync_SendsSystemInstructionAndDisablesThinkingBudget()
+        public async Task GenerateJsonAsync_SendsSystemInstructionModelAndAnthropicVersionHeader()
         {
             var handler = new StubHandler(HttpStatusCode.OK, Envelope("{\"answer\":\"ok\"}"));
 
             await Ask(BuildSut(handler));
 
             var body = handler.LastRequestBody!;
-            body.Should().Contain("system_instruction");
-            body.Should().Contain("application/json", "we ask for structured output, not prose");
-            body.Should().Contain("thinkingBudget");
+            body.Should().Contain("\"system\":\"You are the ExamHub AI Learning Coach.\"");
+            body.Should().Contain("\"model\":\"claude-sonnet-4-6\"", "claude-sonnet-4-6 is the approved default model");
+            handler.LastRequestHeaders!.GetValues("anthropic-version").Should().Contain("2023-06-01");
+        }
+
+        [Test]
+        public async Task GenerateJsonAsync_ModelOverride_IsHonored()
+        {
+            var handler = new StubHandler(HttpStatusCode.OK, Envelope("{\"answer\":\"ok\"}"));
+            var dict = new Dictionary<string, string?>
+            {
+                ["LLM:ApiKey"] = ApiKey, ["LLM:BaseUrl"] = TestBaseUrl, ["LLM:Model"] = "claude-haiku-4-5-20251001"
+            };
+            var config = new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
+
+            await Ask(BuildSut(handler, config));
+
+            handler.LastRequestBody.Should().Contain("\"model\":\"claude-haiku-4-5-20251001\"");
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -153,13 +173,14 @@ namespace ExamPlatform.BLL.Tests.Services
         // ════════════════════════════════════════════════════════════════
 
         [Test]
-        public async Task GenerateJsonAsync_ApiKey_IsSentOnlyInTheQueryString_NeverInTheBody()
+        public async Task GenerateJsonAsync_ApiKey_IsSentOnlyInTheHeader_NeverInTheUrlOrBody()
         {
             var handler = new StubHandler(HttpStatusCode.OK, Envelope("{\"answer\":\"ok\"}"));
 
             await Ask(BuildSut(handler));
 
-            handler.LastRequestUri!.Query.Should().Contain(ApiKey, "the provider authenticates via ?key=");
+            handler.LastRequestHeaders!.GetValues("x-api-key").Should().Contain(ApiKey);
+            handler.LastRequestUri!.ToString().Should().NotContain(ApiKey, "the key belongs in a header, never the URL");
             handler.LastRequestBody.Should().NotContain(ApiKey, "the key has no business being in the prompt");
         }
 
@@ -167,7 +188,7 @@ namespace ExamPlatform.BLL.Tests.Services
         public async Task GenerateJsonAsync_ProviderError_ExceptionMessageNeverLeaksTheKeyOrTheBody()
         {
             // A real provider error body, which we must not relay to the client.
-            var errorBody = "{\"error\":{\"code\":429,\"message\":\"Quota exceeded for project 12345\"}}";
+            var errorBody = "{\"error\":{\"type\":\"rate_limit_error\",\"message\":\"Quota exceeded for project 12345\"}}";
             var handler = new StubHandler(HttpStatusCode.TooManyRequests, errorBody);
 
             var act = async () => await Ask(BuildSut(handler));
@@ -189,6 +210,18 @@ namespace ExamPlatform.BLL.Tests.Services
         {
             var handler = new StubHandler(HttpStatusCode.OK, Envelope("{\"answer\":\"ok\"}"));
             var sut = BuildSut(handler, Config(apiKey: ""));   // key absent from configuration
+
+            var act = async () => await Ask(sut);
+
+            var thrown = await act.Should().ThrowAsync<AiCoachUnavailableException>();
+            thrown.Which.Category.Should().Be(CoachFailureCategory.Misconfigured);
+        }
+
+        [Test]
+        public async Task GenerateJsonAsync_MissingBaseUrl_IsUnavailable_NotAStartupFailure()
+        {
+            var handler = new StubHandler(HttpStatusCode.OK, Envelope("{\"answer\":\"ok\"}"));
+            var sut = BuildSut(handler, Config(baseUrl: ""));   // base URL absent from configuration
 
             var act = async () => await Ask(sut);
 
@@ -246,10 +279,11 @@ namespace ExamPlatform.BLL.Tests.Services
         }
 
         [Test]
-        public async Task GenerateJsonAsync_NoCandidatesInEnvelope_IsUnavailable()
+        public async Task GenerateJsonAsync_NoContentBlocksInEnvelope_IsUnavailable()
         {
-            // e.g. the model returned only a safety block.
-            var handler = new StubHandler(HttpStatusCode.OK, "{\"promptFeedback\":{\"blockReason\":\"SAFETY\"}}");
+            // e.g. the model returned only a refusal with no text block, or the shape
+            // is otherwise unexpected.
+            var handler = new StubHandler(HttpStatusCode.OK, "{\"stop_reason\":\"refusal\"}");
 
             var act = async () => await Ask(BuildSut(handler));
 
@@ -286,10 +320,10 @@ namespace ExamPlatform.BLL.Tests.Services
         [Test]
         public async Task GenerateJsonAsync_TransientServerError_IsRetriedOnceAndSucceeds()
         {
-            // The exact live scenario: Google's endpoint returns 503 "overloaded" for a
+            // The exact live scenario: the gateway/provider returns a 503 "overloaded" for a
             // moment, then recovers. One retry turns a user-visible failure into a success.
             var handler = new SequenceHandler(
-                (HttpStatusCode.ServiceUnavailable, "{\"error\":{\"code\":503,\"message\":\"overloaded\"}}"),
+                (HttpStatusCode.ServiceUnavailable, "{\"error\":{\"type\":\"overloaded_error\",\"message\":\"overloaded\"}}"),
                 (HttpStatusCode.OK, Envelope("{\"answer\":\"Recovered.\"}")));
             var sut = new CoachGeminiClient(new HttpClient(handler), Config(),
                 new Mock<ILogger<CoachGeminiClient>>().Object);

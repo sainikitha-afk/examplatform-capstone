@@ -39,6 +39,31 @@ export const routes: Routes = [
   { path: 'login',    component: Login },
   { path: 'register', component: Register },
   { path: 'apply-as-examiner', component: ExaminerRequest },
+  {
+    // Public pricing page — Subscription & Payment System. Anyone can view
+    // plans; the Professional CTA itself is guarded by role checks in-page.
+    path: 'pricing',
+    loadComponent: () => import('./pricing/pricing').then(m => m.Pricing)
+  },
+
+  // ── Checkout / payment (any authenticated role — guarded per-context) ──
+  {
+    path: 'checkout/subscription',
+    loadComponent: () => import('./checkout/checkout').then(m => m.Checkout),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Examiner' }
+  },
+  {
+    path: 'checkout/exam/:examId',
+    loadComponent: () => import('./checkout/checkout').then(m => m.Checkout),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Candidate' }
+  },
+  {
+    path: 'payment-success/:paymentId',
+    loadComponent: () => import('./payment-success/payment-success').then(m => m.PaymentSuccess),
+    canActivate: [authGuard]
+  },
 
   // ── Candidate routes ──────────────────────────────────────────────────
   {
@@ -86,6 +111,12 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { role: 'Candidate' }
   },
+  {
+    path: 'my-purchases',
+    loadComponent: () => import('./candidate-purchases/candidate-purchases').then(m => m.CandidatePurchases),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Candidate' }
+  },
 
   // ── Shared (all authenticated users) ────────────────────────────────
   {
@@ -116,6 +147,12 @@ export const routes: Routes = [
   {
     path: 'examiner',
     component: ExaminerDashboard,
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Examiner' }
+  },
+  {
+    path: 'examiner/subscription',
+    loadComponent: () => import('./examiner-subscription/examiner-subscription').then(m => m.ExaminerSubscription),
     canActivate: [authGuard, roleGuard],
     data: { role: 'Examiner' }
   },
@@ -161,6 +198,18 @@ export const routes: Routes = [
   {
     path: 'admin/categories',
     component: Categories,
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Admin' }
+  },
+  {
+    path: 'admin/revenue',
+    loadComponent: () => import('./admin-revenue-dashboard/admin-revenue-dashboard').then(m => m.AdminRevenueDashboard),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'Admin' }
+  },
+  {
+    path: 'admin/institution-verifications',
+    loadComponent: () => import('./admin-institution-verifications/admin-institution-verifications').then(m => m.AdminInstitutionVerifications),
     canActivate: [authGuard, roleGuard],
     data: { role: 'Admin' }
   },

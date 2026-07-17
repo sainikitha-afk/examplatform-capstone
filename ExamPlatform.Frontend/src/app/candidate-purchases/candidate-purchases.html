@@ -1,0 +1,45 @@
+<!-- Candidate Purchases — Part 6 of the Subscription & Payment System -->
+
+<div class="container py-4 animate-fade-in">
+  <h3 class="fw-bold mb-4"><i class="bi bi-bag-check-fill text-primary me-2"></i>My Purchases</h3>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <div *ngIf="purchases.length === 0" class="text-center py-5 text-muted">
+      <i class="bi bi-bag" style="font-size:2.5rem"></i>
+      <p class="mt-3">You haven't purchased any premium certification exams yet.</p>
+      <a routerLink="/browse-exams" class="btn btn-primary">Browse Premium Exams</a>
+    </div>
+
+    <div class="card" *ngIf="purchases.length > 0">
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead>
+            <tr>
+              <th>Exam</th>
+              <th>Purchased</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Invoice</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of purchases">
+              <td class="fw-semibold">{{ p.examTitle }}</td>
+              <td>{{ p.purchasedAt | date:'mediumDate' }}</td>
+              <td>₹{{ p.amount | number }}</td>
+              <td>
+                <span class="status-pill" [ngClass]="'pill-' + p.status.toLowerCase()">{{ p.status }}</span>
+              </td>
+              <td class="font-monospace small">{{ p.invoiceNumber || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

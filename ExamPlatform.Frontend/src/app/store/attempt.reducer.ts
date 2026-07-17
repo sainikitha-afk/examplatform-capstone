@@ -13,6 +13,10 @@ export interface AttemptState {
   attemptId: number;
   examId: number;
   examTitle: string;
+  // Institute badge for premium exams (verified institution). Live-derived by the API.
+  isInstituteVerified: boolean;
+  instituteName: string | null;
+  instituteLogoUrl: string | null;
   questions: QuestionInAttemptModel[];
   currentQuestionIndex: number;
   // answers maps questionId → selected optionId (null = skipped/cleared).
@@ -33,6 +37,9 @@ const initialState: AttemptState = {
   attemptId: 0,
   examId: 0,
   examTitle: '',
+  isInstituteVerified: false,
+  instituteName: null,
+  instituteLogoUrl: null,
   questions: [],
   currentQuestionIndex: 0,
   answers: {},
@@ -65,6 +72,9 @@ export const attemptReducer = createReducer(
       attemptId: attempt.attemptId,
       examId: attempt.examId,
       examTitle: attempt.examTitle,
+      isInstituteVerified: attempt.isInstituteVerified,
+      instituteName: attempt.instituteName,
+      instituteLogoUrl: attempt.instituteLogoUrl,
       questions: attempt.questions,
       answers,
       pendingSync: {},        // fresh start/resume — server state is the source of truth

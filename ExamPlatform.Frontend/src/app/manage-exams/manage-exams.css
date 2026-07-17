@@ -42,3 +42,14 @@
 /* Bank rows that are already attached to the exam read as locked. */
 .q-bank-row.attached { opacity: 0.55; }
 .q-bank-row.attached .q-bank-check { cursor: not-allowed; }
+
+/* Premium exam tag — Subscription & Payment System (Part 3) */
+.badge-premium-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: var(--text-inverse);
+}

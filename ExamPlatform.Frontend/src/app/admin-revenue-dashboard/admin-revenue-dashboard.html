@@ -1,0 +1,118 @@
+<!-- Admin Revenue Dashboard — Part 7 of the Subscription & Payment System -->
+
+<div class="container-fluid py-4 animate-fade-in">
+  <h3 class="fw-bold mb-4"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Revenue Dashboard</h3>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+
+    <!-- Stat cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Total Revenue</div>
+          <div class="stat-value">₹{{ summary.totalRevenue | number }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Subscriptions</div>
+          <div class="stat-value">₹{{ summary.subscriptionRevenue | number }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Certifications</div>
+          <div class="stat-value">₹{{ summary.examCertificationRevenue | number }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Payment Failure Rate</div>
+          <div class="stat-value">{{ (summary.paymentFailureRate * 100) | number:'1.0-1' }}%</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Trial → Paid Conversion</div>
+          <div class="stat-value">{{ (summary.trialToPaidConversionRate * 100) | number:'1.0-1' }}%</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Professional Examiners</div>
+          <div class="stat-value">{{ summary.activeProfessionalCount }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Trial Examiners</div>
+          <div class="stat-value">{{ summary.activeTrialCount }}</div>
+        </div></div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Coupon Redemptions</div>
+          <div class="stat-value">{{ summary.couponRedemptions }}</div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4 mb-4">
+      <div class="col-lg-8">
+        <div class="card"><div class="card-body">
+          <h6 class="fw-bold mb-3">Monthly Revenue</h6>
+          <canvas baseChart [data]="monthlyChartData" [options]="monthlyChartOptions" type="bar"></canvas>
+        </div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card"><div class="card-body">
+          <h6 class="fw-bold mb-3">Subscription Distribution</h6>
+          <canvas baseChart [data]="planChartData" [options]="planChartOptions" type="doughnut"></canvas>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card"><div class="card-body">
+          <h6 class="fw-bold mb-3">Top Purchased Exams</h6>
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Exam</th><th>Purchases</th><th>Revenue</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let e of summary.topPurchasedExams">
+                <td>{{ e.examTitle }}</td>
+                <td>{{ e.purchaseCount }}</td>
+                <td>₹{{ e.revenue | number }}</td>
+              </tr>
+              <tr *ngIf="summary.topPurchasedExams.length === 0"><td colspan="3" class="text-muted">No purchases yet.</td></tr>
+            </tbody>
+          </table>
+        </div></div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card"><div class="card-body">
+          <h6 class="fw-bold mb-3">Recent Transactions</h6>
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Date</th><th>Payer</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let t of summary.recentTransactions">
+                <td>{{ t.date | date:'short' }}</td>
+                <td>{{ t.payerName }}</td>
+                <td>₹{{ t.amount | number }}</td>
+                <td>{{ t.status }}</td>
+              </tr>
+              <tr *ngIf="summary.recentTransactions.length === 0"><td colspan="4" class="text-muted">No transactions yet.</td></tr>
+            </tbody>
+          </table>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -140,6 +140,54 @@ namespace ExamPlatform.DAL.Migrations
                     b.ToTable("attempt_answers");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.CandidatePurchase", b =>
+                {
+                    b.Property<int>("PurchaseId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("purchase_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PurchaseId"));
+
+                    b.Property<int>("ExamId")
+                        .HasColumnType("integer")
+                        .HasColumnName("exam_id");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_id");
+
+                    b.Property<DateTime>("PurchasedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purchased_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("PurchaseId")
+                        .HasName("pk_candidate_purchases");
+
+                    b.HasIndex("ExamId")
+                        .HasDatabaseName("ix_candidate_purchases_exam_id");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_candidate_purchases_payment_id");
+
+                    b.HasIndex("UserId", "ExamId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_candidate_purchases_user_id_exam_id");
+
+                    b.ToTable("candidate_purchases");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Certificate", b =>
                 {
                     b.Property<int>("CertificateId")
@@ -168,6 +216,22 @@ namespace ExamPlatform.DAL.Migrations
                     b.Property<int>("ExamId")
                         .HasColumnType("integer")
                         .HasColumnName("exam_id");
+
+                    b.Property<string>("InstituteLogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("institute_logo_url");
+
+                    b.Property<string>("InstituteName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("institute_name");
+
+                    b.Property<bool>("IsPremium")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_premium");
 
                     b.Property<DateTime>("IssuedAt")
                         .HasColumnType("timestamp with time zone")
@@ -205,6 +269,106 @@ namespace ExamPlatform.DAL.Migrations
                         .HasDatabaseName("ix_certificates_user_id_exam_id");
 
                     b.ToTable("certificates");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Coupon", b =>
+                {
+                    b.Property<int>("CouponId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("coupon_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CouponId"));
+
+                    b.Property<string>("AppliesTo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("applies_to");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("discount_percent");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<int?>("MaxRedemptions")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_redemptions");
+
+                    b.Property<int>("TimesRedeemed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("times_redeemed");
+
+                    b.Property<DateTime>("ValidFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateTime>("ValidTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_to");
+
+                    b.HasKey("CouponId")
+                        .HasName("pk_coupons");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coupons_code");
+
+                    b.ToTable("coupons");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.CouponRedemption", b =>
+                {
+                    b.Property<int>("RedemptionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("redemption_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RedemptionId"));
+
+                    b.Property<int>("CouponId")
+                        .HasColumnType("integer")
+                        .HasColumnName("coupon_id");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_id");
+
+                    b.Property<DateTime>("RedeemedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("redeemed_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("RedemptionId")
+                        .HasName("pk_coupon_redemptions");
+
+                    b.HasIndex("PaymentId")
+                        .HasDatabaseName("ix_coupon_redemptions_payment_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_coupon_redemptions_user_id");
+
+                    b.HasIndex("CouponId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coupon_redemptions_coupon_id_user_id");
+
+                    b.ToTable("coupon_redemptions");
                 });
 
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Exam", b =>
@@ -247,10 +411,27 @@ namespace ExamPlatform.DAL.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("instructions");
 
+                    b.Property<bool>("IsFeatured")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_featured");
+
+                    b.Property<bool>("IsPremium")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_premium");
+
                     b.Property<decimal>("PassingMarks")
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)")
                         .HasColumnName("passing_marks");
+
+                    b.Property<decimal?>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("price");
 
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone")
@@ -404,6 +585,220 @@ namespace ExamPlatform.DAL.Migrations
                     b.ToTable("examiner_requests");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.ExaminerSubscription", b =>
+                {
+                    b.Property<int>("SubscriptionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("subscription_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SubscriptionId"));
+
+                    b.Property<bool>("AutoRenew")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("auto_renew");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("DiscountAppliedPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("discount_applied_percent");
+
+                    b.Property<DateTime?>("LastFreeExamCreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_free_exam_created_at");
+
+                    b.Property<DateTime?>("NextRenewalDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_renewal_date");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("integer")
+                        .HasColumnName("plan_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("SubscriptionEndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("subscription_end_date");
+
+                    b.Property<DateTime>("SubscriptionStartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("subscription_start_date");
+
+                    b.Property<int>("TrialExamsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("trial_exams_used");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UpgradeDeclineCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("upgrade_decline_count");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("SubscriptionId")
+                        .HasName("pk_examiner_subscriptions");
+
+                    b.HasIndex("PlanId")
+                        .HasDatabaseName("ix_examiner_subscriptions_plan_id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_examiner_subscriptions_user_id");
+
+                    b.ToTable("examiner_subscriptions");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Institution", b =>
+                {
+                    b.Property<int>("InstitutionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("institution_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("InstitutionId"));
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("logo_url");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("OwnerUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("verification_status");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("verified_at");
+
+                    b.Property<int?>("VerifiedByAdminUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("verified_by_admin_user_id");
+
+                    b.HasKey("InstitutionId")
+                        .HasName("pk_institutions");
+
+                    b.HasIndex("OwnerUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_institutions_owner_user_id");
+
+                    b.HasIndex("VerifiedByAdminUserId")
+                        .HasDatabaseName("ix_institutions_verified_by_admin_user_id");
+
+                    b.ToTable("institutions");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Invoice", b =>
+                {
+                    b.Property<int>("InvoiceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("invoice_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("InvoiceId"));
+
+                    b.Property<string>("BillingEmail")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("billing_email");
+
+                    b.Property<string>("BillingName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("billing_name");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("discount_amount");
+
+                    b.Property<string>("FakeGstNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("fake_gst_number");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_id");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("subtotal");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("tax_amount");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("total");
+
+                    b.HasKey("InvoiceId")
+                        .HasName("pk_invoices");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_invoice_number");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_payment_id");
+
+                    b.ToTable("invoices");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.IssueReport", b =>
                 {
                     b.Property<int>("IssueReportId")
@@ -520,6 +915,112 @@ namespace ExamPlatform.DAL.Migrations
                     b.ToTable("notifications");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Payment", b =>
+                {
+                    b.Property<int>("PaymentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PaymentId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<int?>("CouponId")
+                        .HasColumnType("integer")
+                        .HasColumnName("coupon_id");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("INR")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("FakeGatewayReference")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fake_gateway_reference");
+
+                    b.Property<string>("FakeTransactionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("fake_transaction_id");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<DateTime>("InitiatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("initiated_at");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("method");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int?>("SubscriptionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("subscription_id");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("PaymentId")
+                        .HasName("pk_payments");
+
+                    b.HasIndex("CouponId")
+                        .HasDatabaseName("ix_payments_coupon_id");
+
+                    b.HasIndex("FakeTransactionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payments_fake_transaction_id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payments_idempotency_key");
+
+                    b.HasIndex("SubscriptionId")
+                        .HasDatabaseName("ix_payments_subscription_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_payments_user_id");
+
+                    b.ToTable("payments");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Question", b =>
                 {
                     b.Property<int>("QuestionId")
@@ -606,6 +1107,57 @@ namespace ExamPlatform.DAL.Migrations
                         .HasDatabaseName("ix_question_options_question_id");
 
                     b.ToTable("question_options");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.SubscriptionPlan", b =>
+                {
+                    b.Property<int>("PlanId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("plan_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PlanId"));
+
+                    b.Property<int?>("ExamCooldownDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("exam_cooldown_days");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<int?>("MaxExamsLifetime")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_exams_lifetime");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("PriceMonthly")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("price_monthly");
+
+                    b.Property<decimal>("PriceYearly")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("price_yearly");
+
+                    b.Property<string>("Tier")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tier");
+
+                    b.HasKey("PlanId")
+                        .HasName("pk_subscription_plans");
+
+                    b.ToTable("subscription_plans");
                 });
 
             modelBuilder.Entity("ExamPlatform.Domain.Entities.User", b =>
@@ -721,6 +1273,36 @@ namespace ExamPlatform.DAL.Migrations
                     b.Navigation("SelectedOption");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.CandidatePurchase", b =>
+                {
+                    b.HasOne("ExamPlatform.Domain.Entities.Exam", "Exam")
+                        .WithMany("CandidatePurchases")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_candidate_purchases__exams_exam_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.Payment", "Payment")
+                        .WithOne("CandidatePurchase")
+                        .HasForeignKey("ExamPlatform.Domain.Entities.CandidatePurchase", "PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_candidate_purchases__payments_payment_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.User", "User")
+                        .WithMany("CandidatePurchases")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_candidate_purchases__users_user_id");
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("Payment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Certificate", b =>
                 {
                     b.HasOne("ExamPlatform.Domain.Entities.Attempt", "Attempt")
@@ -747,6 +1329,36 @@ namespace ExamPlatform.DAL.Migrations
                     b.Navigation("Attempt");
 
                     b.Navigation("Exam");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.CouponRedemption", b =>
+                {
+                    b.HasOne("ExamPlatform.Domain.Entities.Coupon", "Coupon")
+                        .WithMany("Redemptions")
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_coupon_redemptions_coupons_coupon_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_coupon_redemptions__payments_payment_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_coupon_redemptions__users_user_id");
+
+                    b.Navigation("Coupon");
+
+                    b.Navigation("Payment");
 
                     b.Navigation("User");
                 });
@@ -791,6 +1403,59 @@ namespace ExamPlatform.DAL.Migrations
                     b.Navigation("Exam");
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.ExaminerSubscription", b =>
+                {
+                    b.HasOne("ExamPlatform.Domain.Entities.SubscriptionPlan", "Plan")
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_examiner_subscriptions__subscription_plans_plan_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.User", "User")
+                        .WithOne("ExaminerSubscription")
+                        .HasForeignKey("ExamPlatform.Domain.Entities.ExaminerSubscription", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_examiner_subscriptions__users_user_id");
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Institution", b =>
+                {
+                    b.HasOne("ExamPlatform.Domain.Entities.User", "Owner")
+                        .WithOne("Institution")
+                        .HasForeignKey("ExamPlatform.Domain.Entities.Institution", "OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_institutions__users_owner_user_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.User", "VerifiedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByAdminUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_institutions__users_verified_by_admin_user_id");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("VerifiedByAdmin");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Invoice", b =>
+                {
+                    b.HasOne("ExamPlatform.Domain.Entities.Payment", "Payment")
+                        .WithOne("Invoice")
+                        .HasForeignKey("ExamPlatform.Domain.Entities.Invoice", "PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoices__payments_payment_id");
+
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("ExamPlatform.Domain.Entities.IssueReport", b =>
@@ -842,6 +1507,34 @@ namespace ExamPlatform.DAL.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Payment", b =>
+                {
+                    b.HasOne("ExamPlatform.Domain.Entities.Coupon", "Coupon")
+                        .WithMany("Payments")
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_payments_coupons_coupon_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.ExaminerSubscription", "Subscription")
+                        .WithMany("Payments")
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_payments_examiner_subscriptions_subscription_id");
+
+                    b.HasOne("ExamPlatform.Domain.Entities.User", "User")
+                        .WithMany("Payments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payments__users_user_id");
+
+                    b.Navigation("Coupon");
+
+                    b.Navigation("Subscription");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Question", b =>
                 {
                     b.HasOne("ExamPlatform.Domain.Entities.ExamCategory", "Category")
@@ -882,9 +1575,18 @@ namespace ExamPlatform.DAL.Migrations
                     b.Navigation("Certificate");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Coupon", b =>
+                {
+                    b.Navigation("Payments");
+
+                    b.Navigation("Redemptions");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Exam", b =>
                 {
                     b.Navigation("Attempts");
+
+                    b.Navigation("CandidatePurchases");
 
                     b.Navigation("Certificates");
 
@@ -898,6 +1600,18 @@ namespace ExamPlatform.DAL.Migrations
                     b.Navigation("Exams");
 
                     b.Navigation("Questions");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.ExaminerSubscription", b =>
+                {
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.Payment", b =>
+                {
+                    b.Navigation("CandidatePurchase");
+
+                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("ExamPlatform.Domain.Entities.Question", b =>
@@ -914,15 +1628,28 @@ namespace ExamPlatform.DAL.Migrations
                     b.Navigation("AttemptAnswers");
                 });
 
+            modelBuilder.Entity("ExamPlatform.Domain.Entities.SubscriptionPlan", b =>
+                {
+                    b.Navigation("Subscriptions");
+                });
+
             modelBuilder.Entity("ExamPlatform.Domain.Entities.User", b =>
                 {
                     b.Navigation("Attempts");
 
+                    b.Navigation("CandidatePurchases");
+
                     b.Navigation("Certificates");
+
+                    b.Navigation("ExaminerSubscription");
 
                     b.Navigation("Exams");
 
+                    b.Navigation("Institution");
+
                     b.Navigation("Notifications");
+
+                    b.Navigation("Payments");
 
                     b.Navigation("Questions");
                 });

@@ -19,6 +19,21 @@ namespace ExamPlatform.API.DTOs.Exam
         public DateTime EndTime { get; set; }
         public string ExamStatus { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public bool IsPremium { get; set; }
+        public decimal? Price { get; set; }
+        // True when the candidate already holds an Active purchase for this
+        // exam (or the exam isn't premium at all) — the frontend uses this,
+        // not IsPremium alone, to decide whether to show the attempt button
+        // or the "Purchase to Unlock" CTA.
+        public bool HasAccess { get; set; }
+
+        // Institute branding (Part 3/7) — populated live only when the owning
+        // examiner has an Admin-Verified institution. Lets the candidate see
+        // which institute is certifying this exam, on the details screen and
+        // while taking it.
+        public bool IsInstituteVerified { get; set; }
+        public string? InstituteName { get; set; }
+        public string? InstituteLogoUrl { get; set; }
         // Same structure as ExamDetailDto but questions use candidate-safe option DTO.
         public List<ExamQuestionForCandidateDto> Questions { get; set; } = new();
     }

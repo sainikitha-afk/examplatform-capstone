@@ -36,5 +36,12 @@ namespace ExamPlatform.API.DTOs.Exam
         // Candidates who START before EndTime always get the full duration,
         // even if they finish after the window closes.
         public DateTime? EndTime { get; set; }
+
+        // Subscription & Payment System (additive): requesting a premium exam
+        // is only honoured server-side if the examiner's current tier allows
+        // it — ExamService re-checks this from the database, never trusting
+        // these two fields alone.
+        public bool IsPremium { get; set; }
+        public decimal? Price { get; set; }
     }
 }

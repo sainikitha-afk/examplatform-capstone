@@ -1,18 +1,20 @@
-// browse-exams.ts — Lists all published exams. Candidates can filter by category.
-// CONCEPTS DEMO: *ngFor, *ngIf, event binding on category filter, programmatic navigation.
+// browse-exams.ts — Lists all published exams. Candidates browse categories
+// via clickable "board" cards, each showing the category's name, description
+// and how many published exams are inside it.
+// CONCEPTS DEMO: *ngFor, *ngIf, event binding on category boards, programmatic navigation.
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { ExamApiService } from '../services/examapi.service';
 import { CategoryApiService } from '../services/categoryapi.service';
 import { ExamSummaryModel } from '../models/exam.model';
 import { CategoryModel } from '../models/category.model';
+import { CategoryBoard } from '../category-board/category-board';
 
 @Component({
   selector: 'app-browse-exams',
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, RouterModule, CategoryBoard],
   templateUrl: './browse-exams.html',
   styleUrl: './browse-exams.css',
 })
@@ -62,6 +64,12 @@ export class BrowseExams implements OnInit {
   handleCategoryChange(): void {
     this.currentPage = 1;
     this.loadExams();
+  }
+
+  // Fires when a category board card is clicked (null = "All Categories").
+  handleBoardSelect(catId: number | null): void {
+    this.selectedCategoryId = catId;
+    this.handleCategoryChange();
   }
 
   handlePageChange(page: number): void {

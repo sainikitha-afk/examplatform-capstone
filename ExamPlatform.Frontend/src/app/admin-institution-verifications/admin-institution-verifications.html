@@ -1,0 +1,48 @@
+<!-- Admin: Institute Verification queue — Part 3/7 -->
+
+<div class="container py-4 animate-fade-in">
+  <h3 class="fw-bold mb-4"><i class="bi bi-patch-check-fill text-primary me-2"></i>Institute Verification Requests</h3>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <div *ngIf="requests.length === 0" class="text-center py-5 text-muted">
+      No pending institute verification requests.
+    </div>
+
+    <div class="card request-card mb-3" *ngFor="let r of requests">
+      <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <!-- Logo preview (or placeholder) so the admin sees exactly what will
+               appear as the institute badge on exams and certificates. -->
+          <div class="logo-preview">
+            <img *ngIf="r.logoUrl" [src]="r.logoUrl" alt="logo" />
+            <i *ngIf="!r.logoUrl" class="bi bi-building"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-1">{{ r.name }}</h6>
+            <div class="text-muted small"><i class="bi bi-person me-1"></i>{{ r.ownerName }}</div>
+            <div class="text-muted small"><i class="bi bi-clock me-1"></i>{{ r.requestedAt | date:'medium' }}</div>
+            <a *ngIf="r.logoUrl" [href]="r.logoUrl" target="_blank" rel="noopener"
+               class="small d-inline-block mt-1 logo-link"><i class="bi bi-box-arrow-up-right me-1"></i>Open logo</a>
+            <span *ngIf="!r.logoUrl" class="small text-muted d-inline-block mt-1">No logo provided</span>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-success btn-sm" [disabled]="processingId === r.institutionId"
+                  (click)="handleApproveClick(r.institutionId)">
+            <span *ngIf="processingId === r.institutionId" class="spinner-border spinner-border-sm me-1"></span>
+            <i *ngIf="processingId !== r.institutionId" class="bi bi-check-lg me-1"></i>Approve
+          </button>
+          <button class="btn btn-outline-danger btn-sm" [disabled]="processingId === r.institutionId"
+                  (click)="handleRejectClick(r.institutionId)">
+            <i class="bi bi-x-lg me-1"></i>Reject
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

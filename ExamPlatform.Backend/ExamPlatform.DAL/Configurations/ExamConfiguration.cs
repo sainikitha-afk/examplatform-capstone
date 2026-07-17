@@ -34,6 +34,11 @@ namespace ExamPlatform.DAL.Configurations
 
             builder.Property(e => e.CreatedAt).IsRequired();
 
+            // ───────────── SUBSCRIPTION & PAYMENT (additive) ─────────────
+            builder.Property(e => e.IsPremium).IsRequired().HasDefaultValue(false);
+            builder.Property(e => e.Price).HasPrecision(10, 2);
+            builder.Property(e => e.IsFeatured).IsRequired().HasDefaultValue(false);
+
             // Relationships — both Restrict. Don't delete a user who authored
             // exams; don't delete a category that has exams.
             builder.HasOne(e => e.Examiner)

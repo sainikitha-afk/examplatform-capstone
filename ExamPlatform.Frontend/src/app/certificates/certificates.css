@@ -19,3 +19,48 @@
 .csb-label { font-size: 0.65rem; color: var(--text-muted); }
 
 .cert-meta { font-size: 0.8rem; color: var(--text-muted); }
+
+/* Premium certificate card treatment */
+.cert-card { position: relative; overflow: hidden; }
+.cert-card-premium {
+  border: 1.5px solid var(--accent);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.14);
+}
+.cert-ribbon {
+  position: absolute;
+  top: 0.9rem; right: -2.4rem;
+  transform: rotate(35deg);
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 0.22rem 2.6rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Institute badge on the card */
+.cert-institute {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--primary-50);
+  color: var(--primary-hover);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-full);
+  padding: 0.2rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  max-width: 100%;
+}
+.cert-institute span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cert-inst-logo { height: 18px; width: auto; max-width: 40px; object-fit: contain; border-radius: 3px; }
+
+.btn-premium-download {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: #fff;
+  border: 0;
+}
+.btn-premium-download:hover { filter: brightness(1.05); color: #fff; }
+.btn-premium-download:disabled { opacity: 0.7; }

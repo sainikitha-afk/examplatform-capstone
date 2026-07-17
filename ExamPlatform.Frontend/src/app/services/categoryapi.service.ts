@@ -24,7 +24,8 @@ export class CategoryApiService {
   // CONCEPT DEMO: map — converts each plain JSON object into a CategoryModel class instance.
   loadCategories(): Observable<CategoryModel[]> {
     return this.http.get<CategoryModel[]>(this.baseUrl).pipe(
-      map(items => items.map(c => new CategoryModel(c.catId, c.catName, c.description)))
+      map(items => items.map(c =>
+        new CategoryModel(c.catId, c.catName, c.description, c.publishedExamCount)))
     );
   }
 

@@ -1,0 +1,129 @@
+<!-- Fake Payment Gateway checkout — Part 5 of the Subscription & Payment System -->
+
+<div class="container py-4 animate-fade-in checkout-page">
+
+  <div *ngIf="isLoadingContext" class="text-center py-5">
+    <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem"></div>
+  </div>
+
+  <div *ngIf="!isLoadingContext" class="row g-4 justify-content-center">
+
+    <!-- Order summary -->
+    <div class="col-lg-4">
+      <div class="card summary-card">
+        <div class="card-body p-4">
+          <h6 class="text-muted text-uppercase small fw-bold mb-3">Order Summary</h6>
+
+          <ng-container *ngIf="context === 'subscription'">
+            <div class="summary-item">
+              <span>ExamHub Professional</span>
+              <span>{{ annual ? 'Annual' : 'Monthly' }}</span>
+            </div>
+            <p class="text-muted small mt-2">
+              Unlimited exams, priority AI, premium analytics, Institute Verification eligibility,
+              branded certificates, custom branding, and priority support.
+            </p>
+          </ng-container>
+
+          <ng-container *ngIf="context === 'exam' && exam">
+            <div class="summary-item">
+              <span>{{ exam.title }}</span>
+              <span class="badge-premium">Premium</span>
+            </div>
+            <p class="text-muted small mt-2">
+              Purchase unlocks your attempt and, on passing, a verified premium certificate.
+            </p>
+            <div class="summary-total">₹{{ exam.price | number }}</div>
+          </ng-container>
+
+          <div *ngIf="couponResult?.isValid" class="alert alert-success small mt-3 mb-0">
+            <i class="bi bi-tag-fill me-1"></i>{{ couponResult!.discountPercent }}% discount will be applied.
+          </div>
+          <div *ngIf="couponResult && !couponResult.isValid" class="alert alert-warning small mt-3 mb-0">
+            {{ couponResult.rejectionReason }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment form -->
+    <div class="col-lg-6">
+      <div class="card checkout-card">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3"><i class="bi bi-shield-lock-fill text-primary me-2"></i>Secure Checkout</h5>
+          <p class="text-muted small">Simulated payment — no real card is ever charged.</p>
+
+          <div *ngIf="errorMessage" class="alert alert-danger small">{{ errorMessage }}</div>
+
+          <!-- Method tabs -->
+          <div class="method-tabs mb-3">
+            <button type="button" class="method-tab" [class.active]="method==='CreditCard'" (click)="method='CreditCard'">
+              <i class="bi bi-credit-card"></i> Credit Card
+            </button>
+            <button type="button" class="method-tab" [class.active]="method==='DebitCard'" (click)="method='DebitCard'">
+              <i class="bi bi-credit-card-2-front"></i> Debit Card
+            </button>
+            <button type="button" class="method-tab" [class.active]="method==='UPI'" (click)="method='UPI'">
+              <i class="bi bi-phone"></i> UPI
+            </button>
+            <button type="button" class="method-tab" [class.active]="method==='NetBanking'" (click)="method='NetBanking'">
+              <i class="bi bi-bank"></i> Net Banking
+            </button>
+            <button type="button" class="method-tab" [class.active]="method==='Wallet'" (click)="method='Wallet'">
+              <i class="bi bi-wallet2"></i> Wallet
+            </button>
+          </div>
+
+          <form (ngSubmit)="handleSubmit()">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Card / Account Number</label>
+              <input type="text" class="form-control" [(ngModel)]="cardNumber" name="cardNumber"
+                     placeholder="4242 4242 4242 4242" maxlength="19" />
+            </div>
+
+            <div *ngIf="context === 'subscription'" class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="annual" name="annual" id="annualSwitch">
+              <label class="form-check-label small" for="annualSwitch">Bill annually (2 months free)</label>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Coupon Code (optional)</label>
+              <div class="input-group">
+                <input type="text" class="form-control" [(ngModel)]="couponCode" name="couponCode" placeholder="SAVE25" />
+                <button type="button" class="btn btn-outline-secondary" (click)="handleValidateCouponClick()"
+                        [disabled]="isValidatingCoupon">Apply</button>
+              </div>
+            </div>
+
+            <details class="demo-panel mb-3">
+              <summary class="small text-muted">Demo test cards &amp; failure simulation</summary>
+              <table class="table table-sm mt-2 mb-2">
+                <tbody>
+                  <tr *ngFor="let c of demoCards">
+                    <td class="font-monospace">{{ c.number }}</td>
+                    <td class="text-muted">{{ c.outcome }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" [(ngModel)]="simulateNetworkFailure" name="simNetwork" id="simNetwork">
+                  <label class="form-check-label small" for="simNetwork">Simulate network failure</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" [(ngModel)]="simulateTimeout" name="simTimeout" id="simTimeout">
+                  <label class="form-check-label small" for="simTimeout">Simulate timeout</label>
+                </div>
+              </div>
+            </details>
+
+            <button type="submit" class="btn btn-primary w-100 btn-lg" [disabled]="!canSubmit">
+              <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2"></span>
+              {{ isProcessing ? 'Processing…' : 'Pay Now' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -50,5 +50,11 @@ namespace ExamPlatform.DAL.Interfaces
             string? search,
             int page,
             int pageSize);
+
+        // True if at least one question (active or soft-deleted — the FK exists
+        // on every row regardless of IsActive) references this category. Used
+        // alongside IExamRepository.AnyByCategoryAsync by the category-delete
+        // guard.
+        Task<bool> AnyByCategoryAsync(int catId);
     }
 }

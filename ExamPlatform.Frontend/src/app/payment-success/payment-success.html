@@ -1,0 +1,53 @@
+<!-- Payment outcome screen — Part 5 of the Subscription & Payment System -->
+
+<div class="container py-5 animate-fade-in">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+
+      <div *ngIf="!payment" class="alert alert-warning text-center">
+        No payment information found. If you completed a checkout, check your billing history.
+      </div>
+
+      <div *ngIf="payment" class="card outcome-card">
+        <div class="card-body text-center p-4">
+
+          <div *ngIf="isSuccess" class="outcome-icon success-icon">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+          <div *ngIf="!isSuccess" class="outcome-icon failure-icon">
+            <i class="bi bi-x-circle-fill"></i>
+          </div>
+
+          <h4 class="fw-bold mt-3">{{ isSuccess ? 'Payment Successful' : failureLabel }}</h4>
+          <p class="text-muted" *ngIf="!isSuccess">{{ payment.failureReason }}</p>
+
+          <div class="receipt mt-4 text-start">
+            <div class="receipt-row"><span>Amount</span><span>₹{{ payment.amount | number }}</span></div>
+            <div class="receipt-row"><span>Method</span><span>{{ payment.method }}</span></div>
+            <div class="receipt-row"><span>Status</span><span>{{ payment.status }}</span></div>
+            <div class="receipt-row"><span>Transaction ID</span><span class="font-monospace">{{ payment.fakeTransactionId }}</span></div>
+            <div class="receipt-row"><span>Gateway Reference</span><span class="font-monospace">{{ payment.fakeGatewayReference }}</span></div>
+          </div>
+
+          <div *ngIf="payment.invoice" class="invoice-box mt-4 text-start">
+            <h6 class="fw-bold small text-uppercase text-muted">Invoice {{ payment.invoice.invoiceNumber }}</h6>
+            <div class="receipt-row"><span>GSTIN</span><span class="font-monospace">{{ payment.invoice.fakeGstNumber }}</span></div>
+            <div class="receipt-row"><span>Subtotal</span><span>₹{{ payment.invoice.subtotal | number }}</span></div>
+            <div class="receipt-row" *ngIf="payment.invoice.discountAmount > 0">
+              <span>Discount</span><span>-₹{{ payment.invoice.discountAmount | number }}</span>
+            </div>
+            <div class="receipt-row"><span>GST (18%)</span><span>₹{{ payment.invoice.taxAmount | number }}</span></div>
+            <div class="receipt-row fw-bold"><span>Total</span><span>₹{{ payment.invoice.total | number }}</span></div>
+          </div>
+
+          <button *ngIf="isSuccess" class="btn btn-primary w-100 mt-4" (click)="handleContinueClick()">
+            Continue
+          </button>
+          <button *ngIf="!isSuccess" class="btn btn-primary w-100 mt-4" (click)="handleRetryClick()">
+            Try Again
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

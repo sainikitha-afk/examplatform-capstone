@@ -1,0 +1,100 @@
+/* category-board.css — grid of clickable "board" cards, one per category. */
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.75rem;
+}
+
+.board-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.board-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-200);
+}
+
+.board-card-active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-100), var(--shadow-md);
+}
+
+.board-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: var(--text-inverse);
+  flex-shrink: 0;
+}
+
+.board-accent-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); }
+.board-accent-teal    { background: linear-gradient(135deg, #0d9488, #2dd4bf); }
+.board-accent-amber   { background: linear-gradient(135deg, #d97706, #fbbf24); }
+.board-accent-blue    { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+.board-accent-purple  { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.board-accent-rose    { background: linear-gradient(135deg, #e11d48, #fb7185); }
+
+.board-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.board-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin: 0 0 0.2rem 0;
+}
+
+.board-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.board-count {
+  align-self: flex-start;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-50);
+  border-radius: var(--radius-full);
+  padding: 0.2rem 0.6rem;
+}
+
+.board-card-all .board-count {
+  color: var(--accent-hover);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.board-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1.5rem;
+}
+.board-empty i { font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }

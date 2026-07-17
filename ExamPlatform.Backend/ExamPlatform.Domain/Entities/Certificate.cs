@@ -34,6 +34,16 @@ namespace ExamPlatform.Domain.Entities
         // while the cert is Issued.
         public DateTime? RevokedAt { get; set; }
 
+        // ───────────── PREMIUM BRANDING (additive, snapshotted) ─────────────
+        // Snapshotted at issuance for the same reason Score is: the underlying
+        // Institution could later be edited or have its verification revoked,
+        // but an already-issued certificate must keep showing what was true
+        // when it was earned. Default false/null — no change for any existing
+        // or future non-premium certificate.
+        public bool IsPremium { get; set; }
+        public string? InstituteName { get; set; }
+        public string? InstituteLogoUrl { get; set; }
+
         // ───────────── NAVIGATION ─────────────
         public User User { get; set; } = null!;
         public Exam Exam { get; set; } = null!;

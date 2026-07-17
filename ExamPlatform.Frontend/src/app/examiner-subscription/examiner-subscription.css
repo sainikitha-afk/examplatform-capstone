@@ -1,0 +1,78 @@
+.status-card, .card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.upgrade-dialog {
+  border: 2px solid var(--accent);
+  background: var(--bg-glass);
+}
+
+.discount-dialog { border-color: var(--success); }
+
+.status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+/* Positive states */
+.pill-professionalactive, .pill-verified, .pill-success, .pill-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+}
+
+/* Neutral / in-progress states */
+.pill-trialactive, .pill-pending, .pill-processing, .pill-graceperiod {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--info);
+}
+
+/* Needs-attention states */
+.pill-trialexhausted, .pill-freeforever {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+/* Negative / terminal-failure states */
+.pill-failed, .pill-rejected, .pill-cancelled, .pill-expired,
+.pill-networkfailure, .pill-timeout, .pill-refunded {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.billing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.billing-row:last-child { border-bottom: none; }
+
+/* Verified institute badge (examiner profile) */
+.verified-institute {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius);
+}
+.verified-institute .vi-logo {
+  height: 44px; width: auto; max-width: 72px;
+  object-fit: contain; border-radius: 6px; background: #fff;
+}
+.verified-institute .vi-icon { font-size: 2rem; color: var(--primary); }
+.vi-text { display: flex; flex-direction: column; line-height: 1.25; }
+.vi-name { font-weight: 700; color: var(--text); font-size: 1rem; }
+.vi-tag  { font-size: 0.74rem; font-weight: 600; color: var(--primary-hover); text-transform: uppercase; letter-spacing: 0.4px; }

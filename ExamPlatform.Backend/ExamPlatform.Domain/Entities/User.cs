@@ -53,5 +53,13 @@ namespace ExamPlatform.Domain.Entities
         public ICollection<Attempt> Attempts { get; set; } = new List<Attempt>();         // taken (candidate)
         public ICollection<Certificate> Certificates { get; set; } = new List<Certificate>(); // earned (candidate)
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>(); // received
+
+        // ───────────── SUBSCRIPTION & PAYMENT NAVIGATION ─────────────
+        // One examiner has at most one subscription (created at approval time);
+        // a candidate accumulates purchases; a user of either role can be a payer.
+        public ExaminerSubscription? ExaminerSubscription { get; set; }                    // examiner's plan
+        public Institution? Institution { get; set; }                                      // examiner's owned institution, if any
+        public ICollection<CandidatePurchase> CandidatePurchases { get; set; } = new List<CandidatePurchase>(); // bought (candidate)
+        public ICollection<Payment> Payments { get; set; } = new List<Payment>();          // paid (either role)
     }
 }

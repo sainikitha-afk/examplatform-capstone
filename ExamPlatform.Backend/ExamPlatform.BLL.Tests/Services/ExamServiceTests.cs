@@ -2,6 +2,7 @@
 
 using ExamPlatform.BLL.Exceptions;
 using ExamPlatform.BLL.Interfaces;
+using ExamPlatform.BLL.Models;
 using ExamPlatform.BLL.Services;
 using ExamPlatform.BLL.Tests.Helpers;
 using ExamPlatform.DAL.Contexts;
@@ -28,6 +29,8 @@ namespace ExamPlatform.BLL.Tests.Services
         private Mock<INotificationRepository>   _notifRepoMock    = null!;
         private Mock<INotificationEmailService> _emailMock        = null!;
         private Mock<IUserRepository>           _userRepoMock     = null!;
+        private Mock<IExaminerSubscriptionService> _subscriptionServiceMock = null!;
+        private Mock<IInstitutionRepository>    _institutionRepoMock = null!;
         private Mock<ILogger<ExamService>>      _loggerMock       = null!;
         private ExamPlatformContext _dbContext = null!;
         private ExamService _sut = null!;
@@ -43,12 +46,29 @@ namespace ExamPlatform.BLL.Tests.Services
             _notifRepoMock    = new Mock<INotificationRepository>();
             _emailMock        = new Mock<INotificationEmailService>();
             _userRepoMock     = new Mock<IUserRepository>();
+            _subscriptionServiceMock = new Mock<IExaminerSubscriptionService>();
             _loggerMock       = new Mock<ILogger<ExamService>>();
 
             // PublishAsync announces to candidates — default to an empty list so
             // existing publish tests don't need to care about notifications.
             _userRepoMock.Setup(r => r.GetAllByRoleAsync(UserRole.Candidate))
                          .ReturnsAsync(new List<User>());
+
+            // Default: subscription gate always allows exam creation and never
+            // blocks premium — individual CreateAsync tests override this when
+            // they specifically exercise the subscription/premium guard clauses.
+            _subscriptionServiceMock
+                .Setup(s => s.CanCreateExamAsync(It.IsAny<int>(), It.IsAny<DateTime?>()))
+                .ReturnsAsync(new ExamCreationEligibility(
+                    true, ExaminerSubscriptionStatus.ProfessionalActive, 0, null, 0, null, true));
+            _subscriptionServiceMock
+                .Setup(s => s.RecordExamCreatedAsync(It.IsAny<int>(), It.IsAny<DateTime?>()))
+                .Returns(Task.CompletedTask);
+
+            _institutionRepoMock = new Mock<IInstitutionRepository>();
+            _institutionRepoMock
+                .Setup(r => r.GetByOwnerUserIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((Institution?)null);
 
             var options = new DbContextOptionsBuilder<ExamPlatformContext>()
                 .UseInMemoryDatabase($"ExamSvcDb_{Guid.NewGuid()}")
@@ -61,7 +81,8 @@ namespace ExamPlatform.BLL.Tests.Services
             _sut = new ExamService(
                 _examRepoMock.Object, _examQRepoMock.Object, _questionRepoMock.Object,
                 _attemptRepoMock.Object, _certRepoMock.Object, _notifRepoMock.Object,
-                _emailMock.Object, _userRepoMock.Object, _dbContext, _loggerMock.Object);
+                _emailMock.Object, _userRepoMock.Object, _dbContext,
+                _subscriptionServiceMock.Object, _institutionRepoMock.Object, _loggerMock.Object);
         }
 
         [TearDown]
@@ -129,6 +150,92 @@ namespace ExamPlatform.BLL.Tests.Services
                 totalMarks: 40m, passingMarks: 50m,
                 DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3));
             await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   CreateAsync — SUBSCRIPTION GATE (Part 2/3/9)
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task CreateAsync_TrialExhausted_ThrowsTrialExhaustedException()
+        {
+            _subscriptionServiceMock
+                .Setup(s => s.CanCreateExamAsync(10, It.IsAny<DateTime?>()))
+                .ReturnsAsync(new ExamCreationEligibility(
+                    false, ExaminerSubscriptionStatus.TrialExhausted, 8, 8, 0, null, false));
+
+            var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3));
+
+            await act.Should().ThrowAsync<TrialExhaustedException>();
+            _examRepoMock.Verify(r => r.AddAsync(It.IsAny<Exam>()), Times.Never);
+        }
+
+        [Test]
+        public async Task CreateAsync_FreeForeverCooldownActive_ThrowsCooldownActiveException()
+        {
+            var nextEligible = DateTime.UtcNow.AddDays(1);
+            _subscriptionServiceMock
+                .Setup(s => s.CanCreateExamAsync(10, It.IsAny<DateTime?>()))
+                .ReturnsAsync(new ExamCreationEligibility(
+                    false, ExaminerSubscriptionStatus.FreeForever, 0, null, 2, nextEligible, false));
+
+            var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3));
+
+            await act.Should().ThrowAsync<CooldownActiveException>();
+        }
+
+        [Test]
+        public async Task CreateAsync_PremiumRequestedButNotAllowed_ThrowsValidationException()
+        {
+            _subscriptionServiceMock
+                .Setup(s => s.CanCreateExamAsync(10, It.IsAny<DateTime?>()))
+                .ReturnsAsync(new ExamCreationEligibility(
+                    true, ExaminerSubscriptionStatus.FreeForever, 0, null, 2, null, false));
+
+            var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3),
+                isPremium: true, price: 999m);
+
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task CreateAsync_PremiumWithoutPrice_ThrowsValidationException()
+        {
+            var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3),
+                isPremium: true, price: null);
+
+            await act.Should().ThrowAsync<ValidationException>();
+        }
+
+        [Test]
+        public async Task CreateAsync_PremiumAllowedWithPrice_CreatesPremiumExam()
+        {
+            _examRepoMock.Setup(r => r.AddAsync(It.IsAny<Exam>())).ReturnsAsync((Exam e) => e);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3),
+                isPremium: true, price: 999m);
+
+            result.IsPremium.Should().BeTrue();
+            result.Price.Should().Be(999m);
+        }
+
+        [Test]
+        public async Task CreateAsync_Success_RecordsExamCreatedOnSubscriptionService()
+        {
+            _examRepoMock.Setup(r => r.AddAsync(It.IsAny<Exam>())).ReturnsAsync((Exam e) => e);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3));
+
+            _subscriptionServiceMock.Verify(
+                s => s.RecordExamCreatedAsync(10, It.IsAny<DateTime?>()), Times.Once);
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -914,6 +1021,55 @@ namespace ExamPlatform.BLL.Tests.Services
             // Emails: ResultPublished ×2 + YouPassed ×1 + CertificateAvailable ×1 = 4.
             _emailMock.Verify(e => e.SendAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), true), Times.Exactly(4));
+        }
+
+        [Test]
+        public async Task PublishResultsAsync_PremiumExamVerifiedInstitution_SnapshotsBrandingOntoCertificate()
+        {
+            var exam = SetUpPublishResultsScenario();
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            _institutionRepoMock.Setup(r => r.GetByOwnerUserIdAsync(10)).ReturnsAsync(new Institution
+            {
+                InstitutionId = 1, OwnerUserId = 10, Name = "Acme Institute", LogoUrl = "https://cdn/acme.png",
+                VerificationStatus = InstitutionVerificationStatus.Verified, RequestedAt = DateTime.UtcNow
+            });
+
+            await _sut.PublishResultsAsync(1, 10);
+
+            _certRepoMock.Verify(r => r.AddAsync(It.Is<Certificate>(c =>
+                c.IsPremium && c.InstituteName == "Acme Institute" && c.InstituteLogoUrl == "https://cdn/acme.png")),
+                Times.Once);
+        }
+
+        [Test]
+        public async Task PublishResultsAsync_PremiumExamUnverifiedInstitution_NoInstituteBrandingSnapshotted()
+        {
+            var exam = SetUpPublishResultsScenario();
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            _institutionRepoMock.Setup(r => r.GetByOwnerUserIdAsync(10)).ReturnsAsync(new Institution
+            {
+                InstitutionId = 1, OwnerUserId = 10, Name = "Acme Institute",
+                VerificationStatus = InstitutionVerificationStatus.Pending, RequestedAt = DateTime.UtcNow
+            });
+
+            await _sut.PublishResultsAsync(1, 10);
+
+            _certRepoMock.Verify(r => r.AddAsync(It.Is<Certificate>(c =>
+                c.IsPremium && c.InstituteName == null && c.InstituteLogoUrl == null)),
+                Times.Once);
+        }
+
+        [Test]
+        public async Task PublishResultsAsync_NonPremiumExam_CertificateIsPremiumFalse()
+        {
+            SetUpPublishResultsScenario(); // exam.IsPremium defaults to false
+
+            await _sut.PublishResultsAsync(1, 10);
+
+            _certRepoMock.Verify(r => r.AddAsync(It.Is<Certificate>(c => !c.IsPremium)), Times.Once);
+            _institutionRepoMock.Verify(r => r.GetByOwnerUserIdAsync(It.IsAny<int>()), Times.Never);
         }
 
         [Test]

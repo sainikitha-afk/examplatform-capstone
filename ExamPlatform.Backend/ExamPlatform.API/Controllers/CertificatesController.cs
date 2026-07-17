@@ -209,7 +209,10 @@ namespace ExamPlatform.API.Controllers
             Score           = c.Score,
             IssuedAt        = c.IssuedAt,
             CertStatus      = c.CertStatus.ToString(),
-            RevokedAt       = c.RevokedAt
+            RevokedAt       = c.RevokedAt,
+            IsPremium         = c.IsPremium,
+            InstituteName     = c.InstituteName,
+            InstituteLogoUrl  = c.InstituteLogoUrl
         };
 
         /// <summary>
@@ -240,7 +243,10 @@ namespace ExamPlatform.API.Controllers
                 Score           = c.Score,
                 IssuedAt        = c.IssuedAt,
                 CertStatus      = c.CertStatus.ToString(),
-                CertificateText = certText
+                CertificateText = certText,
+                IsPremium        = c.IsPremium,
+                InstituteName    = c.InstituteName,
+                InstituteLogoUrl = c.InstituteLogoUrl
             };
         }
     }

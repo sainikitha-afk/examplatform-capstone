@@ -37,13 +37,18 @@ namespace ExamPlatform.BLL.Services
         private readonly ILogger<AttemptService> _logger;
         private readonly IBackgroundTaskQueue _taskQueue;
 
+        // Premium-exam access gate (Part 4/9): a candidate may not start/resume
+        // a brand-new attempt on an IsPremium exam without an Active purchase.
+        private readonly ICandidatePurchaseRepository _purchaseRepository;
+
         public AttemptService(
             IAttemptRepository attemptRepository,
             IAttemptAnswerRepository answerRepository,
             IExamRepository examRepository,
             INotificationRepository notificationRepository,
             ILogger<AttemptService> logger,
-            IBackgroundTaskQueue taskQueue)
+            IBackgroundTaskQueue taskQueue,
+            ICandidatePurchaseRepository purchaseRepository)
         {
             _attemptRepository = attemptRepository;
             _answerRepository = answerRepository;
@@ -51,6 +56,7 @@ namespace ExamPlatform.BLL.Services
             _notificationRepository = notificationRepository;
             _logger = logger;
             _taskQueue = taskQueue;
+            _purchaseRepository = purchaseRepository;
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -85,6 +91,15 @@ namespace ExamPlatform.BLL.Services
                 throw new ExamNotOpenForAttemptException(
                     $"exam is in '{exam.ExamStatus}' status.");
             }
+
+            // ─── PREMIUM ACCESS GATE (new attempts AND resumes) ──────
+            // Re-checked server-side on every call — never trusted from a
+            // cached frontend flag, and never skipped just because an
+            // InProgress attempt already exists. Without this on the resume
+            // path, a candidate whose purchase was refunded mid-attempt could
+            // keep resuming, answering and submitting a premium exam they no
+            // longer have access to.
+            await EnsurePremiumAccessAsync(exam, userId);
 
             // ─── RESUME CHECK (BEFORE window check) ──────────────────
             // A candidate who started before EndTime must be able to resume
@@ -313,6 +328,9 @@ namespace ExamPlatform.BLL.Services
                 throw new AttemptAlreadySubmittedException(attemptId);
             }
 
+            // Re-checked on every save — a refund revokes access mid-attempt.
+            await EnsurePremiumAccessAsync(attempt.Exam!, userId);
+
             // ─── TIMER CHECK BEFORE SAVING ────────────────────────────
             var remaining = ComputeRemainingSeconds(attempt);
             if (remaining <= 0)
@@ -388,6 +406,9 @@ namespace ExamPlatform.BLL.Services
                     attemptId, attempt.AttemptStatus);
                 throw new AttemptAlreadySubmittedException(attemptId);
             }
+
+            // Re-checked on every submit — a refund revokes access mid-attempt.
+            await EnsurePremiumAccessAsync(attempt.Exam!, userId);
 
             await EvaluateAndSubmitAsync(attempt, AttemptStatus.Submitted);
 
@@ -534,6 +555,28 @@ namespace ExamPlatform.BLL.Services
         // ═══════════════════════════════════════════════════════════════
         //   PRIVATE HELPERS
         // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Throws PremiumAccessRequiredException if <paramref name="exam"/> is
+        /// premium and the candidate does not currently hold an Active purchase.
+        /// Called on every code path that can advance an InProgress attempt
+        /// (start, resume, save-answer, submit) — not just the initial start —
+        /// so a purchase refunded mid-attempt immediately cuts off further
+        /// progress instead of only blocking a brand-new attempt.
+        /// </summary>
+        private async Task EnsurePremiumAccessAsync(Exam exam, int userId)
+        {
+            if (!exam.IsPremium) return;
+
+            var purchase = await _purchaseRepository.GetByUserAndExamAsync(userId, exam.ExamId);
+            if (purchase == null || purchase.Status != CandidatePurchaseStatus.Active)
+            {
+                _logger.LogWarning(
+                    "User {UserId} attempted premium exam {ExamId} without an active purchase.",
+                    userId, exam.ExamId);
+                throw new PremiumAccessRequiredException(exam.ExamId, exam.Price ?? 0m);
+            }
+        }
 
         /// <summary>
         /// Computes how many seconds remain on the server-authoritative timer.

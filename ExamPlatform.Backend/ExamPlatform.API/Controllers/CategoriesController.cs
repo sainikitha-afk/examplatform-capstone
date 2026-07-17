@@ -37,8 +37,8 @@ namespace ExamPlatform.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var categories = await _categoryService.GetAllAsync();
-            return Ok(categories.Select(ToDto));
+            var categories = await _categoryService.GetAllWithExamCountsAsync();
+            return Ok(categories.Select(c => ToDto(c.Category, c.PublishedExamCount)));
         }
 
         [HttpGet("{id:int}")]
@@ -144,11 +144,12 @@ namespace ExamPlatform.API.Controllers
         // ───────────── PRIVATE MAPPER ─────────────
         // Entity → DTO mapping. Lives here because no other controller needs it.
         // If reuse pops up, move to a Mappers/ folder.
-        private static CategoryDto ToDto(ExamCategory entity) => new()
+        private static CategoryDto ToDto(ExamCategory entity, int publishedExamCount = 0) => new()
         {
             CatId = entity.CatId,
             CatName = entity.CatName,
-            Description = entity.Description
+            Description = entity.Description,
+            PublishedExamCount = publishedExamCount
         };
     }
 }

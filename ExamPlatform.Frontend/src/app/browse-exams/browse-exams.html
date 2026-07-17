@@ -7,13 +7,15 @@
     <p class="page-header-sub">Discover and take published assessments.</p>
   </div>
 
-  <!-- Category filter -->
-  <div class="browse-filter-bar mb-4">
-    <select class="form-select filter-select" [(ngModel)]="selectedCategoryId" (change)="handleCategoryChange()">
-      <option [value]="null">All Categories</option>
-      <option *ngFor="let cat of categories" [value]="cat.catId">{{ cat.catName }}</option>
-    </select>
-  </div>
+  <!-- Category boards — one per category, always up to date when the admin
+       adds a new one. Clicking a board filters the exam grid below it. -->
+  <app-category-board
+    [categories]="categories"
+    [selectedCategoryId]="selectedCategoryId"
+    allLabel="All Categories"
+    countLabel="exams"
+    (categorySelected)="handleBoardSelect($event)"
+  ></app-category-board>
 
   <!-- Loading -->
   <div *ngIf="isLoading" class="text-center py-5">
@@ -28,9 +30,22 @@
   <!-- Exam Cards Grid -->
   <div *ngIf="!isLoading" class="row g-3 stagger-children">
     <div class="col-md-6 col-lg-4" *ngFor="let exam of exams">
-      <div class="exam-card">
+      <div class="exam-card" [class.exam-card-premium]="exam.isPremium">
         <div class="exam-card-body">
+          <div class="exam-badge-row" *ngIf="exam.isPremium || exam.isFeatured">
+            <span *ngIf="exam.isPremium" class="badge-premium-tag"><i class="bi bi-gem me-1"></i>Premium</span>
+            <span *ngIf="exam.isFeatured" class="badge-featured-tag"><i class="bi bi-star-fill me-1"></i>Featured</span>
+          </div>
           <h5 class="exam-title">{{ exam.title }}</h5>
+
+          <!-- Institute badge — premium exam certified by a verified institution
+               (name + logo the examiner registered). -->
+          <div *ngIf="exam.isInstituteVerified" class="exam-institute-chip" [title]="exam.instituteName || ''">
+            <img *ngIf="exam.instituteLogoUrl" [src]="exam.instituteLogoUrl" alt="" class="eic-logo" />
+            <i *ngIf="!exam.instituteLogoUrl" class="bi bi-patch-check-fill"></i>
+            <span>{{ exam.instituteName }}</span>
+          </div>
+
           <div class="exam-meta">
             <span><i class="bi bi-clock me-1"></i>{{ exam.durationMinutes }} min</span>
             <span><i class="bi bi-star-fill me-1 text-warning"></i>{{ exam.totalMarks }} marks</span>
@@ -40,10 +55,12 @@
             <i class="bi bi-check-circle me-1 text-success"></i>
             Pass at <strong>{{ exam.passingMarks }}</strong> marks
           </div>
+          <div *ngIf="exam.isPremium" class="exam-price">₹{{ exam.price | number }}</div>
         </div>
         <div class="exam-card-footer">
           <button class="btn btn-primary w-100" (click)="viewExamDetails(exam.examId)">
-            <i class="bi bi-eye me-1"></i>View & Start
+            <i class="bi" [ngClass]="exam.isPremium ? 'bi-unlock' : 'bi-eye'"></i>
+            {{ exam.isPremium ? ' View & Purchase' : ' View & Start' }}
           </button>
         </div>
       </div>

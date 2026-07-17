@@ -40,5 +40,17 @@ namespace ExamPlatform.DAL.Interfaces
         // Paginated variant of GetByExaminerAsync — scoped to one examiner, with paging.
         Task<(IEnumerable<Exam> Items, int TotalCount)> GetByExaminerPagedAsync(
             int examinerId, int page, int pageSize);
+
+        // Published-exam counts grouped by CatId. Powers the category "board"
+        // cards (browse/manage screens) so each board can show how many exams
+        // a candidate/examiner will actually find there, without an N-query
+        // round-trip per category.
+        Task<Dictionary<int, int>> GetPublishedCountsByCategoryAsync();
+
+        // True if at least one exam (any status) references this category.
+        // Used by the category-delete guard: the FK is DeleteBehavior.Restrict,
+        // so we pre-check and throw a friendly CategoryInUseException instead
+        // of letting a raw DbUpdateException surface as a 500.
+        Task<bool> AnyByCategoryAsync(int catId);
     }
 }

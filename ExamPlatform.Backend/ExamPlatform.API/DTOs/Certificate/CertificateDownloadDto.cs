@@ -22,6 +22,13 @@ namespace ExamPlatform.API.DTOs.Certificate
         public DateTime IssuedAt { get; set; }        // UTC
         public string CertStatus { get; set; } = null!;
 
+        // Premium / institute branding — snapshotted onto the Certificate at
+        // issuance (frozen even if the institute is later revoked). Drives the
+        // premium certificate design: gold seal, institute name + logo.
+        public bool IsPremium { get; set; }
+        public string? InstituteName { get; set; }
+        public string? InstituteLogoUrl { get; set; }
+
         // Pre-formatted certificate body text — the frontend can render this
         // verbatim or use it as fallback when building a custom layout.
         // Example: "This certifies that Riya has successfully completed

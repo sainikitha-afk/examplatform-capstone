@@ -52,6 +52,16 @@
       <div class="exam-title-area">
         <i class="bi bi-mortarboard-fill text-primary me-2"></i>
         <span class="exam-topbar-title">{{ examTitle$ | async }}</span>
+
+        <!-- Institute badge — shown while sitting a premium exam whose examiner
+             holds an Admin-verified institution (name + logo the examiner registered). -->
+        <ng-container *ngIf="institute$ | async as inst">
+          <span *ngIf="inst.verified" class="exam-institute-badge" [title]="inst.name || 'Institute Verified'">
+            <img *ngIf="inst.logoUrl" [src]="inst.logoUrl" alt="" class="eib-logo" />
+            <i *ngIf="!inst.logoUrl" class="bi bi-patch-check-fill"></i>
+            <span class="eib-name">{{ inst.name }}</span>
+          </span>
+        </ng-container>
       </div>
 
       <!-- Progress indicator -->

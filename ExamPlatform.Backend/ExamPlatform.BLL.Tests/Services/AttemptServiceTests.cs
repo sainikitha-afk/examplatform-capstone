@@ -23,6 +23,7 @@ namespace ExamPlatform.BLL.Tests.Services
         private Mock<INotificationRepository>   _notifRepoMock   = null!;
         private Mock<ILogger<AttemptService>>   _loggerMock      = null!;
         private Mock<IBackgroundTaskQueue>      _taskQueueMock   = null!;
+        private Mock<ICandidatePurchaseRepository> _purchaseRepoMock = null!;
         private AttemptService _sut = null!;
 
         [SetUp]
@@ -34,6 +35,7 @@ namespace ExamPlatform.BLL.Tests.Services
             _notifRepoMock   = new Mock<INotificationRepository>();
             _loggerMock      = new Mock<ILogger<AttemptService>>();
             _taskQueueMock   = new Mock<IBackgroundTaskQueue>();
+            _purchaseRepoMock = new Mock<ICandidatePurchaseRepository>();
 
             _sut = new AttemptService(
                 _attemptRepoMock.Object,
@@ -41,7 +43,8 @@ namespace ExamPlatform.BLL.Tests.Services
                 _examRepoMock.Object,
                 _notifRepoMock.Object,
                 _loggerMock.Object,
-                _taskQueueMock.Object);
+                _taskQueueMock.Object,
+                _purchaseRepoMock.Object);
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -112,6 +115,78 @@ namespace ExamPlatform.BLL.Tests.Services
             _attemptRepoMock.Verify(r => r.AddAsync(It.IsAny<Attempt>()), Times.Once);
         }
 
+        // ════════════════════════════════════════════════════════════════
+        //   StartOrResumeAsync — PREMIUM ACCESS GATE (Part 4/9)
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task StartOrResumeAsync_PremiumExamNoPurchase_ThrowsPremiumAccessRequiredException()
+        {
+            var exam = TestDataBuilder.BuildPublishedExam(1);
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
+            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
+            _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1)).ReturnsAsync((CandidatePurchase?)null);
+
+            var act = async () => await _sut.StartOrResumeAsync(1, 1);
+
+            await act.Should().ThrowAsync<PremiumAccessRequiredException>();
+            _attemptRepoMock.Verify(r => r.AddAsync(It.IsAny<Attempt>()), Times.Never);
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_PremiumExamRefundedPurchase_ThrowsPremiumAccessRequiredException()
+        {
+            var exam = TestDataBuilder.BuildPublishedExam(1);
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
+            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
+            _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
+                .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Refunded });
+
+            var act = async () => await _sut.StartOrResumeAsync(1, 1);
+
+            await act.Should().ThrowAsync<PremiumAccessRequiredException>();
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_PremiumExamWithActivePurchase_CreatesNewAttempt()
+        {
+            var exam = TestDataBuilder.BuildPublishedExam(1);
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
+            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
+            _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
+                .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Active });
+            _attemptRepoMock.Setup(r => r.AddAsync(It.IsAny<Attempt>())).ReturnsAsync((Attempt a) => a);
+            _attemptRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.StartOrResumeAsync(1, 1);
+
+            result.AttemptStatus.Should().Be(AttemptStatus.InProgress);
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_NonPremiumExam_NeverConsultsPurchaseRepository()
+        {
+            var exam = TestDataBuilder.BuildPublishedExam(1); // IsPremium defaults to false
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
+            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
+            _attemptRepoMock.Setup(r => r.AddAsync(It.IsAny<Attempt>())).ReturnsAsync((Attempt a) => a);
+            _attemptRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            await _sut.StartOrResumeAsync(1, 1);
+
+            _purchaseRepoMock.Verify(r => r.GetByUserAndExamAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        }
+
         [Test]
         public async Task StartOrResumeAsync_ExistingInProgressAttempt_ReturnsSameAttempt()
         {
@@ -140,6 +215,29 @@ namespace ExamPlatform.BLL.Tests.Services
             _attemptRepoMock.Verify(r => r.AddAsync(It.IsAny<Attempt>()), Times.Never);
             // Resume must call the full-load method so answers are populated.
             _attemptRepoMock.Verify(r => r.GetByIdWithAnswersAndExamAsync(42), Times.Once);
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_ExistingInProgressAttemptOnRefundedPremiumExam_ThrowsPremiumAccessRequiredException()
+        {
+            // Regression test for the audit finding: an admin-triggered refund
+            // must immediately cut off a candidate's ability to keep resuming
+            // (and therefore answering/submitting) an already-InProgress
+            // attempt on a premium exam — not just block a brand-new start.
+            var exam = TestDataBuilder.BuildPublishedExam(1);
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            var existing = TestDataBuilder.BuildInProgressAttempt(42, 1, 1);
+
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync(existing);
+            _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
+                .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Refunded });
+
+            var act = async () => await _sut.StartOrResumeAsync(1, 1);
+
+            await act.Should().ThrowAsync<PremiumAccessRequiredException>();
+            _attemptRepoMock.Verify(r => r.GetByIdWithAnswersAndExamAsync(It.IsAny<int>()), Times.Never);
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -181,6 +279,25 @@ namespace ExamPlatform.BLL.Tests.Services
 
             var act = async () => await _sut.SubmitAsync(1, userId: 1);
             await act.Should().ThrowAsync<AttemptNotFoundException>();
+        }
+
+        [Test]
+        public async Task SubmitAsync_PremiumExamPurchaseRefundedMidAttempt_ThrowsPremiumAccessRequiredException()
+        {
+            // Regression test: a refund issued while the attempt is still
+            // InProgress must block the final Submit too, not just resume.
+            var attempt = TestDataBuilder.BuildInProgressAttempt(1, userId: 1, examId: 1);
+            var exam = TestDataBuilder.BuildPublishedExam(1);
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            attempt.Exam = exam;
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+            _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
+                .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Refunded });
+
+            var act = async () => await _sut.SubmitAsync(1, userId: 1);
+
+            await act.Should().ThrowAsync<PremiumAccessRequiredException>();
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -427,6 +544,24 @@ namespace ExamPlatform.BLL.Tests.Services
             await _sut.SaveAnswerAsync(1, questionId: 3, selectedOptionId: 31, userId: 1);
 
             _answerRepoMock.Verify(r => r.UpsertAsync(1, 3, 31), Times.Once);
+        }
+
+        [Test]
+        public async Task SaveAnswerAsync_PremiumExamPurchaseRefundedMidAttempt_ThrowsPremiumAccessRequiredException()
+        {
+            // Regression test: a refund issued while the attempt is still
+            // InProgress must block further answer-saving too.
+            var attempt = BuildLoadedAttempt();
+            attempt.Exam!.IsPremium = true;
+            attempt.Exam.Price = 999m;
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(1)).ReturnsAsync(attempt);
+            _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
+                .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Refunded });
+
+            var act = async () => await _sut.SaveAnswerAsync(1, questionId: 3, selectedOptionId: 31, userId: 1);
+
+            await act.Should().ThrowAsync<PremiumAccessRequiredException>();
+            _answerRepoMock.Verify(r => r.UpsertAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int?>()), Times.Never);
         }
 
         [Test]

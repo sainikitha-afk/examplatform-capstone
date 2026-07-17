@@ -111,6 +111,26 @@ namespace ExamPlatform.API
                             QueueLimit = 0
                         });
                 });
+
+                // Same isolated-policy technique, applied only to the two payment-charge
+                // endpoints (subscription upgrade, exam purchase) — prevents a rapid-fire
+                // checkout submission loop, never touches any other endpoint.
+                options.AddPolicy(RateLimitPolicies.Payments, httpContext =>
+                {
+                    var partitionKey =
+                        httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                        ?? httpContext.User.FindFirst("sub")?.Value
+                        ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                        ?? "anonymous";
+
+                    return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ =>
+                        new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 10,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0
+                        });
+                });
             });
             #endregion
 

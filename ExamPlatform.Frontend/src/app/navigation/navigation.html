@@ -36,6 +36,11 @@
             <i class="bi bi-award"></i>Certificates
           </a>
         </li>
+        <li *ngIf="user.role === 'Candidate'">
+          <a routerLink="/my-purchases" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-bag-check"></i>My Purchases
+          </a>
+        </li>
 
         <!-- Examiner links -->
         <li *ngIf="user.role === 'Examiner'">
@@ -56,6 +61,11 @@
         <li *ngIf="user.role === 'Examiner'">
           <a routerLink="/publish-results" routerLinkActive="active" class="nav-link-item">
             <i class="bi bi-broadcast"></i>Publish Results
+          </a>
+        </li>
+        <li *ngIf="user.role === 'Examiner'">
+          <a routerLink="/examiner/subscription" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-gem"></i>Subscription
           </a>
         </li>
 
@@ -83,6 +93,16 @@
         <li *ngIf="user.role === 'Admin'">
           <a routerLink="/admin/examiner-requests" routerLinkActive="active" class="nav-link-item">
             <i class="bi bi-person-lines-fill"></i>Requests
+          </a>
+        </li>
+        <li *ngIf="user.role === 'Admin'">
+          <a routerLink="/admin/revenue" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-graph-up-arrow"></i>Revenue
+          </a>
+        </li>
+        <li *ngIf="user.role === 'Admin'">
+          <a routerLink="/admin/institution-verifications" routerLinkActive="active" class="nav-link-item">
+            <i class="bi bi-patch-check"></i>Institutes
           </a>
         </li>
 
@@ -174,6 +194,7 @@
         <a routerLink="/browse-exams"    class="mobile-link" (click)="closeMobile()"><i class="bi bi-search"></i>Browse Exams</a>
         <a routerLink="/my-analytics"    class="mobile-link" (click)="closeMobile()"><i class="bi bi-bar-chart-line"></i>Analytics</a>
         <a routerLink="/my-certificates" class="mobile-link" (click)="closeMobile()"><i class="bi bi-award"></i>Certificates</a>
+        <a routerLink="/my-purchases"     class="mobile-link" (click)="closeMobile()"><i class="bi bi-bag-check"></i>My Purchases</a>
       </ng-container>
 
       <!-- Examiner mobile links -->
@@ -182,6 +203,7 @@
         <a routerLink="/manage-questions"  class="mobile-link" (click)="closeMobile()"><i class="bi bi-question-circle"></i>Questions</a>
         <a routerLink="/manage-exams"      class="mobile-link" (click)="closeMobile()"><i class="bi bi-file-earmark-text"></i>Exams</a>
         <a routerLink="/publish-results"   class="mobile-link" (click)="closeMobile()"><i class="bi bi-broadcast"></i>Publish Results</a>
+        <a routerLink="/examiner/subscription" class="mobile-link" (click)="closeMobile()"><i class="bi bi-gem"></i>Subscription</a>
       </ng-container>
 
       <!-- Admin mobile links -->
@@ -191,6 +213,8 @@
         <a routerLink="/admin/users"      class="mobile-link" (click)="closeMobile()"><i class="bi bi-people"></i>Users</a>
         <a routerLink="/admin/examiners"          class="mobile-link" (click)="closeMobile()"><i class="bi bi-person-badge"></i>Examiners</a>
         <a routerLink="/admin/examiner-requests"  class="mobile-link" (click)="closeMobile()"><i class="bi bi-person-lines-fill"></i>Requests</a>
+        <a routerLink="/admin/revenue"             class="mobile-link" (click)="closeMobile()"><i class="bi bi-graph-up-arrow"></i>Revenue</a>
+        <a routerLink="/admin/institution-verifications" class="mobile-link" (click)="closeMobile()"><i class="bi bi-patch-check"></i>Institutes</a>
       </ng-container>
 
       <!-- AI Learning Coach — available to every signed-in role (see desktop links above). -->
@@ -216,6 +240,7 @@
       </a>
       <ul class="nav-links d-none d-lg-flex">
         <li><a href="#features" class="nav-link-item">Features</a></li>
+        <li><a routerLink="/pricing" class="nav-link-item">Pricing</a></li>
         <li><a href="#faq" class="nav-link-item">FAQ</a></li>
       </ul>
       <div class="nav-actions">

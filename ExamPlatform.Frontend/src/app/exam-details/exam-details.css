@@ -25,6 +25,27 @@
   margin: 0.4rem 0 0;
 }
 
+.badge-premium-tag {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: var(--text-inverse);
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.premium-lock-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
 .exam-instructions {
   display: flex;
   align-items: flex-start;
@@ -62,3 +83,23 @@
 .pass-gauge { display: flex; align-items: baseline; justify-content: center; gap: 0.3rem; }
 .pass-pct   { font-size: 2rem; font-weight: 800; color: var(--primary); }
 .pass-label { font-size: 0.85rem; color: var(--text-muted); }
+
+/* Institute Verified badge */
+.institute-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius);
+}
+.institute-badge > .bi { font-size: 1.6rem; color: var(--primary); }
+.institute-badge-logo {
+  height: 34px; width: auto; max-width: 60px;
+  object-fit: contain; border-radius: 5px; background: #fff;
+}
+.institute-badge-text { display: flex; flex-direction: column; line-height: 1.2; }
+.institute-badge-name { font-weight: 700; color: var(--text); font-size: 0.95rem; }
+.institute-badge-tag  { font-size: 0.72rem; font-weight: 600; color: var(--primary-hover); text-transform: uppercase; letter-spacing: 0.4px; }

@@ -15,6 +15,8 @@ namespace ExamPlatform.Domain.Enums
         IssueReported,             // Examiner alert: "<candidate> reported an issue on '<exam>'."
         IssueResolved,             // Candidate alert: "Your reported issue on '<exam>' was resolved."
         IntegrityFlag,             // Examiner alert: "<candidate> left the exam tab N times during '<exam>'."
-        SystemAlert                // Admin alert: a crucial workflow partly failed (e.g. SMTP down during publish).
+        SystemAlert,               // Admin alert: a crucial workflow partly failed (e.g. SMTP down during publish).
+        InstitutionVerified,       // Examiner alert: "Your institute '<name>' has been verified."
+        InstitutionRejected        // Examiner alert: "Your institute verification request was not approved."
     }
 }

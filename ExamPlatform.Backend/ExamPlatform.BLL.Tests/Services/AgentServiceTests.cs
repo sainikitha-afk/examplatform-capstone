@@ -1,9 +1,12 @@
-// AgentServiceTests.cs — focused tests for the Gemini prompt-path resolution.
-// These verify the fix for the "prompt file not found" defect: the default path
-// must resolve against the binary's output directory (where the build copies
+// AgentServiceTests.cs — focused tests for the question-categorization call
+// (now against the Presidio LLM Gateway's Anthropic-compatible pass-through —
+// see LlmGatewayProtocol.cs) and the Gemini-era prompt-path resolution fix,
+// which is unaffected by the provider swap: the default path must resolve
+// against the binary's output directory (where the build copies
 // Assets/gemini-prompt.txt) rather than the process working directory.
 
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using ExamPlatform.BLL.Services;
@@ -19,14 +22,15 @@ namespace ExamPlatform.BLL.Tests.Services
     [TestFixture]
     public class AgentServiceTests
     {
-        // ── Test doubles for the Gemini HTTP integration ──────────────────
-        // A stub handler returns a canned response and records the request URI
-        // so we can assert on the endpoint/model actually called.
+        // ── Test doubles for the LLM Gateway HTTP integration ─────────────
+        // A stub handler returns a canned response and records the request
+        // (URI, headers) so we can assert on the endpoint/model actually called.
         private sealed class StubHandler : HttpMessageHandler
         {
             private readonly HttpStatusCode _status;
             private readonly string _body;
             public Uri? LastRequestUri { get; private set; }
+            public HttpRequestHeaders? LastRequestHeaders { get; private set; }
 
             public StubHandler(HttpStatusCode status, string body)
             {
@@ -38,6 +42,7 @@ namespace ExamPlatform.BLL.Tests.Services
                 HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 LastRequestUri = request.RequestUri;
+                LastRequestHeaders = request.Headers;
                 return Task.FromResult(new HttpResponseMessage(_status)
                 {
                     Content = new StringContent(_body, Encoding.UTF8, "application/json")
@@ -45,21 +50,18 @@ namespace ExamPlatform.BLL.Tests.Services
             }
         }
 
-        private static IConfiguration BuildConfig(string apiKey, string? apiUrl = null)
+        private static IConfiguration BuildConfig(string apiKey, string? baseUrl = "https://example.test")
         {
-            var dict = new Dictionary<string, string?> { ["Gemini:ApiKey"] = apiKey };
-            if (apiUrl != null) dict["Gemini:ApiUrl"] = apiUrl;
+            var dict = new Dictionary<string, string?> { ["LLM:ApiKey"] = apiKey };
+            if (baseUrl != null) dict["LLM:BaseUrl"] = baseUrl;
             return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
         }
 
-        // Wraps the model's JSON output in Gemini's response envelope.
-        private static string GeminiEnvelope(string modelJsonText)
+        // Wraps the model's JSON output in the Anthropic Messages API response envelope.
+        private static string AnthropicEnvelope(string modelJsonText)
             => JsonSerializer.Serialize(new
             {
-                candidates = new[]
-                {
-                    new { content = new { parts = new[] { new { text = modelJsonText } } } }
-                }
+                content = new[] { new { type = "text", text = modelJsonText } }
             });
 
         private static List<ExamQuestion> SampleQuestions() => new()
@@ -75,27 +77,38 @@ namespace ExamPlatform.BLL.Tests.Services
         public async Task CategorizeQuestionsAsync_SuccessResponse_MapsCategoriesByIntId()
         {
             var handler = new StubHandler(HttpStatusCode.OK,
-                GeminiEnvelope("{\"1\":\"Arithmetic\",\"2\":\"Geometry\"}"));
-            var config = BuildConfig("SECRET-KEY-123",
-                "https://example.test/v1beta/models/gemini-flash-latest:generateContent");
+                AnthropicEnvelope("{\"1\":\"Arithmetic\",\"2\":\"Geometry\"}"));
+            var config = BuildConfig("SECRET-KEY-123", "https://example.test");
             var sut = BuildSut(handler, config);
 
             var result = await sut.CategorizeQuestionsAsync(SampleQuestions());
 
             result[1].Should().Be("Arithmetic");
             result[2].Should().Be("Geometry");
-            // The configured model/endpoint is the one actually called.
-            handler.LastRequestUri!.ToString().Should().Contain("gemini-flash-latest:generateContent");
+            // The gateway's Anthropic pass-through endpoint is the one actually called.
+            handler.LastRequestUri!.ToString().Should().Be("https://example.test/v1/messages");
+        }
+
+        [Test]
+        public async Task CategorizeQuestionsAsync_SendsApiKeyHeaderAndDefaultModel()
+        {
+            var handler = new StubHandler(HttpStatusCode.OK, AnthropicEnvelope("{\"1\":\"A\",\"2\":\"B\"}"));
+            var config = BuildConfig("SECRET-KEY-123");
+            var sut = BuildSut(handler, config);
+
+            await sut.CategorizeQuestionsAsync(SampleQuestions());
+
+            handler.LastRequestHeaders!.GetValues("x-api-key").Should().Contain("SECRET-KEY-123");
+            handler.LastRequestHeaders!.GetValues("anthropic-version").Should().Contain("2023-06-01");
         }
 
         [Test]
         public async Task CategorizeQuestionsAsync_NonSuccessResponse_ThrowsWithStatusAndNeverLeaksKey()
         {
             const string apiKey = "SUPER-SECRET-KEY-XYZ";
-            var errorBody = "{\"error\":{\"code\":404,\"message\":\"model not found\",\"status\":\"NOT_FOUND\"}}";
+            var errorBody = "{\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found\"}}";
             var handler = new StubHandler(HttpStatusCode.NotFound, errorBody);
-            var config = BuildConfig(apiKey,
-                "https://example.test/v1beta/models/gemini-flash-latest:generateContent");
+            var config = BuildConfig(apiKey, "https://example.test");
             var sut = BuildSut(handler, config);
 
             var act = async () => await sut.CategorizeQuestionsAsync(SampleQuestions());
@@ -109,8 +122,19 @@ namespace ExamPlatform.BLL.Tests.Services
         [Test]
         public async Task CategorizeQuestionsAsync_MissingApiKey_Throws()
         {
-            var handler = new StubHandler(HttpStatusCode.OK, GeminiEnvelope("{}"));
+            var handler = new StubHandler(HttpStatusCode.OK, AnthropicEnvelope("{}"));
             var sut = BuildSut(handler, BuildConfig("")); // no key configured
+
+            var act = async () => await sut.CategorizeQuestionsAsync(SampleQuestions());
+
+            await act.Should().ThrowAsync<Exception>();
+        }
+
+        [Test]
+        public async Task CategorizeQuestionsAsync_MissingBaseUrl_Throws()
+        {
+            var handler = new StubHandler(HttpStatusCode.OK, AnthropicEnvelope("{}"));
+            var sut = BuildSut(handler, BuildConfig("SOME-KEY", baseUrl: null)); // no base URL configured
 
             var act = async () => await sut.CategorizeQuestionsAsync(SampleQuestions());
 
@@ -121,7 +145,7 @@ namespace ExamPlatform.BLL.Tests.Services
         public async Task CategorizeQuestionsAsync_MalformedResponse_Throws()
         {
             var handler = new StubHandler(HttpStatusCode.OK, "{\"unexpected\":true}");
-            var config = BuildConfig("KEY", "https://example.test/x:generateContent");
+            var config = BuildConfig("KEY", "https://example.test");
             var sut = BuildSut(handler, config);
 
             var act = async () => await sut.CategorizeQuestionsAsync(SampleQuestions());
@@ -132,11 +156,12 @@ namespace ExamPlatform.BLL.Tests.Services
         [Test]
         public async Task CategorizeQuestionsAsync_ResponseMissingClosingBrace_StillRecovers()
         {
-            // Reproduces the real defect: gemini-flash-latest intermittently returns the
-            // answer JSON with the closing brace omitted. Tolerant parsing must recover it.
+            // Reproduces the real defect observed with the previous provider: the model
+            // intermittently returns the answer JSON with the closing brace omitted.
+            // Tolerant parsing must recover it regardless of provider.
             var truncated = "{\n  \"1\": \"Arithmetic\",\n  \"2\": \"Geometry\"";
-            var handler = new StubHandler(HttpStatusCode.OK, GeminiEnvelope(truncated));
-            var config = BuildConfig("KEY", "https://example.test/x:generateContent");
+            var handler = new StubHandler(HttpStatusCode.OK, AnthropicEnvelope(truncated));
+            var config = BuildConfig("KEY", "https://example.test");
             var sut = BuildSut(handler, config);
 
             var result = await sut.CategorizeQuestionsAsync(SampleQuestions());

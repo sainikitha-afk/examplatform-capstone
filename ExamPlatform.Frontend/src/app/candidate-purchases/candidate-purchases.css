@@ -1,0 +1,22 @@
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.pill-active { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.pill-refunded { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+table thead th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
+table td, table th { border-color: var(--border); }

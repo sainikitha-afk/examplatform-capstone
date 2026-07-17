@@ -19,7 +19,7 @@ import { Observable, Subscription } from 'rxjs';
 import { QuestionCard } from '../question-card/question-card';
 import { AttemptActions } from '../store/attempt.actions';
 import {
-  selectAttemptId, selectExamTitle, selectQuestions,
+  selectAttemptId, selectExamTitle, selectInstitute, selectQuestions,
   selectCurrentIndex, selectAnswers, selectTimeRemaining,
   selectAttemptStatus, selectErrorMessage,
   selectIsOffline, selectPendingSyncCount
@@ -40,6 +40,7 @@ export class AttemptExam implements OnInit, OnDestroy {
   // ── NgRx Observables — assigned in constructor (not as field initialisers)
   // because 'store' is not available until after the constructor runs.
   examTitle$:    Observable<string>;
+  institute$:    Observable<{ verified: boolean; name: string | null; logoUrl: string | null }>;
   questions$:    Observable<QuestionInAttemptModel[]>;
   currentIndex$: Observable<number>;
   answers$:      Observable<Record<number, number | null>>;
@@ -95,6 +96,7 @@ export class AttemptExam implements OnInit, OnDestroy {
   ) {
     // Assign Observables here — store is available after super() in the constructor.
     this.examTitle$    = this.store.select(selectExamTitle);
+    this.institute$    = this.store.select(selectInstitute);
     this.questions$    = this.store.select(selectQuestions);
     this.currentIndex$ = this.store.select(selectCurrentIndex);
     this.answers$      = this.store.select(selectAnswers);

@@ -12,6 +12,11 @@ namespace ExamPlatform.BLL.Interfaces
         Task<IEnumerable<ExamCategory>> GetAllAsync();
         Task<ExamCategory> GetByIdAsync(int catId);   // throws CategoryNotFoundException if missing
 
+        // Same list as GetAllAsync, paired with each category's published-exam
+        // count. Powers the "category board" cards on Browse Exams (candidate)
+        // and the examiner's category-browse view — one query, no N+1.
+        Task<IEnumerable<(ExamCategory Category, int PublishedExamCount)>> GetAllWithExamCountsAsync();
+
         // Returns the special "Mixed" category, creating it on first use.
         // Used when an examiner labels an exam as multi-category — the exam's
         // CatId FK is non-nullable, so "Mixed" is a real category row that is

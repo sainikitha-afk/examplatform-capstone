@@ -1,0 +1,144 @@
+<!-- Examiner Subscription Dashboard — Part 6 of the Subscription & Payment System -->
+
+<div class="container py-4 animate-fade-in">
+  <h3 class="fw-bold mb-4"><i class="bi bi-gem text-primary me-2"></i>Subscription</h3>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+
+    <!-- Trial-exhausted / discount dialog -->
+    <div *ngIf="status.upgradeDialog === 'upgrade'" class="card upgrade-dialog mb-4">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-trophy-fill text-warning" style="font-size:2.5rem"></i>
+        <h5 class="fw-bold mt-2">You've successfully created {{ status.trialExamsUsed }} exams!</h5>
+        <p class="text-muted">You've experienced the platform. Upgrade to Professional to keep creating exams.</p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+          <button class="btn btn-primary" (click)="handleUpgradeClick(false)">Upgrade to Professional</button>
+          <button class="btn btn-outline-secondary" [disabled]="isDeclining" (click)="handleDeclineClick()">
+            No thanks
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="status.upgradeDialog === 'discount'" class="card upgrade-dialog discount-dialog mb-4">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-tag-fill text-success" style="font-size:2.5rem"></i>
+        <h5 class="fw-bold mt-2">One-time offer: 25% off Professional</h5>
+        <p class="text-muted">Before you go — get Professional at a discount, just this once.</p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+          <button class="btn btn-success" (click)="handleUpgradeClick(false)">Claim 25% Off</button>
+          <button class="btn btn-outline-secondary" [disabled]="isDeclining" (click)="handleDeclineClick()">
+            Continue on Free Forever
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- Status card -->
+      <div class="col-lg-7">
+        <div class="card status-card">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <span class="status-pill" [ngClass]="'pill-' + status.status.toLowerCase()">{{ status.status }}</span>
+                <h4 class="fw-bold mt-2 mb-0">{{ status.planName }}</h4>
+              </div>
+              <i class="bi bi-gem text-primary" style="font-size:2rem"></i>
+            </div>
+
+            <div *ngIf="status.maxExamsLifetime" class="mt-4">
+              <div class="d-flex justify-content-between small text-muted mb-1">
+                <span>Trial exams used</span>
+                <span>{{ status.trialExamsUsed }} / {{ status.maxExamsLifetime }}</span>
+              </div>
+              <div class="progress" style="height:8px">
+                <div class="progress-bar bg-primary" [style.width.%]="trialProgressPercent"></div>
+              </div>
+            </div>
+
+            <div *ngIf="status.nextEligibleAt" class="alert alert-warning small mt-3 mb-0">
+              <i class="bi bi-clock-history me-1"></i>Next exam available after {{ status.nextEligibleAt | date:'medium' }}
+            </div>
+
+            <div *ngIf="status.subscriptionEndDate" class="small text-muted mt-3">
+              <div *ngIf="status.nextRenewalDate">Renews {{ status.nextRenewalDate | date:'mediumDate' }}</div>
+              <div *ngIf="status.discountAppliedPercent">{{ status.discountAppliedPercent }}% discount applied</div>
+            </div>
+
+            <button *ngIf="status.status !== 'ProfessionalActive' && status.status !== 'GracePeriod' && status.upgradeDialog === 'none'"
+                    class="btn btn-primary w-100 mt-4" (click)="handleUpgradeClick(false)">
+              Upgrade to Professional
+            </button>
+          </div>
+        </div>
+
+        <!-- Institute Verification -->
+        <div class="card mt-4" *ngIf="status.canCreatePremiumExams">
+          <div class="card-body p-4">
+            <h6 class="fw-bold"><i class="bi bi-patch-check-fill text-primary me-2"></i>Institute Verification</h6>
+
+            <div *ngIf="!institution">
+              <p class="text-muted small">Get an "Institute Verified" badge on your premium exams and certificates.</p>
+              <input class="form-control mb-2" [(ngModel)]="institutionName" name="institutionName" placeholder="Institute name" />
+              <input class="form-control mb-2" [(ngModel)]="institutionLogoUrl" name="institutionLogoUrl" placeholder="Logo URL (optional)" />
+              <button class="btn btn-outline-primary" [disabled]="isSubmittingInstitution" (click)="handleSubmitInstitution()">
+                Submit for Verification
+              </button>
+              <p *ngIf="institutionMessage" class="small mt-2">{{ institutionMessage }}</p>
+            </div>
+
+            <div *ngIf="institution">
+              <!-- Verified: show a proud institute badge (logo + name + seal) -->
+              <div *ngIf="institution.verificationStatus === 'Verified'" class="verified-institute">
+                <img *ngIf="institution.logoUrl" [src]="institution.logoUrl" alt="" class="vi-logo" />
+                <i *ngIf="!institution.logoUrl" class="bi bi-patch-check-fill vi-icon"></i>
+                <div class="vi-text">
+                  <div class="vi-name">{{ institution.name }}</div>
+                  <div class="vi-tag"><i class="bi bi-patch-check-fill me-1"></i>Institute Verified</div>
+                </div>
+              </div>
+              <p *ngIf="institution.verificationStatus === 'Verified'" class="text-muted small mt-2 mb-0">
+                This badge now appears on your premium exams and the certificates they issue.
+              </p>
+
+              <!-- Pending / Rejected: status pill -->
+              <div *ngIf="institution.verificationStatus !== 'Verified'">
+                <span class="status-pill" [ngClass]="'pill-' + institution.verificationStatus.toLowerCase()">
+                  {{ institution.verificationStatus }}
+                </span>
+                <div class="fw-semibold mt-2">{{ institution.name }}</div>
+                <button *ngIf="institution.verificationStatus === 'Rejected'" class="btn btn-sm btn-outline-primary mt-2"
+                        (click)="institution = null">
+                  Submit Again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Billing history -->
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-3">Billing History</h6>
+            <p *ngIf="billingHistory.length === 0" class="text-muted small">No payments yet.</p>
+            <div *ngFor="let payment of billingHistory" class="billing-row">
+              <div>
+                <div class="fw-semibold small">₹{{ payment.amount | number }}</div>
+                <div class="text-muted" style="font-size:0.78rem">{{ payment.initiatedAt | date:'mediumDate' }}</div>
+              </div>
+              <span class="status-pill" [ngClass]="'pill-' + payment.status.toLowerCase()">{{ payment.status }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

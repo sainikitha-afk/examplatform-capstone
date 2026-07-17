@@ -41,6 +41,16 @@ namespace ExamPlatform.BLL.Services
         private readonly IUserRepository _userRepository;
         private readonly ExamPlatformContext _context; // for transaction only — see file header
 
+        // Subscription/payment gate: consulted before every exam creation to
+        // enforce the examiner's trial cap / Free Forever cooldown, and to
+        // decide whether isPremium=true is allowed. See Part 2/3/9 of the
+        // Subscription & Payment System design.
+        private readonly IExaminerSubscriptionService _subscriptionService;
+
+        // Institute Verification lookup — used only when snapshotting premium
+        // certificate branding at issuance time (PublishResultsAsync).
+        private readonly IInstitutionRepository _institutionRepository;
+
         private readonly ILogger<ExamService> _logger;
 
         public ExamService(
@@ -53,6 +63,8 @@ namespace ExamPlatform.BLL.Services
             INotificationEmailService emailService,
             IUserRepository userRepository,
             ExamPlatformContext context,
+            IExaminerSubscriptionService subscriptionService,
+            IInstitutionRepository institutionRepository,
             ILogger<ExamService> logger)
         {
             _examRepository = examRepository;
@@ -64,6 +76,8 @@ namespace ExamPlatform.BLL.Services
             _emailService = emailService;
             _userRepository = userRepository;
             _context = context;
+            _subscriptionService = subscriptionService;
+            _institutionRepository = institutionRepository;
             _logger = logger;
         }
 
@@ -179,7 +193,8 @@ namespace ExamPlatform.BLL.Services
         public async Task<Exam> CreateAsync(
             int examinerId, int catId, string title, string? instructions,
             int durationMinutes, decimal totalMarks, decimal passingMarks,
-            DateTime startTime, DateTime endTime)
+            DateTime startTime, DateTime endTime,
+            bool isPremium = false, decimal? price = null)
         {
             // Postgres timestamptz only accepts UTC — normalize before anything else.
             startTime = EnsureUtc(startTime);
@@ -197,6 +212,31 @@ namespace ExamPlatform.BLL.Services
             if (startTime >= endTime)
                 throw new ValidationException("Start time must be before end time.");
 
+            // ─── SUBSCRIPTION GATE (Part 2/9) ──────────────────────────
+            // Re-checked here, server-side, every time — never trusted from
+            // a cached frontend flag. Throws TrialExhaustedException or
+            // CooldownActiveException when the examiner's current plan does
+            // not allow another exam right now.
+            var eligibility = await _subscriptionService.CanCreateExamAsync(examinerId);
+            if (!eligibility.Allowed)
+            {
+                if (eligibility.Status == ExaminerSubscriptionStatus.TrialExhausted)
+                    throw new TrialExhaustedException(
+                        eligibility.UpgradeDeclineCount, eligibility.TrialExamsUsed,
+                        eligibility.MaxExamsLifetime ?? ExaminerSubscriptionService.TrialExamLimit);
+
+                throw new CooldownActiveException(eligibility.NextEligibleAt!.Value);
+            }
+
+            // isPremium is only honoured for a tier that actually allows it —
+            // never trusted from the client alone (Part 3/9 "bypassing premium").
+            if (isPremium && !eligibility.CanCreatePremiumExams)
+                throw new ValidationException(
+                    "Only Professional examiners can create premium certification exams. Upgrade your plan first.");
+
+            if (isPremium && (price is null || price <= 0))
+                throw new ValidationException("A premium exam requires a price greater than 0.");
+
             var exam = new Exam
             {
                 ExaminerId = examinerId,
@@ -209,15 +249,19 @@ namespace ExamPlatform.BLL.Services
                 StartTime = startTime,
                 EndTime = endTime,
                 ExamStatus = ExamStatus.Draft, // new exams always start as Draft
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsPremium = isPremium,
+                Price = isPremium ? price : null
             };
 
             await _examRepository.AddAsync(exam);
             await _examRepository.SaveChangesAsync();
 
+            await _subscriptionService.RecordExamCreatedAsync(examinerId);
+
             _logger.LogInformation(
-                "Exam {ExamId} created by examiner {ExaminerId}: '{Title}'.",
-                exam.ExamId, examinerId, exam.Title);
+                "Exam {ExamId} created by examiner {ExaminerId}: '{Title}' (premium={IsPremium}).",
+                exam.ExamId, examinerId, exam.Title, isPremium);
 
             return exam;
         }
@@ -553,6 +597,18 @@ namespace ExamPlatform.BLL.Services
 
                 var year = DateTime.UtcNow.Year;
 
+                // Resolved once per exam (not per candidate): premium branding to
+                // snapshot onto every certificate issued for this exam. Only a
+                // Verified institution's name/logo are ever snapshotted — an
+                // unverified or absent institution yields plain premium branding.
+                Institution? institution = exam.IsPremium
+                    ? await _institutionRepository.GetByOwnerUserIdAsync(exam.ExaminerId)
+                    : null;
+                var instituteName = institution?.VerificationStatus == InstitutionVerificationStatus.Verified
+                    ? institution.Name : null;
+                var instituteLogoUrl = institution?.VerificationStatus == InstitutionVerificationStatus.Verified
+                    ? institution.LogoUrl : null;
+
                 // Tracks (userId → certCode) for candidates who receive a NEW certificate
                 // during this publish. Used after the transaction commits to send the
                 // "Certificate Available" email without re-querying the database.
@@ -579,7 +635,14 @@ namespace ExamPlatform.BLL.Services
                                 AttemptId = attempt.AttemptId,
                                 Score = attempt.Score!.Value, // snapshot at issuance
                                 IssuedAt = DateTime.UtcNow,
-                                CertStatus = CertificateStatus.Issued
+                                CertStatus = CertificateStatus.Issued,
+                                // Premium branding snapshot (Part 3/8): survives even if the
+                                // institute's verification is later revoked or the exam's
+                                // premium flag could ever change — this certificate always
+                                // shows what was true when it was earned.
+                                IsPremium = exam.IsPremium,
+                                InstituteName = instituteName,
+                                InstituteLogoUrl = instituteLogoUrl
                             };
 
                             await _certRepository.AddAsync(cert);

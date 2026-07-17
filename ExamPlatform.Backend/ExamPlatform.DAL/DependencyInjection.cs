@@ -47,6 +47,16 @@ namespace ExamPlatform.DAL
             services.AddScoped<IExaminerRequestRepository, ExaminerRequestRepository>();
             services.AddScoped<IIssueReportRepository, IssueReportRepository>();
 
+            // ───────────── SUBSCRIPTION & PAYMENT SYSTEM ─────────────
+            services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+            services.AddScoped<IExaminerSubscriptionRepository, ExaminerSubscriptionRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
+            services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+            services.AddScoped<ICandidatePurchaseRepository, CandidatePurchaseRepository>();
+            services.AddScoped<ICouponRepository, CouponRepository>();
+            services.AddScoped<ICouponRedemptionRepository, CouponRedemptionRepository>();
+            services.AddScoped<IInstitutionRepository, InstitutionRepository>();
+
             return services;
         }
         

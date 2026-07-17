@@ -32,7 +32,10 @@
   <!-- Certificate Grid -->
   <div *ngIf="!isLoading && certs.length > 0" class="row g-4 stagger-children">
     <div class="col-md-6" *ngFor="let cert of certs">
-      <div class="cert-card" [class.revoked]="cert.certStatus !== 'Issued'">
+      <div class="cert-card" [class.revoked]="cert.certStatus !== 'Issued'" [class.cert-card-premium]="cert.isPremium">
+        <!-- Premium ribbon -->
+        <div *ngIf="cert.isPremium" class="cert-ribbon"><i class="bi bi-gem me-1"></i>Premium</div>
+
         <!-- Header -->
         <div class="d-flex align-items-start justify-content-between mb-3">
           <div>
@@ -48,6 +51,13 @@
           </div>
         </div>
 
+        <!-- Institute badge -->
+        <div *ngIf="cert.instituteName" class="cert-institute mb-2">
+          <img *ngIf="cert.instituteLogoUrl" [src]="cert.instituteLogoUrl" alt="" class="cert-inst-logo" />
+          <i *ngIf="!cert.instituteLogoUrl" class="bi bi-patch-check-fill"></i>
+          <span>{{ cert.instituteName }}</span>
+        </div>
+
         <!-- Code -->
         <div class="cert-code mb-3">{{ cert.certificateCode | uppercase }}</div>
 
@@ -58,8 +68,12 @@
 
         <!-- Download button -->
         <div *ngIf="cert.certStatus === 'Issued'" class="mt-3">
-          <button class="btn btn-outline-primary btn-sm" (click)="handleDownloadClick(cert.certificateId)">
-            <i class="bi bi-download me-2"></i>Download Certificate
+          <button class="btn btn-sm" [ngClass]="cert.isPremium ? 'btn-premium-download' : 'btn-outline-primary'"
+                  [disabled]="downloadingId === cert.certificateId"
+                  (click)="handleDownloadClick(cert.certificateId)">
+            <span *ngIf="downloadingId === cert.certificateId" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="downloadingId !== cert.certificateId" class="bi bi-download me-2"></i>
+            {{ downloadingId === cert.certificateId ? 'Preparing...' : 'Download Certificate' }}
           </button>
         </div>
       </div>

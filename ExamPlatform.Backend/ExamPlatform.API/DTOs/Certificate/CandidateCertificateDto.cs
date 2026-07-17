@@ -14,5 +14,11 @@ namespace ExamPlatform.API.DTOs.Certificate
         public DateTime IssuedAt { get; set; }
         public string CertStatus { get; set; } = null!; // "Issued" or "Revoked"
         public DateTime? RevokedAt { get; set; }       // null until revoked by admin
+
+        // Premium branding, snapshotted at issuance (Part 3/8/11) — drives the
+        // premium seal/institute logo/QR verification link on the certificate view.
+        public bool IsPremium { get; set; }
+        public string? InstituteName { get; set; }
+        public string? InstituteLogoUrl { get; set; }
     }
 }

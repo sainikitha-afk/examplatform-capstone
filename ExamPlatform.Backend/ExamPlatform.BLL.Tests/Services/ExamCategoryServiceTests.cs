@@ -16,6 +16,8 @@ namespace ExamPlatform.BLL.Tests.Services
     public class ExamCategoryServiceTests
     {
         private Mock<IExamCategoryRepository> _categoryRepoMock = null!;
+        private Mock<IExamRepository> _examRepoMock = null!;
+        private Mock<IQuestionRepository> _questionRepoMock = null!;
         private Mock<ILogger<ExamCategoryService>> _loggerMock = null!;
         private ExamCategoryService _sut = null!;
 
@@ -23,6 +25,8 @@ namespace ExamPlatform.BLL.Tests.Services
         public void SetUp()
         {
             _categoryRepoMock = new Mock<IExamCategoryRepository>();
+            _examRepoMock = new Mock<IExamRepository>();
+            _questionRepoMock = new Mock<IQuestionRepository>();
             _loggerMock = new Mock<ILogger<ExamCategoryService>>();
 
             _categoryRepoMock.Setup(r => r.GetAllAsync())
@@ -32,7 +36,14 @@ namespace ExamPlatform.BLL.Tests.Services
             _categoryRepoMock.Setup(r => r.SaveChangesAsync())
                              .ReturnsAsync(1);
 
-            _sut = new ExamCategoryService(_categoryRepoMock.Object, _loggerMock.Object);
+            // Default: category is free to delete (not referenced anywhere).
+            _examRepoMock.Setup(r => r.AnyByCategoryAsync(It.IsAny<int>())).ReturnsAsync(false);
+            _questionRepoMock.Setup(r => r.AnyByCategoryAsync(It.IsAny<int>())).ReturnsAsync(false);
+            _examRepoMock.Setup(r => r.GetPublishedCountsByCategoryAsync())
+                         .ReturnsAsync(new Dictionary<int, int>());
+
+            _sut = new ExamCategoryService(
+                _categoryRepoMock.Object, _examRepoMock.Object, _questionRepoMock.Object, _loggerMock.Object);
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -203,6 +214,55 @@ namespace ExamPlatform.BLL.Tests.Services
 
             var act = async () => await _sut.DeleteAsync(999);
             await act.Should().ThrowAsync<CategoryNotFoundException>();
+        }
+
+        [Test]
+        public async Task DeleteAsync_CategoryReferencedByExam_ThrowsCategoryInUseException()
+        {
+            var existing = TestDataBuilder.BuildCategory(1, "Mathematics");
+            _categoryRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _examRepoMock.Setup(r => r.AnyByCategoryAsync(1)).ReturnsAsync(true);
+
+            var act = async () => await _sut.DeleteAsync(1);
+
+            await act.Should().ThrowAsync<CategoryInUseException>();
+            _categoryRepoMock.Verify(r => r.Delete(It.IsAny<ExamCategory>()), Times.Never);
+        }
+
+        [Test]
+        public async Task DeleteAsync_CategoryReferencedByQuestion_ThrowsCategoryInUseException()
+        {
+            var existing = TestDataBuilder.BuildCategory(1, "Mathematics");
+            _categoryRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
+            _questionRepoMock.Setup(r => r.AnyByCategoryAsync(1)).ReturnsAsync(true);
+
+            var act = async () => await _sut.DeleteAsync(1);
+
+            await act.Should().ThrowAsync<CategoryInUseException>();
+            _categoryRepoMock.Verify(r => r.Delete(It.IsAny<ExamCategory>()), Times.Never);
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   GetAllWithExamCountsAsync
+        // ════════════════════════════════════════════════════════════════
+
+        [Test]
+        public async Task GetAllWithExamCountsAsync_PairsCategoriesWithCounts()
+        {
+            _categoryRepoMock.Setup(r => r.GetAllAsync())
+                             .ReturnsAsync(new List<ExamCategory>
+                             {
+                                 TestDataBuilder.BuildCategory(1, "C#"),
+                                 TestDataBuilder.BuildCategory(2, "SQL"),
+                             });
+            _examRepoMock.Setup(r => r.GetPublishedCountsByCategoryAsync())
+                         .ReturnsAsync(new Dictionary<int, int> { [1] = 5 });
+
+            var result = (await _sut.GetAllWithExamCountsAsync()).ToList();
+
+            result.Should().HaveCount(2);
+            result.Single(r => r.Category.CatId == 1).PublishedExamCount.Should().Be(5);
+            result.Single(r => r.Category.CatId == 2).PublishedExamCount.Should().Be(0);
         }
 
         // ════════════════════════════════════════════════════════════════

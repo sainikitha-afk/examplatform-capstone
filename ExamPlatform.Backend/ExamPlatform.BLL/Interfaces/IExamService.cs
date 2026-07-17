@@ -31,11 +31,16 @@ namespace ExamPlatform.BLL.Interfaces
         // The controller decides which DTO to use based on the caller's role.
         Task<Exam> GetByIdWithQuestionsAndOptionsAsync(int examId);
 
-        // Creates a new exam in Draft status.
+        // Creates a new exam in Draft status. Enforces the examiner's
+        // subscription state (trial cap / Free Forever cooldown) before the
+        // insert, and rejects isPremium=true unless the examiner's current
+        // tier allows it — both re-checked server-side regardless of what
+        // the client sends.
         Task<Exam> CreateAsync(
             int examinerId, int catId, string title, string? instructions,
             int durationMinutes, decimal totalMarks, decimal passingMarks,
-            DateTime startTime, DateTime endTime);
+            DateTime startTime, DateTime endTime,
+            bool isPremium = false, decimal? price = null);
 
         // Updates exam metadata. Only allowed while exam is in Draft.
         Task<Exam> UpdateAsync(

@@ -34,6 +34,15 @@ namespace ExamPlatform.Domain.Entities
 
         public DateTime CreatedAt { get; set; }               // UTC
 
+        // ───────────── SUBSCRIPTION & PAYMENT (additive) ─────────────
+        // Default false/null so every pre-existing exam and every free/practice
+        // exam is completely unaffected. Only a Professional-tier (or
+        // Institute-verified) examiner may set IsPremium=true — enforced
+        // server-side in ExamService, never trusted from the client.
+        public bool IsPremium { get; set; }
+        public decimal? Price { get; set; }                   // only meaningful when IsPremium
+        public bool IsFeatured { get; set; }                   // admin-curated "Featured" flag
+
         // ───────────── NAVIGATION ─────────────
         // Parent objects this exam belongs to:
         public User Examiner { get; set; } = null!;
@@ -44,5 +53,6 @@ namespace ExamPlatform.Domain.Entities
         public ICollection<Attempt> Attempts { get; set; } = new List<Attempt>();
         public ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public ICollection<CandidatePurchase> CandidatePurchases { get; set; } = new List<CandidatePurchase>();
     }
 }
