@@ -423,6 +423,12 @@ namespace ExamPlatform.DAL.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_premium");
 
+                    b.Property<int>("MaxAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("max_attempts");
+
                     b.Property<decimal>("PassingMarks")
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)")

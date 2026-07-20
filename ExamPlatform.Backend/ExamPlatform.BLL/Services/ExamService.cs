@@ -194,7 +194,7 @@ namespace ExamPlatform.BLL.Services
             int examinerId, int catId, string title, string? instructions,
             int durationMinutes, decimal totalMarks, decimal passingMarks,
             DateTime startTime, DateTime endTime,
-            bool isPremium = false, decimal? price = null)
+            bool isPremium = false, decimal? price = null, int maxAttempts = 1)
         {
             // Postgres timestamptz only accepts UTC — normalize before anything else.
             startTime = EnsureUtc(startTime);
@@ -237,6 +237,13 @@ namespace ExamPlatform.BLL.Services
             if (isPremium && (price is null || price <= 0))
                 throw new ValidationException("A premium exam requires a price greater than 0.");
 
+            // Attempt limit: 1–10 for practice exams; a premium certification is
+            // ALWAYS one attempt — silently forced, not an error, so a client that
+            // sends a stale maxAttempts alongside isPremium still succeeds.
+            if (!isPremium && (maxAttempts < 1 || maxAttempts > 10))
+                throw new ValidationException("Attempts allowed must be between 1 and 10.");
+            var effectiveMaxAttempts = isPremium ? 1 : maxAttempts;
+
             var exam = new Exam
             {
                 ExaminerId = examinerId,
@@ -251,7 +258,8 @@ namespace ExamPlatform.BLL.Services
                 ExamStatus = ExamStatus.Draft, // new exams always start as Draft
                 CreatedAt = DateTime.UtcNow,
                 IsPremium = isPremium,
-                Price = isPremium ? price : null
+                Price = isPremium ? price : null,
+                MaxAttempts = effectiveMaxAttempts
             };
 
             await _examRepository.AddAsync(exam);
@@ -272,7 +280,7 @@ namespace ExamPlatform.BLL.Services
         public async Task<Exam> UpdateAsync(
             int examId, int examinerId, string title, string? instructions,
             int durationMinutes, decimal totalMarks, decimal passingMarks,
-            DateTime startTime, DateTime endTime)
+            DateTime startTime, DateTime endTime, int maxAttempts = 1)
         {
             var exam = await LoadOwnedDraftAsync(examId, examinerId);
 
@@ -291,6 +299,8 @@ namespace ExamPlatform.BLL.Services
                 throw new ValidationException("Passing marks must be > 0 and ≤ total marks.");
             if (startTime >= endTime)
                 throw new ValidationException("Start time must be before end time.");
+            if (!exam.IsPremium && (maxAttempts < 1 || maxAttempts > 10))
+                throw new ValidationException("Attempts allowed must be between 1 and 10.");
 
             exam.Title = title.Trim();
             exam.Instructions = instructions?.Trim();
@@ -299,6 +309,8 @@ namespace ExamPlatform.BLL.Services
             exam.PassingMarks = passingMarks;
             exam.StartTime = startTime;
             exam.EndTime = endTime;
+            // Premium stays pinned at 1 attempt no matter what the client sends.
+            exam.MaxAttempts = exam.IsPremium ? 1 : maxAttempts;
 
             _examRepository.Update(exam);
             await _examRepository.SaveChangesAsync();

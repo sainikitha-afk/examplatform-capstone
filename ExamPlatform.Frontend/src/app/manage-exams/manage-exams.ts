@@ -60,6 +60,8 @@ export class ManageExams implements OnInit {
   createForm: CreateExamModel = new CreateExamModel();
   updateForm: UpdateExamModel = new UpdateExamModel();
   editingExamId: number = 0;
+  // True while editing a premium exam — hides the attempts field (premium = 1 shot).
+  editingIsPremium: boolean = false;
 
   constructor(
     private examService: ExamApiService,
@@ -106,6 +108,9 @@ export class ManageExams implements OnInit {
       this.errorMessage = 'End time must be after the start time.';
       return;
     }
+    // A premium certification is always exactly one attempt (server pins this
+    // too — this just keeps the request honest if the toggle changed late).
+    if (this.createForm.isPremium) this.createForm.maxAttempts = 1;
     this.isSaving = true;
     this.errorMessage = '';
     this.examService.createExam(this.createForm).subscribe({
@@ -116,9 +121,11 @@ export class ManageExams implements OnInit {
 
   showEditForm(exam: ExamSummaryModel): void {
     this.editingExamId = exam.examId;
+    // Premium exams have no attempts setting — always exactly 1 (server-pinned).
+    this.editingIsPremium = exam.isPremium;
     this.updateForm = new UpdateExamModel(
       exam.title, '', exam.durationMinutes, exam.totalMarks, exam.passingMarks,
-      exam.startTime, exam.endTime
+      exam.startTime, exam.endTime, exam.isPremium ? 1 : exam.maxAttempts
     );
     this.view = 'edit';
   }

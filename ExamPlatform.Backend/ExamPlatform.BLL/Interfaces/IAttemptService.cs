@@ -31,6 +31,10 @@ namespace ExamPlatform.BLL.Interfaces
         // Returns the candidate's full attempt history.
         Task<IEnumerable<Attempt>> GetByUserAsync(int userId);
 
+        // How many completed (Submitted/AutoSubmitted) attempts the user has for
+        // this exam — the details page shows it against Exam.MaxAttempts.
+        Task<int> CountCompletedAttemptsAsync(int userId, int examId);
+
         // Returns a paginated page of the candidate's attempt history.
         Task<PagedResult<Attempt>> GetByUserPagedAsync(int userId, int page, int pageSize);
 

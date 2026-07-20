@@ -4,3 +4,42 @@
   padding-top: calc(var(--nav-height) + 1.5rem);
   min-height: 100vh;
 }
+
+/* ── App-wide footer ─────────────────────────────────────────── */
+.app-footer {
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+  padding: 1.75rem 0 1.25rem;
+}
+.af-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.af-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--primary);
+}
+.af-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.af-points i { color: var(--primary); }
+.af-bottom {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+}

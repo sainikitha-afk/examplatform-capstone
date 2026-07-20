@@ -43,5 +43,10 @@ namespace ExamPlatform.API.DTOs.Exam
         // these two fields alone.
         public bool IsPremium { get; set; }
         public decimal? Price { get; set; }
+
+        // Completed attempts allowed per candidate (practice exams only).
+        // Ignored for premium exams — the server always pins those to 1.
+        [Range(1, 10, ErrorMessage = "Attempts allowed must be between 1 and 10.")]
+        public int MaxAttempts { get; set; } = 1;
     }
 }

@@ -17,6 +17,8 @@ namespace ExamPlatform.API.DTOs.Exam
         public string ExamStatus { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool IsPremium { get; set; }
+        // Completed attempts allowed per candidate (always 1 for premium exams).
+        public int MaxAttempts { get; set; } = 1;
         public decimal? Price { get; set; }
         public bool IsFeatured { get; set; }
 

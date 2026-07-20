@@ -39,6 +39,10 @@ namespace ExamPlatform.DAL.Configurations
             builder.Property(e => e.Price).HasPrecision(10, 2);
             builder.Property(e => e.IsFeatured).IsRequired().HasDefaultValue(false);
 
+            // Attempt limit — DB default 1 backfills every pre-existing exam with
+            // the historic one-attempt-per-candidate rule.
+            builder.Property(e => e.MaxAttempts).IsRequired().HasDefaultValue(1);
+
             // Relationships — both Restrict. Don't delete a user who authored
             // exams; don't delete a category that has exams.
             builder.HasOne(e => e.Examiner)

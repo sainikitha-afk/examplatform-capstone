@@ -24,6 +24,8 @@ export class BrowseExams implements OnInit {
   selectedCategoryId: number | null = null;
   currentPage: number = 1;
   totalPages: number = 1;
+  // Total published exams matching the current filter — shown in the header.
+  totalCount: number = 0;
   isLoading: boolean = false;
   errorMessage: string = '';
 
@@ -51,6 +53,7 @@ export class BrowseExams implements OnInit {
       next: (result) => {
         this.exams = result.items;
         this.totalPages = result.totalPages;
+        this.totalCount = result.totalCount;
         this.isLoading = false;
       },
       error: () => {

@@ -65,6 +65,10 @@
                 <td class="fw-medium">
                   {{ e.title }}
                   <span *ngIf="e.isPremium" class="badge-premium-tag ms-1"><i class="bi bi-gem"></i></span>
+                  <span *ngIf="!e.isPremium && e.maxAttempts > 1" class="attempts-chip ms-1"
+                        title="{{ e.maxAttempts }} attempts allowed per candidate">
+                    <i class="bi bi-arrow-repeat"></i>{{ e.maxAttempts }}
+                  </span>
                 </td>
                 <td class="text-center">
                   <!-- [ngClass]: colour badge by exam status -->
@@ -159,6 +163,11 @@
           <label class="form-label">Passing Marks</label>
           <input type="number" class="form-control" [(ngModel)]="createForm.passingMarks" name="pass" min="1" />
         </div>
+        <div class="col-md-3" *ngIf="!createForm.isPremium">
+          <label class="form-label">Attempts Allowed</label>
+          <input type="number" class="form-control" [(ngModel)]="createForm.maxAttempts" name="maxAttempts" min="1" max="10" />
+          <small class="text-muted">1–10 per candidate. Best score counts.</small>
+        </div>
         <div class="col-md-6">
           <label class="form-label">Start Time</label>
           <input type="datetime-local" class="form-control" [(ngModel)]="createForm.startTime" name="start" required />
@@ -176,6 +185,9 @@
             </label>
           </div>
           <small class="text-muted">Requires a Professional subscription. Candidates must purchase access before attempting.</small>
+          <small class="text-muted d-block" *ngIf="createForm.isPremium">
+            <i class="bi bi-info-circle me-1"></i>Premium certification exams allow exactly one attempt per candidate.
+          </small>
         </div>
         <div class="col-md-4" *ngIf="createForm.isPremium">
           <label class="form-label">Price (₹)</label>
@@ -218,6 +230,14 @@
         <div class="col-md-3">
           <label class="form-label">Passing Marks</label>
           <input type="number" class="form-control" [(ngModel)]="updateForm.passingMarks" name="pass" />
+        </div>
+        <div class="col-md-3" *ngIf="!editingIsPremium">
+          <label class="form-label">Attempts Allowed</label>
+          <input type="number" class="form-control" [(ngModel)]="updateForm.maxAttempts" name="maxAttempts" min="1" max="10" />
+          <small class="text-muted">1–10 per candidate. Best score counts.</small>
+        </div>
+        <div class="col-12" *ngIf="editingIsPremium">
+          <small class="text-muted"><i class="bi bi-gem text-warning me-1"></i>Premium certification exam — one attempt per candidate (fixed).</small>
         </div>
       </div>
       <div class="mt-4 d-flex gap-2">

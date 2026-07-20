@@ -143,7 +143,14 @@ namespace ExamPlatform.API.Controllers
 
             var hasAccess = !exam.IsPremium
                 || (User.IsInRole("Candidate") && await _purchaseService.HasActivePurchaseAsync(userId, id));
-            return Ok(ToDetailForCandidateDto(exam, hasAccess, institute)); // omits IsCorrect
+
+            // Attempt allowance for THIS candidate — the details page shows
+            // "Attempt X of N" and hides Start once the limit is spent.
+            var attemptsUsed = User.IsInRole("Candidate")
+                ? await _attemptService.CountCompletedAttemptsAsync(userId, id)
+                : 0;
+
+            return Ok(ToDetailForCandidateDto(exam, hasAccess, institute, attemptsUsed)); // omits IsCorrect
         }
 
         /// <summary>
@@ -212,7 +219,7 @@ namespace ExamPlatform.API.Controllers
                 dto.DurationMinutes, dto.TotalMarks, dto.PassingMarks,
                 // End time is optional — default to a 30-day window from the start.
                 dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30),
-                dto.IsPremium, dto.Price);
+                dto.IsPremium, dto.Price, dto.MaxAttempts);
 
             return CreatedAtAction(nameof(GetById), new { id = exam.ExamId }, ToSummaryDto(exam));
         }
@@ -230,7 +237,8 @@ namespace ExamPlatform.API.Controllers
                 id, userId, dto.Title, dto.Instructions,
                 dto.DurationMinutes, dto.TotalMarks, dto.PassingMarks,
                 // End time is optional — default to a 30-day window from the start.
-                dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30));
+                dto.StartTime, dto.EndTime ?? dto.StartTime.AddDays(30),
+                dto.MaxAttempts);
 
             return Ok(ToSummaryDto(exam));
         }
@@ -361,6 +369,7 @@ namespace ExamPlatform.API.Controllers
             IsPremium = e.IsPremium,
             Price = e.Price,
             IsFeatured = e.IsFeatured,
+            MaxAttempts = e.IsPremium ? 1 : e.MaxAttempts,
             // Institute badge only makes sense for premium exams (the certification
             // product) — a verified institute passed in here attaches its branding.
             IsInstituteVerified = e.IsPremium && institute != null,
@@ -416,6 +425,7 @@ namespace ExamPlatform.API.Controllers
             IsPremium = e.IsPremium,
             Price = e.Price,
             IsFeatured = e.IsFeatured,
+            MaxAttempts = e.IsPremium ? 1 : e.MaxAttempts,
             IsInstituteVerified = institute != null,
             InstituteName = institute?.Name,
             InstituteLogoUrl = institute?.LogoUrl,
@@ -440,7 +450,8 @@ namespace ExamPlatform.API.Controllers
         };
 
         private static ExamDetailForCandidateDto ToDetailForCandidateDto(
-            Exam e, bool hasAccess = true, Institution? institute = null) => new()
+            Exam e, bool hasAccess = true, Institution? institute = null,
+            int attemptsUsed = 0) => new()
         {
             ExamId = e.ExamId,
             Title = e.Title,
@@ -457,6 +468,8 @@ namespace ExamPlatform.API.Controllers
             IsPremium = e.IsPremium,
             Price = e.Price,
             HasAccess = hasAccess,
+            MaxAttempts = e.IsPremium ? 1 : e.MaxAttempts,
+            AttemptsUsed = attemptsUsed,
             IsInstituteVerified = institute != null,
             InstituteName = institute?.Name,
             InstituteLogoUrl = institute?.LogoUrl,

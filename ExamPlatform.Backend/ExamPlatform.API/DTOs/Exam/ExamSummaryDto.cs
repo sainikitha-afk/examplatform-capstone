@@ -20,6 +20,9 @@ namespace ExamPlatform.API.DTOs.Exam
         public decimal? Price { get; set; }
         public bool IsFeatured { get; set; }
 
+        // Completed attempts allowed per candidate (always 1 for premium exams).
+        public int MaxAttempts { get; set; } = 1;
+
         // Institute badge (live-derived): populated only for premium exams whose
         // examiner has an Admin-verified institution, so browse cards can show the
         // institute name + logo. Null/false for everything else.

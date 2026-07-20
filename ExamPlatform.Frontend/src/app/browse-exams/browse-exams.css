@@ -59,6 +59,20 @@
   flex: 1;
 }
 
+/* Inline content stats in the page header */
+.browse-stats {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.6rem;
+  padding: 0.15rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: var(--primary-50);
+  color: var(--primary-hover);
+  border: 1px solid var(--primary-200);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .exam-title {
   font-weight: 700;
   font-size: 1rem;

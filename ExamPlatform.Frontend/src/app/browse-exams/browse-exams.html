@@ -4,7 +4,13 @@
 
   <div class="page-header">
     <h3><i class="bi bi-search me-2 text-primary"></i>Browse Exams</h3>
-    <p class="page-header-sub">Discover and take published assessments.</p>
+    <p class="page-header-sub">
+      Discover and take published assessments.
+      <span *ngIf="totalCount > 0" class="browse-stats">
+        <i class="bi bi-journal-check me-1"></i>{{ totalCount }} exam{{ totalCount === 1 ? '' : 's' }}
+        across {{ categories.length }} categories
+      </span>
+    </p>
   </div>
 
   <!-- Category boards — one per category, always up to date when the admin
@@ -49,6 +55,9 @@
           <div class="exam-meta">
             <span><i class="bi bi-clock me-1"></i>{{ exam.durationMinutes }} min</span>
             <span><i class="bi bi-star-fill me-1 text-warning"></i>{{ exam.totalMarks }} marks</span>
+            <span *ngIf="exam.maxAttempts > 1">
+              <i class="bi bi-arrow-repeat me-1 text-primary"></i>{{ exam.maxAttempts }} attempts
+            </span>
             <span class="badge-status badge-published">Live</span>
           </div>
           <div class="exam-pass-info">

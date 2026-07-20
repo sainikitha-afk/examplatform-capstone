@@ -149,17 +149,25 @@ namespace ExamPlatform.BLL.Services
                 return fullExisting;
             }
 
-            // ─── ONE ATTEMPT PER CANDIDATE ────────────────────────────
-            // Once a candidate has completed this exam (submitted or timed out),
-            // it is no longer available to them. In-progress resumes were
-            // handled above; this only blocks brand-new attempts.
-            if (await _attemptRepository.HasCompletedAttemptAsync(userId, examId))
+            // ─── ATTEMPT LIMIT ────────────────────────────────────────
+            // Examiner-set MaxAttempts (1–10) for practice exams; a premium
+            // certification exam is ALWAYS exactly one attempt regardless of the
+            // stored value (paid, one shot — same reasoning as the other premium
+            // rules: enforced server-side, never trusted from the client).
+            // In-progress resumes were handled above; this only blocks brand-new
+            // attempts once the completed (Submitted/AutoSubmitted) count reaches
+            // the limit. Math.Max guards against a bad stored value ever locking
+            // an exam to zero attempts.
+            var maxAttempts = exam.IsPremium ? 1 : Math.Max(1, exam.MaxAttempts);
+            var completed = await _attemptRepository.CountCompletedAttemptsAsync(userId, examId);
+            if (completed >= maxAttempts)
             {
                 _logger.LogWarning(
-                    "User {UserId} tried to re-attempt exam {ExamId} after completing it.",
-                    userId, examId);
-                throw new ExamNotOpenForAttemptException(
-                    "you have already completed this exam. Each exam can only be taken once.");
+                    "User {UserId} tried to start exam {ExamId} but has used {Completed}/{Max} attempts.",
+                    userId, examId, completed, maxAttempts);
+                throw new ExamNotOpenForAttemptException(maxAttempts == 1
+                    ? "you have already completed this exam. It allows only one attempt."
+                    : $"you have used all {maxAttempts} attempts for this exam.");
             }
 
             // ─── WINDOW CHECK (new attempts only) ────────────────────
@@ -196,8 +204,26 @@ namespace ExamPlatform.BLL.Services
                 // until the attempt is submitted and evaluated.
             };
 
-            await _attemptRepository.AddAsync(attempt);
-            await _attemptRepository.SaveChangesAsync();
+            // Race-safe insert: if a concurrent start (double-click / second tab)
+            // already created the one-allowed InProgress attempt, the filtered
+            // unique index rejects this insert and TryAddInProgressAsync returns
+            // false — we then resume the winning attempt instead of 500-ing.
+            var inserted = await _attemptRepository.TryAddInProgressAsync(attempt);
+            if (!inserted)
+            {
+                _logger.LogInformation(
+                    "User {UserId} lost a concurrent start race for exam {ExamId}; resuming existing attempt.",
+                    userId, examId);
+
+                var winner = await _attemptRepository.GetInProgressAsync(userId, examId);
+                if (winner != null)
+                    return (await _attemptRepository.GetByIdWithAnswersAndExamAsync(winner.AttemptId))!;
+
+                // Extremely unlikely: the concurrent attempt was submitted between
+                // our failed insert and this re-read. Surface the normal "closed" path.
+                throw new ExamNotOpenForAttemptException(
+                    "could not start the attempt — please retry.");
+            }
             // EF Core back-fills AttemptId from the DB sequence after SaveChanges.
 
             _logger.LogInformation(
@@ -455,6 +481,11 @@ namespace ExamPlatform.BLL.Services
         public async Task<IEnumerable<Attempt>> GetByUserAsync(int userId)
         {
             return await _attemptRepository.GetByUserAsync(userId);
+        }
+
+        public async Task<int> CountCompletedAttemptsAsync(int userId, int examId)
+        {
+            return await _attemptRepository.CountCompletedAttemptsAsync(userId, examId);
         }
 
         // ════════════════════════════════════════════════════════════════

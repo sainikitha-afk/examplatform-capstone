@@ -86,6 +86,20 @@
                   </div>
                 </div>
               </div>
+              <div class="col-sm-6">
+                <div class="exam-info-item">
+                  <i class="bi bi-arrow-repeat text-primary"></i>
+                  <div>
+                    <div class="exam-info-label">Attempts Allowed</div>
+                    <div class="exam-info-val">
+                      {{ exam.isPremium ? 1 : exam.maxAttempts }}
+                      <span *ngIf="exam.attemptsUsed > 0" class="text-muted fw-normal">
+                        ({{ exam.attemptsUsed }} used)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -103,9 +117,24 @@
               Make sure you have {{ exam.durationMinutes }} minutes available. The timer starts immediately.
             </p>
 
+            <!-- All attempts spent: no Start button, clear message instead.
+                 (The server enforces this too — this just avoids a dead click.) -->
+            <ng-container *ngIf="exam.attemptsUsed >= (exam.isPremium ? 1 : exam.maxAttempts)">
+              <div class="premium-lock-notice mb-2">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>You've used all {{ exam.isPremium ? 1 : exam.maxAttempts }}
+                  {{ (exam.isPremium ? 1 : exam.maxAttempts) === 1 ? 'attempt' : 'attempts' }} for this exam.</span>
+              </div>
+              <a routerLink="/candidate" class="btn btn-outline-primary w-100">
+                <i class="bi bi-clock-history me-2"></i>View My Results
+              </a>
+            </ng-container>
+
+            <ng-container *ngIf="exam.attemptsUsed < (exam.isPremium ? 1 : exam.maxAttempts)">
             <ng-container *ngIf="!exam.isPremium || exam.hasAccess">
               <button class="btn btn-primary w-100 btn-lg" (click)="handleStartExamClick()">
-                <i class="bi bi-play-fill me-2"></i>Start Exam
+                <i class="bi bi-play-fill me-2"></i>
+                {{ exam.attemptsUsed > 0 ? 'Start Attempt ' + (exam.attemptsUsed + 1) : 'Start Exam' }}
               </button>
             </ng-container>
 
@@ -117,6 +146,7 @@
               <button class="btn btn-primary w-100 btn-lg" (click)="handlePurchaseClick()">
                 <i class="bi bi-unlock-fill me-2"></i>Purchase to Unlock — ₹{{ exam.price | number }}
               </button>
+            </ng-container>
             </ng-container>
 
             <p class="text-muted mt-3" style="font-size:0.78rem">

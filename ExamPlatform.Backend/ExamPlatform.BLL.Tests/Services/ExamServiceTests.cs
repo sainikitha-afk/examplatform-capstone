@@ -226,6 +226,45 @@ namespace ExamPlatform.BLL.Tests.Services
         }
 
         [Test]
+        public async Task CreateAsync_PremiumExam_PinsMaxAttemptsToOne()
+        {
+            // A premium certification is always one attempt — a client-sent
+            // maxAttempts is silently ignored, never an error.
+            _examRepoMock.Setup(r => r.AddAsync(It.IsAny<Exam>())).ReturnsAsync((Exam e) => e);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3),
+                isPremium: true, price: 999m, maxAttempts: 7);
+
+            result.MaxAttempts.Should().Be(1);
+        }
+
+        [Test]
+        public async Task CreateAsync_NonPremiumWithMaxAttempts_StoresTheLimit()
+        {
+            _examRepoMock.Setup(r => r.AddAsync(It.IsAny<Exam>())).ReturnsAsync((Exam e) => e);
+            _examRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3),
+                maxAttempts: 3);
+
+            result.MaxAttempts.Should().Be(3);
+        }
+
+        [Test]
+        public async Task CreateAsync_MaxAttemptsOutOfRange_ThrowsValidationException()
+        {
+            var act = async () => await _sut.CreateAsync(10, 1, "Title", null, 60, 50m, 30m,
+                DateTime.UtcNow.AddHours(1), DateTime.UtcNow.AddHours(3),
+                maxAttempts: 11);
+
+            await act.Should().ThrowAsync<ValidationException>()
+                     .WithMessage("*between 1 and 10*");
+        }
+
+        [Test]
         public async Task CreateAsync_Success_RecordsExamCreatedOnSubscriptionService()
         {
             _examRepoMock.Setup(r => r.AddAsync(It.IsAny<Exam>())).ReturnsAsync((Exam e) => e);

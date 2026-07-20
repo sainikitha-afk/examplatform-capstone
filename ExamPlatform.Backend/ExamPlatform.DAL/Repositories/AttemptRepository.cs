@@ -27,6 +27,34 @@ namespace ExamPlatform.DAL.Repositories
         }
 
         // ════════════════════════════════════════════════════════════════
+        //   TryAddInProgressAsync  (race-safe)
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// Inserts a new InProgress attempt, returning false (instead of throwing)
+        /// when the filtered unique index "uix_attempts_user_exam_inprogress" is
+        /// violated — i.e. a concurrent double-start already created one. The
+        /// service then resumes the winning attempt. This is what makes rapid
+        /// double-clicks / two tabs safe rather than a 500.
+        /// </summary>
+        public async Task<bool> TryAddInProgressAsync(Attempt attempt)
+        {
+            _dbSet.Add(attempt);
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex) when (
+                ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+            {
+                // Detach the failed insert so the context stays usable, then let
+                // the caller fall back to resuming the concurrently-created attempt.
+                _context.Entry(attempt).State = EntityState.Detached;
+                return false;
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
         //   HasCompletedAttemptAsync
         // ════════════════════════════════════════════════════════════════
         /// <summary>
@@ -36,6 +64,23 @@ namespace ExamPlatform.DAL.Repositories
         public async Task<bool> HasCompletedAttemptAsync(int userId, int examId)
         {
             return await _dbSet.AnyAsync(a =>
+                a.UserId == userId &&
+                a.ExamId == examId &&
+                (a.AttemptStatus == AttemptStatus.Submitted ||
+                 a.AttemptStatus == AttemptStatus.AutoSubmitted));
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   CountCompletedAttemptsAsync
+        // ════════════════════════════════════════════════════════════════
+        /// <summary>
+        /// How many attempts this user has finished (submitted or timed out) for
+        /// this exam — compared against Exam.MaxAttempts to decide whether another
+        /// attempt is allowed. SQL COUNT — no rows loaded.
+        /// </summary>
+        public async Task<int> CountCompletedAttemptsAsync(int userId, int examId)
+        {
+            return await _dbSet.CountAsync(a =>
                 a.UserId == userId &&
                 a.ExamId == examId &&
                 (a.AttemptStatus == AttemptStatus.Submitted ||

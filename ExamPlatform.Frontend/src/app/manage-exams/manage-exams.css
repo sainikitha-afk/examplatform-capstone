@@ -53,3 +53,17 @@
   background: linear-gradient(135deg, var(--accent), var(--accent-hover));
   color: var(--text-inverse);
 }
+
+/* Small chip showing the multi-attempt allowance on a list row */
+.attempts-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--primary-50);
+  color: var(--primary-hover);
+  border: 1px solid var(--primary-200);
+}

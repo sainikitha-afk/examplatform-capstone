@@ -29,7 +29,12 @@ namespace ExamPlatform.DAL.Repositories
 
         public async Task<User?> GetByUsernameAsync(string username)
         {
-            return await _dbSet.FirstOrDefaultAsync(u => u.Username == username);
+            // Exact match first (uses the unique index), then a case-insensitive
+            // fallback so "Diya" finds "diya" at login. Exact-first ordering means
+            // that if two usernames ever differed only by case, each still resolves
+            // to its own row — the fallback only fires when no exact row exists.
+            return await _dbSet.FirstOrDefaultAsync(u => u.Username == username)
+                ?? await _dbSet.FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
         }
 
         // AnyAsync — translates to SELECT EXISTS(SELECT 1 FROM users WHERE ...)

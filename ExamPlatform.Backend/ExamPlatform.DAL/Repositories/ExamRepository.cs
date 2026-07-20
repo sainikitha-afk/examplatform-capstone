@@ -108,22 +108,24 @@ namespace ExamPlatform.DAL.Repositories
         //   GetAvailableForCandidatePagedAsync
         // ════════════════════════════════════════════════════════════════
         /// <summary>
-        /// Candidate browse: Published exams MINUS the ones this candidate has already
-        /// completed. One attempt per candidate — once Submitted/AutoSubmitted, the exam
-        /// is gone from their browse list (it could only ever 409 on Start). An exam with
-        /// only an InProgress attempt stays listed so the candidate can find their way
-        /// back and resume. The subquery translates to a SQL NOT EXISTS, so pagination
-        /// counts remain correct.
+        /// Candidate browse: Published exams MINUS the ones this candidate has used up.
+        /// An exam disappears once the candidate's completed (Submitted/AutoSubmitted)
+        /// attempts reach the exam's limit — MaxAttempts for practice exams, always 1
+        /// for premium certifications (listing it further could only ever 409 on Start).
+        /// An exam with only an InProgress attempt stays listed so the candidate can
+        /// find their way back and resume. The count subquery translates to SQL, so
+        /// pagination counts remain correct.
         /// </summary>
         public async Task<(IEnumerable<Exam> Items, int TotalCount)> GetAvailableForCandidatePagedAsync(
             int userId, int? categoryId, int page, int pageSize)
         {
             var query = _dbSet
                 .Where(e => e.ExamStatus == ExamStatus.Published)
-                .Where(e => !e.Attempts.Any(a =>
+                .Where(e => e.Attempts.Count(a =>
                     a.UserId == userId &&
                     (a.AttemptStatus == AttemptStatus.Submitted ||
-                     a.AttemptStatus == AttemptStatus.AutoSubmitted)));
+                     a.AttemptStatus == AttemptStatus.AutoSubmitted))
+                    < (e.IsPremium ? 1 : e.MaxAttempts));
 
             if (categoryId.HasValue)
                 query = query.Where(e => e.CatId == categoryId.Value);

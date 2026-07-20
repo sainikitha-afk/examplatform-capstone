@@ -36,6 +36,17 @@ namespace ExamPlatform.DAL.Interfaces
         // finished an exam, it is no longer available to them.
         Task<bool> HasCompletedAttemptAsync(int userId, int examId);
 
+        // Race-safe insert of a new InProgress attempt. Returns true on success;
+        // false when the filtered unique index (one InProgress per user+exam)
+        // rejects the insert because a concurrent request already created one —
+        // letting the caller resume that attempt instead of surfacing a 500.
+        Task<bool> TryAddInProgressAsync(Attempt attempt);
+
+        // How many COMPLETED (Submitted/AutoSubmitted) attempts the user has for
+        // this exam. StartOrResume compares this against the exam's attempt limit
+        // (Exam.MaxAttempts; premium exams are always limited to 1).
+        Task<int> CountCompletedAttemptsAsync(int userId, int examId);
+
         // Returns true if ANY attempt (any status) exists for the given exam.
         // Used by UnpublishAsync to block rollback when candidates have touched
         // the exam — even an InProgress attempt must prevent unpublishing.

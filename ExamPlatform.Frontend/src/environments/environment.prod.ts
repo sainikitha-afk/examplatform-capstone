@@ -5,5 +5,5 @@
 // during provisioning (search for __API_URL__ if it is still here).
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://__API_URL__',
+  apiBaseUrl: 'https://examhub-api-b8d965.azurewebsites.net',
 };

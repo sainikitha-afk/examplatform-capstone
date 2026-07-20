@@ -103,8 +103,8 @@ namespace ExamPlatform.BLL.Tests.Services
             _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
             _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
             // AddAsync returns Task<Attempt>
-            _attemptRepoMock.Setup(r => r.AddAsync(It.IsAny<Attempt>()))
-                            .ReturnsAsync((Attempt a) => a);
+            _attemptRepoMock.Setup(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()))
+                            .ReturnsAsync(true);
             _attemptRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
 
             // ─── ACT ──────────────────────────────────────────────────
@@ -112,7 +112,33 @@ namespace ExamPlatform.BLL.Tests.Services
 
             // ─── ASSERT ───────────────────────────────────────────────
             result.AttemptStatus.Should().Be(AttemptStatus.InProgress);
-            _attemptRepoMock.Verify(r => r.AddAsync(It.IsAny<Attempt>()), Times.Once);
+            _attemptRepoMock.Verify(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()), Times.Once);
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_ConcurrentStartLosesRace_ResumesWinningAttempt()
+        {
+            // The candidate double-clicked / opened two tabs. GetInProgress returns
+            // null on the first check (no attempt yet), our insert loses the race
+            // (TryAddInProgressAsync → false), and we must resume the winning attempt
+            // rather than surface a 500.
+            var exam = TestDataBuilder.BuildPublishedExam(1);
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            // First call (pre-insert): none. Second call (post-race): the winner.
+            _attemptRepoMock.SetupSequence(r => r.GetInProgressAsync(1, 1))
+                .ReturnsAsync((Attempt?)null)
+                .ReturnsAsync(new Attempt { AttemptId = 77, UserId = 1, ExamId = 1,
+                    AttemptStatus = AttemptStatus.InProgress });
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(0);
+            _attemptRepoMock.Setup(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()))
+                            .ReturnsAsync(false);  // race lost
+            _attemptRepoMock.Setup(r => r.GetByIdWithAnswersAndExamAsync(77))
+                .ReturnsAsync(new Attempt { AttemptId = 77, UserId = 1, ExamId = 1,
+                    AttemptStatus = AttemptStatus.InProgress, Exam = exam, StartedAt = DateTime.UtcNow });
+
+            var result = await _sut.StartOrResumeAsync(1, 1);
+
+            result.AttemptId.Should().Be(77);  // resumed the winner, no exception
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -127,13 +153,13 @@ namespace ExamPlatform.BLL.Tests.Services
             exam.Price = 999m;
             _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
             _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
-            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(0);
             _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1)).ReturnsAsync((CandidatePurchase?)null);
 
             var act = async () => await _sut.StartOrResumeAsync(1, 1);
 
             await act.Should().ThrowAsync<PremiumAccessRequiredException>();
-            _attemptRepoMock.Verify(r => r.AddAsync(It.IsAny<Attempt>()), Times.Never);
+            _attemptRepoMock.Verify(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()), Times.Never);
         }
 
         [Test]
@@ -144,7 +170,7 @@ namespace ExamPlatform.BLL.Tests.Services
             exam.Price = 999m;
             _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
             _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
-            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(0);
             _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
                 .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Refunded });
 
@@ -161,10 +187,10 @@ namespace ExamPlatform.BLL.Tests.Services
             exam.Price = 999m;
             _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
             _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
-            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(0);
             _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
                 .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Active });
-            _attemptRepoMock.Setup(r => r.AddAsync(It.IsAny<Attempt>())).ReturnsAsync((Attempt a) => a);
+            _attemptRepoMock.Setup(r => r.TryAddInProgressAsync(It.IsAny<Attempt>())).ReturnsAsync(true);
             _attemptRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _sut.StartOrResumeAsync(1, 1);
@@ -178,8 +204,8 @@ namespace ExamPlatform.BLL.Tests.Services
             var exam = TestDataBuilder.BuildPublishedExam(1); // IsPremium defaults to false
             _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
             _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
-            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
-            _attemptRepoMock.Setup(r => r.AddAsync(It.IsAny<Attempt>())).ReturnsAsync((Attempt a) => a);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(0);
+            _attemptRepoMock.Setup(r => r.TryAddInProgressAsync(It.IsAny<Attempt>())).ReturnsAsync(true);
             _attemptRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
 
             await _sut.StartOrResumeAsync(1, 1);
@@ -212,7 +238,7 @@ namespace ExamPlatform.BLL.Tests.Services
             // ─── ASSERT ───────────────────────────────────────────────
             result.AttemptId.Should().Be(42);
             // Resume must NOT create a new attempt row.
-            _attemptRepoMock.Verify(r => r.AddAsync(It.IsAny<Attempt>()), Times.Never);
+            _attemptRepoMock.Verify(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()), Times.Never);
             // Resume must call the full-load method so answers are populated.
             _attemptRepoMock.Verify(r => r.GetByIdWithAnswersAndExamAsync(42), Times.Once);
         }
@@ -626,13 +652,70 @@ namespace ExamPlatform.BLL.Tests.Services
             _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
             _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
             // The candidate submitted this exam before — no second attempt.
-            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(true);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(1);
 
             var act = async () => await _sut.StartOrResumeAsync(userId: 1, examId: 1);
 
             await act.Should().ThrowAsync<ExamNotOpenForAttemptException>()
                      .WithMessage("*already completed*");
-            _attemptRepoMock.Verify(r => r.AddAsync(It.IsAny<Attempt>()), Times.Never);
+            _attemptRepoMock.Verify(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()), Times.Never);
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_MultiAttemptExam_AllowsRetakeWithinLimit()
+        {
+            // MaxAttempts = 3, one attempt used → a second attempt must be allowed.
+            var exam = TestDataBuilder.BuildPublishedExam(1, examinerId: 10);
+            exam.MaxAttempts = 3;
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(1);
+            _attemptRepoMock.Setup(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()))
+                            .ReturnsAsync(true);
+            _attemptRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sut.StartOrResumeAsync(userId: 1, examId: 1);
+
+            result.AttemptStatus.Should().Be(AttemptStatus.InProgress);
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_MultiAttemptExam_BlocksWhenLimitSpent()
+        {
+            // MaxAttempts = 3, all three used → blocked with the "all N attempts" message.
+            var exam = TestDataBuilder.BuildPublishedExam(1, examinerId: 10);
+            exam.MaxAttempts = 3;
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(3);
+
+            var act = async () => await _sut.StartOrResumeAsync(userId: 1, examId: 1);
+
+            await act.Should().ThrowAsync<ExamNotOpenForAttemptException>()
+                     .WithMessage("*all 3 attempts*");
+            _attemptRepoMock.Verify(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()), Times.Never);
+        }
+
+        [Test]
+        public async Task StartOrResumeAsync_PremiumExam_IgnoresMaxAttemptsAndAllowsOnlyOne()
+        {
+            // A premium certification is ALWAYS one attempt — even if a bad
+            // MaxAttempts value is somehow stored, one completed attempt blocks.
+            var exam = TestDataBuilder.BuildPublishedExam(1, examinerId: 10);
+            exam.IsPremium = true;
+            exam.Price = 999m;
+            exam.MaxAttempts = 5; // must be ignored for premium
+            _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
+            _purchaseRepoMock.Setup(r => r.GetByUserAndExamAsync(1, 1))
+                .ReturnsAsync(new CandidatePurchase { Status = CandidatePurchaseStatus.Active });
+            _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(1);
+
+            var act = async () => await _sut.StartOrResumeAsync(userId: 1, examId: 1);
+
+            await act.Should().ThrowAsync<ExamNotOpenForAttemptException>()
+                     .WithMessage("*only one attempt*");
+            _attemptRepoMock.Verify(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()), Times.Never);
         }
 
         [Test]
@@ -644,9 +727,9 @@ namespace ExamPlatform.BLL.Tests.Services
             exam.EndTime = DateTime.UtcNow.AddMinutes(1);
             _examRepoMock.Setup(r => r.GetByIdWithQuestionsAndOptionsAsync(1)).ReturnsAsync(exam);
             _attemptRepoMock.Setup(r => r.GetInProgressAsync(1, 1)).ReturnsAsync((Attempt?)null);
-            _attemptRepoMock.Setup(r => r.HasCompletedAttemptAsync(1, 1)).ReturnsAsync(false);
-            _attemptRepoMock.Setup(r => r.AddAsync(It.IsAny<Attempt>()))
-                            .ReturnsAsync((Attempt a) => a);
+            _attemptRepoMock.Setup(r => r.CountCompletedAttemptsAsync(1, 1)).ReturnsAsync(0);
+            _attemptRepoMock.Setup(r => r.TryAddInProgressAsync(It.IsAny<Attempt>()))
+                            .ReturnsAsync(true);
             _attemptRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
 
             var result = await _sut.StartOrResumeAsync(userId: 1, examId: 1);

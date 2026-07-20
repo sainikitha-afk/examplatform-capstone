@@ -20,6 +20,12 @@ namespace ExamPlatform.API.DTOs.Exam
         public string ExamStatus { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool IsPremium { get; set; }
+
+        // Attempt allowance: how many completed attempts this exam permits per
+        // candidate (always 1 for premium) and how many THIS candidate has used —
+        // lets the details page show "Attempt 2 of 3" and hide Start when spent.
+        public int MaxAttempts { get; set; } = 1;
+        public int AttemptsUsed { get; set; }
         public decimal? Price { get; set; }
         // True when the candidate already holds an Active purchase for this
         // exam (or the exam isn't premium at all) — the frontend uses this,

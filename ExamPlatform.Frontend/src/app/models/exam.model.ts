@@ -23,7 +23,9 @@ export class ExamSummaryModel {
     // examiner has an Admin-verified institution.
     public isInstituteVerified: boolean = false,
     public instituteName: string | null = null,
-    public instituteLogoUrl: string | null = null
+    public instituteLogoUrl: string | null = null,
+    // Completed attempts allowed per candidate (always 1 for premium exams).
+    public maxAttempts: number = 1
   ) {}
 }
 
@@ -98,7 +100,11 @@ export class ExamDetailModel {
     // Admin-Verified institution. Drives the "Institute Verified" badge.
     public isInstituteVerified: boolean = false,
     public instituteName: string | null = null,
-    public instituteLogoUrl: string | null = null
+    public instituteLogoUrl: string | null = null,
+    // Attempt allowance: completed attempts permitted per candidate (always 1
+    // for premium) and — candidate view only — how many this user has used.
+    public maxAttempts: number = 1,
+    public attemptsUsed: number = 0
   ) {}
 }
 
@@ -114,7 +120,9 @@ export class CreateExamModel {
     public startTime: string = "",
     public endTime: string = "",
     public isPremium: boolean = false,
-    public price: number | null = null
+    public price: number | null = null,
+    // 1–10; ignored (pinned to 1) server-side for premium exams.
+    public maxAttempts: number = 1
   ) {}
 }
 
@@ -127,6 +135,8 @@ export class UpdateExamModel {
     public totalMarks: number = 100,
     public passingMarks: number = 40,
     public startTime: string = "",
-    public endTime: string = ""
+    public endTime: string = "",
+    // 1–10; ignored (pinned to 1) server-side for premium exams.
+    public maxAttempts: number = 1
   ) {}
 }

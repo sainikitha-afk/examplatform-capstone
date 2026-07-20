@@ -36,17 +36,19 @@ namespace ExamPlatform.BLL.Interfaces
         // insert, and rejects isPremium=true unless the examiner's current
         // tier allows it — both re-checked server-side regardless of what
         // the client sends.
+        // maxAttempts: completed attempts allowed per candidate (1–10). Ignored
+        // (forced to 1) for premium exams — a paid certification is one shot.
         Task<Exam> CreateAsync(
             int examinerId, int catId, string title, string? instructions,
             int durationMinutes, decimal totalMarks, decimal passingMarks,
             DateTime startTime, DateTime endTime,
-            bool isPremium = false, decimal? price = null);
+            bool isPremium = false, decimal? price = null, int maxAttempts = 1);
 
         // Updates exam metadata. Only allowed while exam is in Draft.
         Task<Exam> UpdateAsync(
             int examId, int examinerId, string title, string? instructions,
             int durationMinutes, decimal totalMarks, decimal passingMarks,
-            DateTime startTime, DateTime endTime);
+            DateTime startTime, DateTime endTime, int maxAttempts = 1);
 
         // Hard-deletes the exam. Only allowed while exam is in Draft.
         Task DeleteAsync(int examId, int examinerId);
