@@ -107,7 +107,12 @@ namespace ExamPlatform.BLL.Services
                         ExamTitle: best.Exam?.Title ?? string.Empty,
                         BestScore: best.Score ?? 0m,
                         IsPassed: best.IsPassed == true,
-                        TopicScoresUrl: best.TopicScoresUrl);
+                        // Point the radar chart at the live API endpoint (computed from
+                        // the DB) instead of the old static file. A non-null stored value
+                        // still gates "was this processed?"; the URL itself is derived.
+                        TopicScoresUrl: best.TopicScoresUrl is null
+                            ? null
+                            : $"/api/analytics/attempts/{best.AttemptId}/topic-scores");
                 })
                 .OrderBy(b => b.ExamTitle)
                 .ToList();
@@ -175,6 +180,48 @@ namespace ExamPlatform.BLL.Services
                 totalUsers, totalExams, totalAttempts, totalCertsIssued);
 
             return stats;
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //   ComputeTopicScoresAsync — per-topic accuracy for the radar chart
+        // ════════════════════════════════════════════════════════════════
+        public async Task<IReadOnlyDictionary<string, decimal>?> ComputeTopicScoresAsync(int attemptId, int userId)
+        {
+            var attempt = await _attemptRepository.GetByIdWithAnswersAndExamAsync(attemptId);
+
+            // Same gate the rest of analytics uses: caller must own the attempt, it must
+            // be finished, and the exam's results must be published. Anything else → null
+            // (the controller turns null into 404, the chart quietly shows nothing).
+            if (attempt is null || attempt.UserId != userId) return null;
+            if (attempt.AttemptStatus != AttemptStatus.Submitted &&
+                attempt.AttemptStatus != AttemptStatus.AutoSubmitted) return null;
+            if (attempt.Exam?.ExamStatus != ExamStatus.ResultsPublished) return null;
+            if (attempt.Exam.ExamQuestions is null || attempt.Exam.ExamQuestions.Count == 0) return null;
+
+            // Accuracy per analytic category = awarded marks / total marks * 100.
+            // (Identical maths to AnalyticsProcessor, but read live from the DB so it
+            // works on Azure without the old static JSON file.)
+            var total = new Dictionary<string, decimal>();
+            var awarded = new Dictionary<string, decimal>();
+
+            foreach (var eq in attempt.Exam.ExamQuestions)
+            {
+                var category = string.IsNullOrWhiteSpace(eq.AnalyticCategory) ? "Uncategorized" : eq.AnalyticCategory;
+                var marks = eq.Question?.Marks ?? 0;
+                var answer = attempt.AttemptAnswers?.FirstOrDefault(a => a.QuestionId == eq.QuestionId);
+
+                total.TryAdd(category, 0);
+                awarded.TryAdd(category, 0);
+                total[category] += marks;
+                if (answer?.IsCorrect == true)
+                    awarded[category] += answer.MarksAwarded ?? 0;
+            }
+
+            var scores = total.Keys.ToDictionary(
+                c => c,
+                c => total[c] > 0 ? Math.Round(awarded[c] / total[c] * 100m, 2) : 0m);
+
+            return scores.Count == 0 ? null : scores;
         }
     }
 }

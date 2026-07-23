@@ -55,6 +55,23 @@ namespace ExamPlatform.API.Controllers
             return Ok(ToDto(stats));
         }
 
+        // ════════════════════════════════════════════════════════════════
+        //   GET /api/analytics/attempts/{attemptId}/topic-scores
+        //   Per-topic accuracy for the radar chart, computed live from the DB.
+        //   Replaces the old /assets/... static JSON file (which 404s on Azure).
+        //   Candidate-only; the service enforces ownership + results-published.
+        // ════════════════════════════════════════════════════════════════
+        [HttpGet("attempts/{attemptId:int}/topic-scores")]
+        [Authorize(Roles = "Candidate")]
+        public async Task<IActionResult> GetTopicScores(int attemptId)
+        {
+            var userId = ExtractUserId();
+            var scores = await _analyticsService.ComputeTopicScoresAsync(attemptId, userId);
+            if (scores is null)
+                return NotFound(new { error = "Topic scores are not available for this attempt yet." });
+            return Ok(scores);
+        }
+
         // ───────────── PRIVATE HELPERS ─────────────
 
         private int ExtractUserId()

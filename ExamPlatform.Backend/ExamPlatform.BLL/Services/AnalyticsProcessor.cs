@@ -54,61 +54,15 @@ namespace ExamPlatform.BLL.Services
                 await _examQuestionRepo.SaveChangesAsync();
             }
 
-            // 2. Calculate Topic-wise Accuracy
-            var topicScores = new Dictionary<string, decimal>();
-            var topicTotalMarks = new Dictionary<string, decimal>();
-            var topicAwardedMarks = new Dictionary<string, decimal>();
-
-            foreach (var eq in exam.ExamQuestions)
-            {
-                var category = eq.AnalyticCategory ?? "Uncategorized";
-                var question = eq.Question;
-                var answer = attempt.AttemptAnswers.FirstOrDefault(a => a.QuestionId == question.QuestionId);
-
-                if (!topicTotalMarks.ContainsKey(category))
-                {
-                    topicTotalMarks[category] = 0;
-                    topicAwardedMarks[category] = 0;
-                }
-
-                topicTotalMarks[category] += question.Marks;
-                if (answer != null && answer.IsCorrect == true)
-                {
-                    topicAwardedMarks[category] += answer.MarksAwarded ?? 0;
-                }
-            }
-
-            foreach (var category in topicTotalMarks.Keys)
-            {
-                if (topicTotalMarks[category] > 0)
-                {
-                    topicScores[category] = Math.Round((topicAwardedMarks[category] / topicTotalMarks[category]) * 100m, 2);
-                }
-                else
-                {
-                    topicScores[category] = 0;
-                }
-            }
-
-            // 3. Save JSON
-            var contentRoot = Directory.GetCurrentDirectory();
-            var baseAssetPath = Path.GetFullPath(Path.Combine(contentRoot, "..", "ExamPlatform.BLL", "Assets", "candidates"));
-            var userDirectory = Path.Combine(baseAssetPath, attempt.UserId.ToString());
-            if (!Directory.Exists(userDirectory))
-            {
-                Directory.CreateDirectory(userDirectory);
-            }
-
-            var jsonFileName = $"attempt_{attempt.AttemptId}_scores.json";
-            var jsonFilePath = Path.Combine(userDirectory, jsonFileName);
-            await File.WriteAllTextAsync(jsonFilePath, JsonSerializer.Serialize(topicScores));
-            
-            _logger.LogInformation("Successfully saved JSON for Attempt {AttemptId} at {FilePath}", attempt.AttemptId, jsonFilePath);
-            
-            var topicScoresUrl = $"/assets/candidates/{attempt.UserId}/{jsonFileName}";
+            // 2. Mark the attempt as processed. We no longer write a JSON file to disk:
+            //    the topic scores are computed on demand from the DB and served by
+            //    GET /api/analytics/attempts/{id}/topic-scores. (The old static-file
+            //    approach 404'd on Azure, where the /assets path is not mounted.)
+            //    TopicScoresUrl stays non-null as the "analytics ready" signal, and
+            //    points straight at the live endpoint.
+            attempt.TopicScoresUrl = $"/api/analytics/attempts/{attempt.AttemptId}/topic-scores";
 
             // 4. Save to DB
-            attempt.TopicScoresUrl = topicScoresUrl;
             _attemptRepo.Update(attempt);
             await _attemptRepo.SaveChangesAsync();
             

@@ -262,7 +262,8 @@ namespace ExamPlatform.API.Controllers
                 AttemptStatus = a.AttemptStatus.ToString(),
                 Score = a.Score,
                 IsPassed = a.IsPassed,
-                TopicScoresUrl = resultsOut ? a.TopicScoresUrl : null
+                TopicScoresUrl = resultsOut && a.TopicScoresUrl != null
+                    ? $"/api/analytics/attempts/{a.AttemptId}/topic-scores" : null
             };
         }
 
@@ -318,7 +319,8 @@ namespace ExamPlatform.API.Controllers
                 IsPassed = a.IsPassed,
                 TimeTakenSeconds = a.TimeTakenSeconds,
                 ResultsPublished = resultsOut,
-                TopicScoresUrl = resultsOut ? a.TopicScoresUrl : null,
+                TopicScoresUrl = resultsOut && a.TopicScoresUrl != null
+                    ? $"/api/analytics/attempts/{a.AttemptId}/topic-scores" : null,
                 Questions = questionResults
             };
             return resultDto;
