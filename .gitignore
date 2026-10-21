@@ -68,3 +68,7 @@ notes.txt
 # ─────────── Claude Code local config ───────────
 .c/
 .claude/
+
+# dotnet publish output (contains a copy of appsettings.json with real secrets)
+**/publish/
+**/publish.zip
